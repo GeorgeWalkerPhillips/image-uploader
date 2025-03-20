@@ -13,11 +13,14 @@ body {
   justify-content: center;
   height: 100vh;
   margin: 0;
+  padding: 20px;
 }
 
+/* Ensure content is centered and responsive */
 .App-header {
   background-color: rgba(255, 255, 255, 0.8);
-  width: 50%;
+  width: 90%;
+  max-width: 500px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -27,15 +30,16 @@ body {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
+/* Headings */
 h1 {
   font-family: 'Great Vibes', cursive;
-  font-size: 4rem;
+  font-size: 3rem;
   color: navy;
   margin-bottom: 10px;
 }
 
 p {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   color: navy;
 }
 
@@ -43,8 +47,8 @@ p {
 .custom-file-upload {
   background-image: linear-gradient(92.88deg, #455EB5 9.16%, #5643CC 43.89%, #673FD7 64.72%);
   color: white;
-  font-size: 1.2rem;
-  padding: 12px 25px;
+  font-size: 1rem;
+  padding: 10px 20px;
   border: none;
   border-radius: 25px;
   cursor: pointer;
@@ -80,7 +84,7 @@ p {
   cursor: pointer;
   font-size: 16px;
   font-weight: 500;
-  height: 4rem;
+  height: 3rem;
   padding: 0 1.6rem;
   text-shadow: rgba(0, 0, 0, 0.25) 0 3px 8px;
   transition: all .5s;
@@ -131,5 +135,32 @@ p {
 
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Mobile Responsiveness */
+@media screen and (max-width: 768px) {
+  body {
+    background-position: left center;
+  }
+
+  .App-header {
+    width: 95%;
+    max-width: 400px;
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  p {
+    font-size: 1rem;
+  }
+
+  .custom-file-upload,
+  .button-36 {
+    font-size: 0.9rem;
+    padding: 8px 15px;
   }
 }
