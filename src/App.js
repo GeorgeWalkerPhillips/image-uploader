@@ -5,6 +5,7 @@ function App() {
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [fileNames, setFileNames] = useState([]);
+  const [uploadComplete, setUploadComplete] = useState(false);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -35,9 +36,15 @@ function App() {
         const result = await response.json();
         console.log(result);
         setUploading(false);
+        setUploadComplete(true);
       };
       reader.readAsDataURL(image);
     }
+  };
+
+  const handleOk = () => {
+    setUploadComplete(false);
+    window.location.reload();
   };
 
   return (
@@ -67,6 +74,16 @@ function App() {
           <div className="popup-content">
             <div className="spinner"></div>
             <p>Uploading... Please do not leave this page.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Success popup */}
+      {uploadComplete && (
+        <div className="popup">
+          <div className="popup-content">
+            <p>Upload complete! 🎉</p>
+            <button onClick={handleOk}>OK</button>
           </div>
         </div>
       )}

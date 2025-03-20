@@ -45,7 +45,7 @@ p {
 
 /* Custom file picker */
 .custom-file-upload {
-  background: linear-gradient(92.88deg, #ffb6c1 100%);
+  background: #ffb6c1 100%;
   color: white;
   font-size: 1rem;
   padding: 12px 25px;
@@ -58,7 +58,7 @@ p {
 }
 
 .custom-file-upload:hover {
-  background: linear-gradient(92.88deg, #000f97 100%);
+  background: #000f97 100%;
   transform: scale(1.05);
 }
 
@@ -77,7 +77,7 @@ p {
 
 /* Upload button */
 .button-36 {
-  background: linear-gradient(92.88deg, #000080 100%);
+  background: #000080;
   border-radius: 8px;
   border: none;
   color: #FFFFFF;
@@ -92,7 +92,7 @@ p {
 }
 
 .button-36:hover {
-  background: linear-gradient(92.88deg, #001f9e 100%);
+  background: #001f9e 100%;
   box-shadow: rgba(0, 0, 255, 0.5) 0 1px 30px;
   transition-duration: .1s;
 }
