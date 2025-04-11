@@ -33,7 +33,7 @@ function Home() {
 
                 const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
                     method: "POST",
-                    body: formData,
+                    body: formData, 
                 });
 
                 const result = await response.json();

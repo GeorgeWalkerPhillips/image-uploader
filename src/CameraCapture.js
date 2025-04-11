@@ -42,7 +42,7 @@ function CameraCapture() {
     return (
         <div className="camera-page">
             <h1>Capture by Val</h1>
-            <p>Use your camera to upload a beautiful moment 📸</p>
+            <p>Use your camera to upload a beautiful moment! 📸</p>
 
             <video ref={videoRef} width="400" height="300" autoPlay />
             <canvas ref={canvasRef} width="400" height="300" style={{ display: 'none' }} />
