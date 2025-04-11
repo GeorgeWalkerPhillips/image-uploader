@@ -6,7 +6,6 @@ function CameraCapture() {
     const canvasRef = useRef(null);
     const [capturedImage, setCapturedImage] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const [uploadComplete, setUploadComplete] = useState(false);
 
     const startCamera = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -37,12 +36,7 @@ function CameraCapture() {
         const result = await response.json();
         console.log(result);
         setUploading(false);
-        setUploadComplete(true);
-    };
-
-    const handleOk = () => {
-        setUploadComplete(false);
-        setCapturedImage(null);
+        alert("Upload complete!");
     };
 
     return (
@@ -56,7 +50,6 @@ function CameraCapture() {
             <div className="buttons">
                 <button onClick={startCamera}>Start Camera</button>
                 <button onClick={captureImage}>Capture</button>
-
                 {capturedImage && (
                     <>
                         <img src={capturedImage} alt="Captured" />
@@ -66,24 +59,6 @@ function CameraCapture() {
                     </>
                 )}
             </div>
-
-            {uploading && (
-                <div className="popup">
-                    <div className="popup-content">
-                        <div className="spinner"></div>
-                        <p>Uploading... Please do not leave this page.</p>
-                    </div>
-                </div>
-            )}
-
-            {uploadComplete && (
-                <div className="popup">
-                    <div className="popup-content">
-                        <p>Upload complete! 🎉</p>
-                        <button onClick={handleOk}>OK</button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
