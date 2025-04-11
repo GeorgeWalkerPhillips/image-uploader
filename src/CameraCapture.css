@@ -1,0 +1,33 @@
+.camera-page {
+    background-color: #f5f3ef;
+    color: #1e1e1e;
+    font-family: 'Playfair Display', serif;
+    text-align: center;
+    padding: 20px;
+    border-radius: 15px;
+    max-width: 600px;
+    margin: auto;
+}
+
+.camera-page video,
+.camera-page img {
+    margin-top: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.camera-page .buttons button {
+    margin: 10px 5px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    background-color: #1e1e1e;
+    color: #f5f3ef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.camera-page .buttons button:hover {
+    background-color: #333;
+}
