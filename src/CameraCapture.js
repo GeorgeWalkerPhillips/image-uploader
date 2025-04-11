@@ -11,7 +11,7 @@ function CameraCapture() {
 
     useEffect(() => {
         startCamera();
-        // Cleanup camera stream on unmount
+
         return () => {
             if (videoRef.current?.srcObject) {
                 videoRef.current.srcObject.getTracks().forEach(track => track.stop());
@@ -34,7 +34,7 @@ function CameraCapture() {
 
     const flipCamera = () => {
         setFacingMode(prev => (prev === "user" ? "environment" : "user"));
-    }; 
+    };
 
     const captureImage = () => {
         const canvas = canvasRef.current;
@@ -55,15 +55,21 @@ function CameraCapture() {
         const formData = new FormData();
         formData.append("image", base64);
 
-        const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
-            method: "POST",
-            body: formData,
-        });
+        try {
+            const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
+                method: "POST",
+                body: formData,
+            });
 
-        const result = await response.json();
-        console.log(result);
-        setUploading(false);
-        alert("Upload complete!");
+            const result = await response.json();
+            console.log(result);
+            alert("Upload complete!");
+        } catch (error) {
+            console.error("Upload failed:", error);
+            alert("Upload failed.");
+        } finally {
+            setUploading(false);
+        }
     };
 
     return (
