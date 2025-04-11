@@ -49,26 +49,22 @@ function App() {
 
   return (
     <div className="App-header">
-      <h1>Zani & Stian's Wedding</h1>
-      <p>Upload your beautiful moments to our wedding album! 📸</p>
+      <h1>Capture by Val</h1>
+      <p>Upload your beautiful moments directly to Val's lens. 📸</p>
 
       <div className="picker-container">
-        {/* Custom file picker */}
         <label className="custom-file-upload">
           <input type="file" multiple onChange={handleFileChange} />
           Choose Photos
         </label>
 
-        {/* Display selected file names */}
         {fileNames.length > 0 && (
           <p className="file-names">{fileNames.join(", ")}</p>
         )}
 
-        {/* Upload Button */}
-        <button className="button-36" onClick={handleUpload}>Upload to Zani & Stian</button>
+        <button className="button-36" onClick={handleUpload}>Upload to Capture by Val</button>
       </div>
 
-      {/* Loading popup */}
       {uploading && (
         <div className="popup">
           <div className="popup-content">
@@ -78,7 +74,6 @@ function App() {
         </div>
       )}
 
-      {/* Success popup */}
       {uploadComplete && (
         <div className="popup">
           <div className="popup-content">
