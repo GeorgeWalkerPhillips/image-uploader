@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import CameraCapture from "./CameraCapture";   // The camera UI
-import Home from "./Home";
+import Home from "./Home" ; 
 
 function App() {
   return (
