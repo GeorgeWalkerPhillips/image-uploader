@@ -34,7 +34,7 @@ function CameraCapture() {
 
     const flipCamera = () => {
         setFacingMode(prev => (prev === "user" ? "environment" : "user"));
-    };
+    }; 
 
     const captureImage = () => {
         const canvas = canvasRef.current;
