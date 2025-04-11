@@ -1,6 +1,5 @@
 import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
-import FileUploadPage from "./Home"; // Your current upload UI
 import CameraCapture from "./CameraCapture";   // The camera UI
 import Home from "./Home";
 
