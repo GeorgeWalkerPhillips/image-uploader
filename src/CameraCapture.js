@@ -6,6 +6,7 @@ function CameraCapture() {
     const canvasRef = useRef(null);
     const [capturedImage, setCapturedImage] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [uploadComplete, setUploadComplete] = useState(false);
 
     const startCamera = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -28,7 +29,7 @@ function CameraCapture() {
         const formData = new FormData();
         formData.append("image", base64);
 
-        const response = await fetch("YOUR_GOOGLE_SCRIPT_URL", {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
             method: "POST",
             body: formData,
         });
@@ -36,7 +37,12 @@ function CameraCapture() {
         const result = await response.json();
         console.log(result);
         setUploading(false);
-        alert("Upload complete!");
+        setUploadComplete(true);
+    };
+
+    const handleOk = () => {
+        setUploadComplete(false);
+        setCapturedImage(null);
     };
 
     return (
@@ -50,6 +56,7 @@ function CameraCapture() {
             <div className="buttons">
                 <button onClick={startCamera}>Start Camera</button>
                 <button onClick={captureImage}>Capture</button>
+
                 {capturedImage && (
                     <>
                         <img src={capturedImage} alt="Captured" />
@@ -59,6 +66,24 @@ function CameraCapture() {
                     </>
                 )}
             </div>
+
+            {uploading && (
+                <div className="popup">
+                    <div className="popup-content">
+                        <div className="spinner"></div>
+                        <p>Uploading... Please do not leave this page.</p>
+                    </div>
+                </div>
+            )}
+
+            {uploadComplete && (
+                <div className="popup">
+                    <div className="popup-content">
+                        <p>Upload complete! 🎉</p>
+                        <button onClick={handleOk}>OK</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
