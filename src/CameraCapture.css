@@ -143,3 +143,11 @@ body {
     margin: 5px;
     cursor: pointer;
 }
+
+.thumbnail-stack {
+    position: relative;
+    width: 72px;
+    /* Enough for 3 slightly offset thumbnails */
+    height: 60px;
+    cursor: pointer;
+}

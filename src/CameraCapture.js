@@ -136,18 +136,29 @@ function CameraCapture() {
             <div className="bottom-bar">
                 {/* Left: Thumbnail */}
                 {capturedImages.length > 0 ? (
-                    <img
-                        src={capturedImages[capturedImages.length - 1]}
-                        alt="Thumbnail"
-                        className="thumbnail"
-                        onClick={() => {
-                            setShowGallery(true);
-                            setCurrentIndex(capturedImages.length - 1);
-                        }}
-                    />
+                    <div className="thumbnail-stack" onClick={() => {
+                        setShowGallery(true);
+                        setCurrentIndex(capturedImages.length - 1);
+                    }}>
+                        {capturedImages.slice(-3).map((img, i, arr) => (
+                            <img
+                                key={i}
+                                src={img}
+                                alt="Thumb"
+                                className="thumbnail"
+                                style={{
+                                    position: 'absolute',
+                                    left: `${i * 6}px`,
+                                    zIndex: i,
+                                }}
+                            />
+                        ))}
+                    </div>
                 ) : (
                     <div style={{ width: '60px' }}></div>
                 )}
+
+
 
                 {/* Center: Shutter Button */}
                 <button className="shutter-button" onClick={captureImage}></button>
