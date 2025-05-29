@@ -75,17 +75,20 @@ function CameraCapture() {
 
     return (
         <div className="camera-fullscreen">
-            <video ref={videoRef} autoPlay playsInline className="video-feed" />
-            <canvas ref={canvasRef} width="400" height="300" style={{ display: 'none' }} />
-
-            {/* Top Bar */}
+            {/* Top bar */}
             <div className="top-bar">
                 <button className="icon-button">⚡</button>
                 <span className="event-name">Chloe & Tyler</span>
                 <button className="icon-button">☰</button>
             </div>
 
-            {/* Bottom Bar */}
+            {/* Camera Viewfinder */}
+            <div className="camera-viewfinder">
+                <video ref={videoRef} autoPlay playsInline className="video-feed" />
+            </div>
+            <canvas ref={canvasRef} width="400" height="300" style={{ display: 'none' }} />
+
+            {/* Bottom bar */}
             <div className="bottom-bar">
                 <div className="thumbnail-placeholder" />
                 <button className="shutter-button" onClick={captureImage}></button>
@@ -94,7 +97,7 @@ function CameraCapture() {
                 </button>
             </div>
 
-            {/* Preview Overlay */}
+            {/* Preview */}
             {capturedImage && (
                 <div className="preview-overlay">
                     <img src={capturedImage} alt="Captured" />
@@ -105,6 +108,7 @@ function CameraCapture() {
                 </div>
             )}
         </div>
+
     );
 }
 
