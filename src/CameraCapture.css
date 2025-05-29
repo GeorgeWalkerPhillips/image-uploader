@@ -74,6 +74,7 @@ body {
     justify-content: space-around;
     align-items: center;
     z-index: 2;
+    margin-bottom: max(env(safe-area-inset-bottom), 40px);
 }
 
 .shutter-button {
