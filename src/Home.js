@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import "./Home.css";
-import CameraCapture from './CameraCapture';
+import CameraCapture from "./CameraCapture";
 import { Link } from "react-router-dom";
-
+import { FaUpload, FaCamera } from "react-icons/fa";
 
 function Home() {
     const [images, setImages] = useState([]);
@@ -33,7 +33,7 @@ function Home() {
 
                 const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
                     method: "POST",
-                    body: formData, 
+                    body: formData,
                 });
 
                 const result = await response.json();
@@ -51,21 +51,33 @@ function Home() {
     };
 
     return (
-        <div className="App-header">
-            <h1>Capture by Val</h1>
-            <p>Upload your beautiful moments directly to Val's lens. 📸</p>
+        <div className="home-container">
+            <h1 className="home-title">Capture by Val</h1>
+            <p className="home-subtitle">Upload your moments to Val's lens</p>
 
-            <div className="picker-container">
+            <div className="upload-section">
                 <label className="custom-file-upload">
                     <input type="file" multiple onChange={handleFileChange} />
-                    Choose Photos
+                    <FaUpload className="icon" /> Choose Photos
                 </label>
 
                 {fileNames.length > 0 && (
-                    <p className="file-names">{fileNames.join(", ")}</p>
+                    <div className="thumbnail-preview">
+                        {images.slice(0, 3).map((image, index) => (
+                            <div
+                                key={index}
+                                className="thumbnail"
+                                style={{ left: `${index * 20}px`, zIndex: 3 - index }}
+                            >
+                                <img src={URL.createObjectURL(image)} alt={`thumb-${index}`} />
+                            </div>
+                        ))}
+                    </div>
                 )}
 
-                <button className="button-36" onClick={handleUpload}>Upload to Capture by Val</button>
+                <button className="button-36" onClick={handleUpload}>
+                    <FaUpload className="icon" /> Upload to Val
+                </button>
             </div>
 
             {uploading && (
@@ -87,7 +99,9 @@ function Home() {
             )}
 
             <Link to="/camera">
-                <button className="button-36">📷 Use Camera</button>
+                <button className="button-36">
+                    <FaCamera className="icon" /> Use Camera
+                </button>
             </Link>
         </div>
     );

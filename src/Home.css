@@ -1,98 +1,111 @@
-@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@400;700&display=swap');
-
 body {
     background-color: #f8f6f2;
     font-family: 'Playfair Display', serif;
     color: #2c2c2c;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
     margin: 0;
-    padding: 20px;
+    padding: 0;
 }
 
-.App-header {
-    background-color: #fffefa;
-    width: 90%;
-    max-width: 500px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+.home-container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: #fffefa;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 40px 30px;
+    text-align: center;
 }
 
-h1 {
-    font-size: 3rem;
-    color: #2c2c2c;
+.home-title {
+    font-size: 2.8rem;
+    font-weight: bold;
     margin-bottom: 10px;
 }
 
-p {
+.home-subtitle {
     font-size: 1.2rem;
-    color: #2c2c2c;
+    margin-bottom: 30px;
+    color: #555;
+}
+
+.upload-section {
+    margin-bottom: 30px;
 }
 
 .custom-file-upload {
     background: #2c2c2c;
     color: white;
-    font-size: 1rem;
     padding: 12px 25px;
-    border: none;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    display: inline-block;
+    border-radius: 30px;
     font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: 0.3s ease;
 }
 
 .custom-file-upload:hover {
-    background: #000;
-    transform: scale(1.05);
+    background: #1a1a1a;
 }
 
 .custom-file-upload input {
     display: none;
 }
 
-.file-names {
-    font-size: 1rem;
-    color: #2c2c2c;
-    margin-top: 10px;
-    font-weight: bold;
-}
-
 .button-36 {
     background: #2c2c2c;
-    border-radius: 8px;
+    color: #fff;
+    padding: 12px 25px;
+    border-radius: 30px;
     border: none;
-    color: #FFFFFF;
+    font-weight: bold;
+    font-size: 1rem;
+    margin-top: 20px;
     cursor: pointer;
-    font-size: 16px;
-    font-weight: 500;
-    height: 3rem;
-    padding: 0 1.6rem;
-    text-shadow: rgba(0, 0, 0, 0.25) 0 3px 8px;
-    transition: all .5s;
-    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.3s ease;
 }
 
 .button-36:hover {
     background: #1a1a1a;
-    box-shadow: rgba(0, 0, 0, 0.5) 0 1px 30px;
-    transition-duration: .1s;
+}
+
+.thumbnail-preview {
+    position: relative;
+    height: 90px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.thumbnail {
+    position: absolute;
+    width: 70px;
+    height: 90px;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.icon {
+    font-size: 1.2rem;
 }
 
 .popup {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
     height: 100%;
+    width: 100%;
     background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
@@ -101,54 +114,25 @@ p {
 
 .popup-content {
     background: white;
-    padding: 20px;
-    border-radius: 10px;
+    padding: 25px;
+    border-radius: 12px;
     text-align: center;
+    max-width: 300px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .spinner {
     width: 40px;
     height: 40px;
-    border: 5px solid rgba(0, 0, 0, 0.1);
+    border: 4px solid rgba(0, 0, 0, 0.1);
     border-left-color: #2c2c2c;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto;
+    margin: 20px auto;
 }
 
 @keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-
     to {
         transform: rotate(360deg);
-    }
-}
-
-@media screen and (max-width: 768px) {
-    body {
-        background-position: left center;
-    }
-
-    .App-header {
-        width: 95%;
-        max-width: 400px;
-        padding: 15px;
-    }
-
-    h1 {
-        font-size: 2.5rem;
-    }
-
-    p {
-        font-size: 1rem;
-    }
-
-    .custom-file-upload,
-    .button-36 {
-        font-size: 0.9rem;
-        padding: 8px 15px;
     }
 }
