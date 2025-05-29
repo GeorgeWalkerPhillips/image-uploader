@@ -7,44 +7,57 @@
 html,
 body {
     height: 100%;
-    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
     background-color: black;
+    font-family: 'Arial', sans-serif;
     overflow: hidden;
+    color: white;
 }
 
 .camera-fullscreen {
+    position: relative;
+    width: 100vw;
+    height: 100dvh;
+    background: black;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    /* center vertically */
     align-items: center;
-    min-height: 100dvh;
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    background: black;
-    position: relative;
+}
+
+.video-feed {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
 }
 
 .top-bar {
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
     width: 100%;
-    padding: 16px;
+    padding: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 2;
+    z-index: 3;
+    background: transparent;
     color: white;
+    font-size: 18px;
 }
 
 .event-name {
+    font-weight: 600;
     font-size: 16px;
-    font-weight: bold;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
 }
 
 .icon-button {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.4);
     border: none;
     border-radius: 50%;
     padding: 10px;
@@ -53,90 +66,42 @@ body {
     cursor: pointer;
 }
 
-.camera-viewfinder {
-    margin-top: 80px;
-    margin-bottom: 100px;
-}
-
-.video-feed {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
 .bottom-bar {
     position: absolute;
-    bottom: 20px;
-    left: 0;
+    bottom: 30px;
     width: 100%;
+    padding: 0 30px;
     display: flex;
     justify-content: space-between;
-    /* spread items */
     align-items: center;
-    padding: 0 20px;
-    box-sizing: border-box;
-    z-index: 5;
+    z-index: 3;
 }
 
 .shutter-button {
-    width: 70px;
-    height: 70px;
+    width: 80px;
+    height: 80px;
     background: white;
-    border: 4px solid #ccc;
     border-radius: 50%;
+    border: 6px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
     cursor: pointer;
+    transition: transform 0.1s ease;
 }
 
-.thumbnail-placeholder {
-    width: 50px;
-    height: 50px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+.shutter-button:active {
+    transform: scale(0.95);
 }
 
 .thumbnail {
     width: 60px;
     height: 60px;
     object-fit: cover;
-    border-radius: 8px;
-    margin-right: auto;
-}
-
-.preview-overlay {
-    position: absolute;
-    z-index: 999;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100dvh;
-    background: rgba(0, 0, 0, 0.9);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.preview-overlay img {
-    max-width: 90%;
-    max-height: 60vh;
     border-radius: 12px;
-    margin-bottom: 20px;
-}
-
-.preview-overlay button {
-    padding: 12px 20px;
-    font-size: 16px;
-    background: #4caf50;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    margin: 5px;
-    cursor: pointer;
+    border: 2px solid white;
 }
 
 .flip-button {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
     color: white;
     border: none;
     padding: 12px;
