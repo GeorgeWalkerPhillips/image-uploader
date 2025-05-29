@@ -40,12 +40,17 @@ function CameraCapture() {
         const canvas = canvasRef.current;
         const video = videoRef.current;
 
+        // Set canvas width and height to video’s actual size or aspect ratio
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
         const context = canvas.getContext('2d');
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         const imageData = canvas.toDataURL('image/png');
         setCapturedImage(imageData);
     };
+
 
     const uploadImage = async () => {
         if (!capturedImage) return;
@@ -89,6 +94,7 @@ function CameraCapture() {
             {capturedImage && (
                 <div className="preview-overlay">
                     <img src={capturedImage} alt="Captured" />
+                    <button onClick={() => setCapturedImage(null)}>Retake</button>  {/* Retake button */}
                     <button onClick={uploadImage} disabled={uploading}>
                         {uploading ? "Uploading..." : "Upload"}
                     </button>
