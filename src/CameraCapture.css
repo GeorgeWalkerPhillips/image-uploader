@@ -16,15 +16,19 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    /* center vertically */
     align-items: center;
     min-height: 100dvh;
-    /* better than 100vh for mobile */
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     background: black;
     position: relative;
 }
 
 .top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     width: 100%;
     padding: 16px;
     display: flex;
@@ -50,15 +54,8 @@ body {
 }
 
 .camera-viewfinder {
-    width: 90vw;
-    max-width: 420px;
-    aspect-ratio: 3 / 4;
-    border-radius: 24px;
-    overflow: hidden;
-    background: black;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-    position: relative;
-    z-index: 1;
+    margin-top: 80px;
+    margin-bottom: 100px;
 }
 
 .video-feed {
