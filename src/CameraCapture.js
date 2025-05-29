@@ -96,11 +96,28 @@ function CameraCapture() {
         }
     };
 
+    const enableFlash = () => {
+        const stream = videoRef.current?.srcObject;
+        const track = stream?.getVideoTracks()[0];
+
+        if (track) {
+            const capabilities = track.getCapabilities();
+
+            if (capabilities.torch) {
+                track.applyConstraints({
+                    advanced: [{ torch: true }]
+                }).catch(e => console.error('Torch failed:', e));
+            } else {
+                alert('Flash/torch is not supported on this device/browser.');
+            }
+        }
+    };
+
     return (
         <div className="camera-fullscreen">
             {/* Top bar */}
             <div className="top-bar">
-                <button className="icon-button">⚡</button>
+                <button className="icon-button" onClick={enableFlash}>⚡</button>
                 <span className="event-name">Chloe & Tyler</span>
                 <button className="icon-button">☰</button>
             </div>
