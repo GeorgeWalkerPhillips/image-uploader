@@ -73,7 +73,8 @@ body {
     left: 0;
     width: 100%;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
+    /* spread items */
     align-items: center;
     padding: 0 20px;
     box-sizing: border-box;
@@ -138,10 +139,6 @@ body {
 }
 
 .flip-button {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    z-index: 10;
     background: rgba(0, 0, 0, 0.5);
     color: white;
     border: none;

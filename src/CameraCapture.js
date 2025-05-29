@@ -113,19 +113,22 @@ function CameraCapture() {
 
             {/* Bottom bar with shutter and thumbnail */}
             <div className="bottom-bar">
-                {capturedImage && (
-                    <img
-                        src={capturedImage}
-                        alt="Thumbnail"
-                        className="thumbnail"
-                    />
+                {/* Left: Thumbnail */}
+                {capturedImage ? (
+                    <img src={capturedImage} alt="Thumbnail" className="thumbnail" />
+                ) : (
+                    <div style={{ width: '60px' }}></div> // keep space even if no thumbnail
                 )}
+
+                {/* Center: Shutter Button */}
                 <button className="shutter-button" onClick={captureImage}></button>
-                {/* Flip Camera Button */}
+
+                {/* Right: Flip Camera Button */}
                 <button className="flip-button" onClick={flipCamera}>
                     <FaSyncAlt />
                 </button>
             </div>
+
         </div>
 
     );
