@@ -151,3 +151,30 @@ body {
     height: 60px;
     cursor: pointer;
 }
+
+.zoom-controls {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 3;
+}
+
+.zoom-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid white;
+    color: white;
+    padding: 8px 12px;
+    font-size: 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.zoom-button.active {
+    background: white;
+    color: black;
+    font-weight: bold;
+}
