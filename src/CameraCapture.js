@@ -48,6 +48,9 @@ function CameraCapture() {
 
         const imageData = canvas.toDataURL('image/png');
         setCapturedImage(imageData);
+
+        // Automatically upload after capture
+        autoUpload(imageData);
     };
 
     const uploadImage = async () => {
@@ -73,6 +76,26 @@ function CameraCapture() {
         }
     };
 
+    const autoUpload = async (imageData) => {
+        setUploading(true);
+        const base64 = imageData.replace("data:image/png;base64,", "");
+        const formData = new FormData();
+        formData.append("image", base64);
+
+        try {
+            const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
+                method: "POST",
+                body: formData,
+            });
+            const result = await response.json();
+            console.log("Auto upload success:", result);
+        } catch (error) {
+            console.error("Auto upload failed:", error);
+        } finally {
+            setUploading(false);
+        }
+    };
+
     return (
         <div className="camera-fullscreen">
             {/* Top bar */}
@@ -88,13 +111,16 @@ function CameraCapture() {
             </div>
             <canvas ref={canvasRef} width="400" height="300" style={{ display: 'none' }} />
 
-            {/* Bottom bar */}
+            {/* Bottom bar with shutter and thumbnail */}
             <div className="bottom-bar">
-                <div className="thumbnail-placeholder" />
+                {capturedImage && (
+                    <img
+                        src={capturedImage}
+                        alt="Thumbnail"
+                        className="thumbnail"
+                    />
+                )}
                 <button className="shutter-button" onClick={captureImage}></button>
-                <button className="icon-button" onClick={flipCamera}>
-                    <FaSyncAlt />
-                </button>
             </div>
 
             {/* Preview */}
