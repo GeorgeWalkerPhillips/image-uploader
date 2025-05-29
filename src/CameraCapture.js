@@ -67,11 +67,9 @@ function CameraCapture() {
             });
 
             const result = await response.json();
-            console.log(result);
-            alert("Upload complete!");
+            console.log("Upload successful:", result);
         } catch (error) {
             console.error("Upload failed:", error);
-            alert("Upload failed.");
         } finally {
             setUploading(false);
         }
