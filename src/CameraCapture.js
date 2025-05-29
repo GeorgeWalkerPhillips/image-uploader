@@ -7,7 +7,7 @@ function CameraCapture() {
     const canvasRef = useRef(null);
     const [capturedImage, setCapturedImage] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const [facingMode, setFacingMode] = useState("user"); // "user" or "environment"
+    const [facingMode, setFacingMode] = useState("user");
 
     useEffect(() => {
         startCamera();
@@ -40,7 +40,6 @@ function CameraCapture() {
         const canvas = canvasRef.current;
         const video = videoRef.current;
 
-        // Set canvas width and height to video’s actual size or aspect ratio
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
@@ -50,7 +49,6 @@ function CameraCapture() {
         const imageData = canvas.toDataURL('image/png');
         setCapturedImage(imageData);
     };
-
 
     const uploadImage = async () => {
         if (!capturedImage) return;
@@ -80,19 +78,27 @@ function CameraCapture() {
             <video ref={videoRef} autoPlay playsInline className="video-feed" />
             <canvas ref={canvasRef} width="400" height="300" style={{ display: 'none' }} />
 
-            {/* Flip Camera Button */}
-            <button className="flip-button" onClick={flipCamera}>
-                <FaSyncAlt />
-            </button>
+            {/* Top Bar */}
+            <div className="top-bar">
+                <button className="icon-button">⚡</button>
+                <span className="event-name">Chloe & Tyler</span>
+                <button className="icon-button">☰</button>
+            </div>
 
-            {/* Shutter Button */}
-            <button className="shutter-button" onClick={captureImage}></button>
+            {/* Bottom Bar */}
+            <div className="bottom-bar">
+                <div className="thumbnail-placeholder" />
+                <button className="shutter-button" onClick={captureImage}></button>
+                <button className="icon-button" onClick={flipCamera}>
+                    <FaSyncAlt />
+                </button>
+            </div>
 
-            {/* Preview & Upload */}
+            {/* Preview Overlay */}
             {capturedImage && (
                 <div className="preview-overlay">
                     <img src={capturedImage} alt="Captured" />
-                    <button onClick={() => setCapturedImage(null)}>Retake</button>  {/* Retake button */}
+                    <button onClick={() => setCapturedImage(null)}>Retake</button>
                     <button onClick={uploadImage} disabled={uploading}>
                         {uploading ? "Uploading..." : "Upload"}
                     </button>
