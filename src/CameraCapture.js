@@ -121,6 +121,10 @@ function CameraCapture() {
                     />
                 )}
                 <button className="shutter-button" onClick={captureImage}></button>
+                {/* Flip Camera Button */}
+                <button className="flip-button" onClick={flipCamera}>
+                    <FaSyncAlt />
+                </button>
             </div>
         </div>
 

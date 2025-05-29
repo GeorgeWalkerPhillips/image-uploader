@@ -133,3 +133,17 @@ body {
     margin: 5px;
     cursor: pointer;
 }
+
+.flip-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+}
