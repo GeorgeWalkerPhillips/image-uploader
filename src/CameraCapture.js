@@ -122,17 +122,6 @@ function CameraCapture() {
                 )}
                 <button className="shutter-button" onClick={captureImage}></button>
             </div>
-
-            {/* Preview */}
-            {capturedImage && (
-                <div className="preview-overlay">
-                    <img src={capturedImage} alt="Captured" />
-                    <button onClick={() => setCapturedImage(null)}>Retake</button>
-                    <button onClick={uploadImage} disabled={uploading}>
-                        {uploading ? "Uploading..." : "Upload"}
-                    </button>
-                </div>
-            )}
         </div>
 
     );
