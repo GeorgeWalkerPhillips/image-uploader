@@ -8,6 +8,10 @@ function CameraCapture() {
     const [capturedImage, setCapturedImage] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [facingMode, setFacingMode] = useState("user");
+    const [capturedImages, setCapturedImages] = useState([]);
+    const [showGallery, setShowGallery] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
 
     useEffect(() => {
         startCamera();
@@ -47,9 +51,9 @@ function CameraCapture() {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         const imageData = canvas.toDataURL('image/png');
-        setCapturedImage(imageData);
 
-        // Automatically upload after capture
+        setCapturedImages(prev => [...prev, imageData]);
+        setCurrentIndex(capturedImages.length); // for next image index
         autoUpload(imageData);
     };
 
@@ -131,10 +135,18 @@ function CameraCapture() {
             {/* Bottom bar with shutter and thumbnail */}
             <div className="bottom-bar">
                 {/* Left: Thumbnail */}
-                {capturedImage ? (
-                    <img src={capturedImage} alt="Thumbnail" className="thumbnail" />
+                {capturedImages.length > 0 ? (
+                    <img
+                        src={capturedImages[capturedImages.length - 1]}
+                        alt="Thumbnail"
+                        className="thumbnail"
+                        onClick={() => {
+                            setShowGallery(true);
+                            setCurrentIndex(capturedImages.length - 1);
+                        }}
+                    />
                 ) : (
-                    <div style={{ width: '60px' }}></div> // keep space even if no thumbnail
+                    <div style={{ width: '60px' }}></div>
                 )}
 
                 {/* Center: Shutter Button */}
@@ -145,6 +157,35 @@ function CameraCapture() {
                     <FaSyncAlt />
                 </button>
             </div>
+            {showGallery && (
+                <div className="preview-overlay">
+                    <img src={capturedImages[currentIndex]} alt="Preview" />
+
+                    <div style={{ display: "flex", gap: "10px" }}>
+                        <button
+                            onClick={() =>
+                                setCurrentIndex((prev) => (prev > 0 ? prev - 1 : prev))
+                            }
+                            disabled={currentIndex === 0}
+                        >
+                            ◀
+                        </button>
+
+                        <button
+                            onClick={() =>
+                                setCurrentIndex((prev) =>
+                                    prev < capturedImages.length - 1 ? prev + 1 : prev
+                                )
+                            }
+                            disabled={currentIndex === capturedImages.length - 1}
+                        >
+                            ▶
+                        </button>
+                    </div>
+
+                    <button onClick={() => setShowGallery(false)}>Close</button>
+                </div>
+            )}
 
         </div>
 
