@@ -13,6 +13,9 @@ function CameraCapture() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [zoom, setZoom] = useState(1);
 
+    // --- 1. Add zoomLevel state ---
+    const [zoomLevel, setZoomLevel] = useState(1);
+    
     useEffect(() => {
         startCamera();
         return () => {
