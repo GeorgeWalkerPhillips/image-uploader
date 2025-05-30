@@ -9,6 +9,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/camera" element={<CameraCapture />} />
+        <Route path="/admin-setup-3782" element={<EventSetup />} />
       </Routes>
     </div>
   );
