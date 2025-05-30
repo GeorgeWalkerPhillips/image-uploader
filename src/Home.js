@@ -1,14 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Home.css";
 import CameraCapture from "./CameraCapture";
 import { Link } from "react-router-dom";
 import { FaUpload, FaCamera } from "react-icons/fa";
+import jwt_decode from "jwt-decode";
 
 function Home() {
     const [images, setImages] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [fileNames, setFileNames] = useState([]);
     const [uploadComplete, setUploadComplete] = useState(false);
+    const [userEmail, setUserEmail] = useState(null);
+
+    useEffect(() => {
+        fetch("https://script.google.com/macros/s/AKfycbygdAxz0zjwvsYrfMQklZLRjgyWXZFzSue8mD1W8xwUm4iJD-iF63CYJRbSlYM4_ANs/exec", {
+            method: "POST",
+            credentials: "include", // ⬅️ This is IMPORTANT for Google to detect login
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.email) {
+                    setUserEmail(data.email);
+                } else {
+                    console.warn("No email returned.");
+                }
+            })
+            .catch(err => {
+                console.error("Login error:", err);
+            });
+    }, []);
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
@@ -54,6 +74,12 @@ function Home() {
         <div className="home-container">
             <h1 className="home-title">Capture by Val</h1>
             <p className="home-subtitle">Upload your moments to Val's lens</p>
+
+            {userEmail ? (
+                <p>Logged in as: <strong>{userEmail}</strong></p>
+            ) : (
+                <p>Please log into your Google Account to use the app.</p>
+            )}
 
             <div className="upload-section">
                 <label className="custom-file-upload">
