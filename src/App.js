@@ -11,7 +11,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/camera" element={<CameraCapture />} />
-        <Route path="/admin" element={<EventSetup />} />
       </Routes>
     </div>
   );
