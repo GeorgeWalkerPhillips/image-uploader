@@ -3,7 +3,6 @@ import "./Home.css";
 import CameraCapture from "./CameraCapture";
 import { Link } from "react-router-dom";
 import { FaUpload, FaCamera } from "react-icons/fa";
-import jwt_decode from "jwt-decode";
 
 function Home() {
     const [images, setImages] = useState([]);
