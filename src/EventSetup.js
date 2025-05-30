@@ -5,7 +5,7 @@ function EventSetup() {
     const [authenticated, setAuthenticated] = useState(false);
     const [passwordInput, setPasswordInput] = useState("");
 
-    const PASSWORD = "valrocks123"; // Change this
+    const PASSWORD = "valisawesome123"; 
 
     const [eventName, setEventName] = useState("");
     const [eventId, setEventId] = useState("");

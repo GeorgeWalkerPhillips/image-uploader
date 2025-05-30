@@ -10,15 +10,36 @@ function useQuery() {
 function Home() {
     const query = useQuery();
     const eventId = query.get("event");
+
+    // State to hold fetched event name
+    const [eventName, setEventName] = useState("");
+
     const [images, setImages] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [fileNames, setFileNames] = useState([]);
     const [uploadComplete, setUploadComplete] = useState(false);
 
+    // Fetch event name from Google Apps Script when eventId changes
     useEffect(() => {
         if (!eventId) {
             alert("No event ID found. Please use a valid QR code or link.");
+            return;
         }
+
+        // Fetch event details using your doGet endpoint
+        fetch(`https://script.google.com/macros/s/AKfycbygdAxz0zjwvsYrfMQklZLRjgyWXZFzSue8mD1W8xwUm4iJD-iF63CYJRbSlYM4_ANs/exec?id=${eventId}`)
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    setEventName(data.event.name);
+                } else {
+                    alert("Event not found for this ID.");
+                }
+            })
+            .catch((err) => {
+                console.error("Error fetching event info:", err);
+                alert("Error fetching event info.");
+            });
     }, [eventId]);
 
     const handleFileChange = (e) => {
@@ -54,10 +75,13 @@ function Home() {
                         formData.append("image", base64String);
                         formData.append("event", eventId);
 
-                        const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
-                            method: "POST",
-                            body: formData,
-                        });
+                        const response = await fetch(
+                            "https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec",
+                            {
+                                method: "POST",
+                                body: formData,
+                            }
+                        );
 
                         const result = await response.json();
                         console.log(result);
@@ -86,9 +110,19 @@ function Home() {
             <p className="home-subtitle">Upload your moments to Val's lens</p>
 
             {eventId ? (
-                <p>Event: <strong>{eventId}</strong></p>
+                <>
+                    {eventName ? (
+                        <p className="event-name-banner">
+                            Event: <strong>{eventName}</strong> (ID: {eventId})
+                        </p>
+                    ) : (
+                        <p>Loading event info...</p>
+                    )}
+                </>
             ) : (
-                <p className="warning">No event ID detected. Please use the correct QR code.</p>
+                <p className="warning">
+                    No event ID detected. Please use the correct QR code or event link.
+                </p>
             )}
 
             <div className="upload-section">
@@ -111,7 +145,7 @@ function Home() {
                     </div>
                 )}
 
-                <button className="button-36" onClick={handleUpload}>
+                <button className="button-36" onClick={handleUpload} disabled={uploading}>
                     <FaUpload className="icon" /> Upload to Val
                 </button>
             </div>
@@ -128,7 +162,7 @@ function Home() {
             {uploadComplete && (
                 <div className="popup">
                     <div className="popup-content">
-                        <p>Upload complete! 🎉</p>
+                        <p>Upload complete!</p>
                         <button onClick={handleOk}>OK</button>
                     </div>
                 </div>
