@@ -7,7 +7,6 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.7.7",
-    "expo": "^53.0.9",
     "firebase": "^11.0.2",
     "gapi-script": "^1.2.0",
     "jwt-decode": "^4.0.0",
