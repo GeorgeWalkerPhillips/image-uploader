@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import QRCode from "qrcode.react";
+import { QRCode } from 'qrcode.react';
 
 function EventSetup() {
     const [authenticated, setAuthenticated] = useState(false);
