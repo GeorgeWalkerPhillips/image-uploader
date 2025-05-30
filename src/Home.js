@@ -1,33 +1,25 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, Link } from "react-router-dom";
 import "./Home.css";
-import CameraCapture from "./CameraCapture";
-import { Link } from "react-router-dom";
 import { FaUpload, FaCamera } from "react-icons/fa";
 
+function useQuery() {
+    return new URLSearchParams(useLocation().search);
+}
+
 function Home() {
+    const query = useQuery();
+    const eventId = query.get("event");
     const [images, setImages] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [fileNames, setFileNames] = useState([]);
     const [uploadComplete, setUploadComplete] = useState(false);
-    const [userEmail, setUserEmail] = useState(null);
 
     useEffect(() => {
-        fetch("https://script.google.com/macros/s/AKfycbygdAxz0zjwvsYrfMQklZLRjgyWXZFzSue8mD1W8xwUm4iJD-iF63CYJRbSlYM4_ANs/exec", {
-            method: "POST",
-            credentials: "include", // ⬅️ This is IMPORTANT for Google to detect login
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.email) {
-                    setUserEmail(data.email);
-                } else {
-                    console.warn("No email returned.");
-                }
-            })
-            .catch(err => {
-                console.error("Login error:", err);
-            });
-    }, []);
+        if (!eventId) {
+            alert("No event ID found. Please use a valid QR code or link.");
+        }
+    }, [eventId]);
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
@@ -36,6 +28,11 @@ function Home() {
     };
 
     const handleUpload = async () => {
+        if (!eventId) {
+            alert("Missing event ID. Please use a valid QR code.");
+            return;
+        }
+
         if (images.length === 0) {
             alert("Please select at least one file.");
             return;
@@ -43,25 +40,39 @@ function Home() {
 
         setUploading(true);
 
-        const formData = new FormData();
         for (const image of images) {
             const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64String = reader.result.replace("data:", "").replace(/^.+,/, "");
-                formData.append("image", base64String);
 
-                const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
-                    method: "POST",
-                    body: formData,
-                });
+            await new Promise((resolve, reject) => {
+                reader.onloadend = async () => {
+                    try {
+                        const base64String = reader.result
+                            .replace("data:", "")
+                            .replace(/^.+,/, "");
 
-                const result = await response.json();
-                console.log(result);
-                setUploading(false);
-                setUploadComplete(true);
-            };
-            reader.readAsDataURL(image);
+                        const formData = new FormData();
+                        formData.append("image", base64String);
+                        formData.append("event", eventId);
+
+                        const response = await fetch("https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec", {
+                            method: "POST",
+                            body: formData,
+                        });
+
+                        const result = await response.json();
+                        console.log(result);
+                        resolve();
+                    } catch (err) {
+                        console.error("Upload error:", err);
+                        reject(err);
+                    }
+                };
+                reader.readAsDataURL(image);
+            });
         }
+
+        setUploading(false);
+        setUploadComplete(true);
     };
 
     const handleOk = () => {
@@ -74,10 +85,10 @@ function Home() {
             <h1 className="home-title">Capture by Val</h1>
             <p className="home-subtitle">Upload your moments to Val's lens</p>
 
-            {userEmail ? (
-                <p>Logged in as: <strong>{userEmail}</strong></p>
+            {eventId ? (
+                <p>Event: <strong>{eventId}</strong></p>
             ) : (
-                <p>Please log into your Google Account to use the app.</p>
+                <p className="warning">No event ID detected. Please use the correct QR code.</p>
             )}
 
             <div className="upload-section">
