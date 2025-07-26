@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import "./Home.css";
 import { FaUpload, FaCamera } from "react-icons/fa";
+import { db, storage } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
 
 function useQuery() {
     return new URLSearchParams(useLocation().search);
@@ -62,42 +66,30 @@ function Home() {
         setUploading(true);
 
         for (const image of images) {
-            const reader = new FileReader();
+            try {
+                const fileName = `${Date.now()}_${image.name}`;
+                const storagePath = `events/${eventId}/${fileName}`;
+                const storageRef = ref(storage, storagePath);
 
-            await new Promise((resolve, reject) => {
-                reader.onloadend = async () => {
-                    try {
-                        const base64String = reader.result
-                            .replace("data:", "")
-                            .replace(/^.+,/, "");
+                // Upload to Firebase Storage
+                const snapshot = await uploadBytes(storageRef, image);
 
-                        const formData = new FormData();
-                        formData.append("image", base64String);
-                        formData.append("event", eventId);
+                // Save metadata to Firestore
+                await addDoc(collection(db, `events/${eventId}/photos`), {
+                    storagePath,
+                    uploadedAt: serverTimestamp()
+                });
 
-                        const response = await fetch(
-                            "https://script.google.com/macros/s/AKfycbyKY9Ndbchu1dMwYTTMOJ_hJLwQ76Vu-bWkGuF3Y7wD53Lsodj3ecdtyjQhr4uGRQH9Wg/exec",
-                            {
-                                method: "POST",
-                                body: formData,
-                            }
-                        );
-
-                        const result = await response.json();
-                        console.log(result);
-                        resolve();
-                    } catch (err) {
-                        console.error("Upload error:", err);
-                        reject(err);
-                    }
-                };
-                reader.readAsDataURL(image);
-            });
+                console.log(`Uploaded: ${fileName}`);
+            } catch (err) {
+                console.error("Upload error:", err);
+            }
         }
 
         setUploading(false);
         setUploadComplete(true);
     };
+    
 
     const handleOk = () => {
         setUploadComplete(false);
