@@ -20,7 +20,6 @@ function Home() {
     const [uploading, setUploading] = useState(false);
     const [uploadComplete, setUploadComplete] = useState(false);
 
-    // ✅ Fetch event info from Firestore instead of Apps Script
     useEffect(() => {
         const fetchEvent = async () => {
             if (!eventId) {

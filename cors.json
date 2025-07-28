@@ -1,0 +1,16 @@
+[
+    {
+        "origin": [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "https://image-uploader-git-main-georgewalkerphillips-projects.vercel.app",
+            "https://capture-by-val.vercel.app"
+        ],
+        "method": [
+            "GET",
+            "POST",
+            "PUT"
+        ],
+        "maxAgeSeconds": 3600
+    }
+]
