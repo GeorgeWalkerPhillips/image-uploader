@@ -3,9 +3,8 @@ import { useLocation, Link } from "react-router-dom";
 import "./Home.css";
 import { FaUpload, FaCamera } from "react-icons/fa";
 import { db, storage } from './firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-
+import { ref, uploadBytes } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 
 function useQuery() {
     return new URLSearchParams(useLocation().search);
@@ -15,41 +14,42 @@ function Home() {
     const query = useQuery();
     const eventId = query.get("event");
 
-    // State to hold fetched event name
     const [eventName, setEventName] = useState("");
-
     const [images, setImages] = useState([]);
-    const [uploading, setUploading] = useState(false);
     const [fileNames, setFileNames] = useState([]);
+    const [uploading, setUploading] = useState(false);
     const [uploadComplete, setUploadComplete] = useState(false);
 
-    // Fetch event name from Google Apps Script when eventId changes
+    // ✅ Fetch event info from Firestore instead of Apps Script
     useEffect(() => {
-        if (!eventId) {
-            alert("No event ID found. Please use a valid QR code or link.");
-            return;
-        }
+        const fetchEvent = async () => {
+            if (!eventId) {
+                alert("No event ID found. Please use a valid QR code or link.");
+                return;
+            }
 
-        // Fetch event details using your doGet endpoint
-        fetch(`https://script.google.com/macros/s/AKfycbygdAxz0zjwvsYrfMQklZLRjgyWXZFzSue8mD1W8xwUm4iJD-iF63CYJRbSlYM4_ANs/exec?id=${eventId}`)
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.success) {
-                    setEventName(data.event.name);
+            try {
+                const docRef = doc(db, "events", eventId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    setEventName(docSnap.data().name);
                 } else {
-                    alert("Event not found for this ID.");
+                    alert("Event not found in Firestore.");
                 }
-            })
-            .catch((err) => {
-                console.error("Error fetching event info:", err);
-                alert("Error fetching event info.");
-            });
+            } catch (err) {
+                console.error("Error fetching event from Firestore:", err);
+                alert("Error loading event info.");
+            }
+        };
+
+        fetchEvent();
     }, [eventId]);
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
         setImages(files);
-        setFileNames(files.map((file) => file.name));
+        setFileNames(files.map(file => file.name));
     };
 
     const handleUpload = async () => {
@@ -71,10 +71,8 @@ function Home() {
                 const storagePath = `events/${eventId}/${fileName}`;
                 const storageRef = ref(storage, storagePath);
 
-                // Upload to Firebase Storage
-                const snapshot = await uploadBytes(storageRef, image);
+                await uploadBytes(storageRef, image);
 
-                // Save metadata to Firestore
                 await addDoc(collection(db, `events/${eventId}/photos`), {
                     storagePath,
                     uploadedAt: serverTimestamp()
@@ -89,7 +87,6 @@ function Home() {
         setUploading(false);
         setUploadComplete(true);
     };
-    
 
     const handleOk = () => {
         setUploadComplete(false);
