@@ -9,7 +9,11 @@
         "method": [
             "GET",
             "POST",
-            "PUT"
+            "PUT",
+            "DELETE"
+        ],
+        "responseHeader": [
+            "Content-Type"
         ],
         "maxAgeSeconds": 3600
     }
