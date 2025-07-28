@@ -8,7 +8,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyB3OP7WXKT36M7qO-yrJHnm3OeyZVGU078",
     authDomain: "capturexval.firebaseapp.com",
     projectId: "capturexval",
-    storageBucket: "capturexval.appspot.com",  // ✅ Fixed domain
+    storageBucket: "capturexval.firebasestorage.app",  
     messagingSenderId: "983180189880",
     appId: "1:983180189880:web:0c45489c563fe7bdf7d44d",
     measurementId: "G-P143X3T4RJ"  // Optional: okay to leave
