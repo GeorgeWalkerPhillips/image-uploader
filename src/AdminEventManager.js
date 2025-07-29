@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import QRCode from "qrcode.react";
+import { QRCodeCanvas } from 'qrcode.react'; // ✅ This is correct
 import jsPDF from "jspdf";
 
 function AdminEventManager() {
@@ -75,7 +75,7 @@ function AdminEventManager() {
             {qrGenerated && (
                 <div className="qr-section">
                     <h3>QR Code for Event</h3>
-                    <QRCode value={`https://yourapp.com/?event=${eventId}`} size={256} />
+                    <QRCodeCanvas value={`https://yourapp.com/?event=${eventId}`} size={256} />
                     <br />
                     <button onClick={downloadQRCodePDF}>Download as PDF</button>
                 </div>

@@ -2,6 +2,8 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth";
+
 
 // Your Firebase config
 const firebaseConfig = {
@@ -14,9 +16,10 @@ const firebaseConfig = {
     measurementId: "G-P143X3T4RJ"  // Optional: okay to leave
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Export Firestore and Storage services
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+const auth = getAuth(app);  // ✅ Add this line
+
+export { db, storage, auth };  // ✅ Now export it
