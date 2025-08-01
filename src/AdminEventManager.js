@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { QRCodeCanvas } from 'qrcode.react'; // ✅ This is correct
 import jsPDF from "jspdf";
+import "./AdminEventManager.css";
 
 function AdminEventManager() {
     const [user, setUser] = useState(null);
@@ -13,19 +14,31 @@ function AdminEventManager() {
     const [qrGenerated, setQrGenerated] = useState(false);
     const navigate = useNavigate();
 
-    const adminUID = "YOUR_ADMIN_UID"; // Replace with your Firebase UID
-
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (!currentUser || currentUser.uid !== adminUID) {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (!currentUser) {
                 navigate("/unauthorized");
-            } else {
-                setUser(currentUser);
+                return;
+            }
+
+            try {
+                const adminDocRef = doc(db, "admin", currentUser.uid);
+                const adminSnap = await getDoc(adminDocRef);
+
+                if (adminSnap.exists()) {
+                    setUser(currentUser); // Authorized admin
+                } else {
+                    navigate("/unauthorized"); // Not an admin
+                }
+            } catch (err) {
+                console.error("Error checking admin access:", err);
+                navigate("/unauthorized");
             }
         });
 
         return () => unsubscribe();
     }, [navigate]);
+    
 
     const createEvent = async () => {
         if (!eventName) return alert("Please enter an event name");
@@ -75,7 +88,7 @@ function AdminEventManager() {
             {qrGenerated && (
                 <div className="qr-section">
                     <h3>QR Code for Event</h3>
-                    <QRCodeCanvas value={`https://yourapp.com/?event=${eventId}`} size={256} />
+                    <QRCodeCanvas value={`https://capture-by-val.vercel.app/?event=${eventId}`} size={256} />
                     <br />
                     <button onClick={downloadQRCodePDF}>Download as PDF</button>
                 </div>
