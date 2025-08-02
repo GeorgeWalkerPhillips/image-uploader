@@ -70,6 +70,13 @@ function AdminEventManager() {
         pdf.save(`${eventName}_QR.pdf`);
     };
 
+    const copyLink = () => {
+        const link = `https://capture-by-val.vercel.app/?event=${eventId}`;
+        navigator.clipboard.writeText(link)
+            .then(() => alert("Link copied to clipboard!"))
+            .catch(err => console.error("Failed to copy link:", err));
+    }
+
     return (
         <div className="admin-container">
             <h1>Event Admin Panel</h1>
@@ -91,6 +98,7 @@ function AdminEventManager() {
                     <QRCodeCanvas value={`https://capture-by-val.vercel.app/?event=${eventId}`} size={256} />
                     <br />
                     <button onClick={downloadQRCodePDF}>Download as PDF</button>
+                    <button onClick={copyLink}>Copy Link</button>
                 </div>
             )}
         </div>
