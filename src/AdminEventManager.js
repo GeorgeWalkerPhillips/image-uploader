@@ -117,55 +117,23 @@ function AdminEventManager() {
                 <button onClick={createEvent}>Create New Event</button>
             </div>
 
-            <div className="events-grid">
-                {loading ? (
-                    <p>Loading events...</p>
-                ) : (
-                    events.map((event) => (
-                        <div key={event.id} className="event-card">
-                            <QRCodeCanvas
-                                id={`qr-${event.id}`}
-                                value={`https://capture-by-val.vercel.app/?event=${event.id}`}
-                                size={128}
-                            />
-                            {editingId === event.id ? (
-                                <>
-                                    <input
-                                        type="text"
-                                        value={newName}
-                                        onChange={(e) => setNewName(e.target.value)}
-                                    />
-                                    <button onClick={() => updateEvent(event.id)}>Save</button>
-                                    <button onClick={() => setEditingId(null)}>Cancel</button>
-                                </>
-                            ) : (
-                                <>
-                                    <h3>{event.name}</h3>
-                                    <p className="event-id">ID: {event.id}</p>
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(
-                                                `https://capture-by-val.vercel.app/?event=${event.id}`
-                                            );
-                                            alert("Link copied to clipboard!");
-                                        }}
-                                    >
-                                        Copy Link
-                                    </button>
-                                    <button onClick={() => downloadQRCodePDF(event.id, event.name)}>
-                                        Download QR
-                                    </button>
-                                    <button onClick={() => {
-                                        setEditingId(event.id);
-                                        setNewName(event.name);
-                                    }}>Edit</button>
-                                    <button className="danger" onClick={() => deleteEvent(event.id)}>Delete</button>
-                                </>
-                            )}
+            <div className="events-list">
+                {events.map((event) => (
+                    <div key={event.id} className="event-card">
+                        <QRCodeCanvas value={`https://capture-by-val.vercel.app/?event=${event.id}`} size={128} />
+                        <div className="event-name">{event.name}</div>
+                        <div className="event-id">ID: {event.id}</div>
+
+                        <div className="event-actions">
+                            <button className="copy" onClick={() => copyLink(event.id)}>Copy Link</button>
+                            <button className="download" onClick={() => downloadQRCodePDF(event)}>Download QR</button>
+                            <button className="edit" onClick={() => startEditing(event)}>Edit</button>
+                            <button className="delete" onClick={() => deleteEvent(event.id)}>Delete</button>
                         </div>
-                    ))
-                )}
+                    </div>
+                ))}
             </div>
+
         </div>
     );
 }
