@@ -133,8 +133,10 @@ function AdminEventManager() {
     };
 
     const formatDate = (timestamp) => {
-        return timestamp?.toDate().toLocaleDateString("en-ZA");
+        if (!timestamp || typeof timestamp.toDate !== "function") return "—";
+        return timestamp.toDate().toLocaleDateString("en-ZA");
     };
+
 
     const isExpired = (expiryTimestamp) => {
         if (!expiryTimestamp) return false;
