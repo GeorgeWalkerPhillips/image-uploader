@@ -1,4 +1,3 @@
-// AdminEventManager.js
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
@@ -12,6 +11,7 @@ import {
     doc,
     getDoc,
     serverTimestamp,
+    Timestamp,
 } from "firebase/firestore";
 import { QRCodeCanvas } from "qrcode.react";
 import jsPDF from "jspdf";
@@ -20,6 +20,8 @@ import "./AdminEventManager.css";
 function AdminEventManager() {
     const [user, setUser] = useState(null);
     const [eventName, setEventName] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const [events, setEvents] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [newName, setNewName] = useState("");
@@ -52,12 +54,6 @@ function AdminEventManager() {
         return () => unsubscribe();
     }, [navigate]);
 
-    const isExpired = (endDateString) => {
-        const now = new Date();
-        const endDate = new Date(endDateString);
-        return now > endDate;
-    };
-
     const fetchEvents = async () => {
         setLoading(true);
         const snapshot = await getDocs(collection(db, "events"));
@@ -67,21 +63,29 @@ function AdminEventManager() {
     };
 
     const createEvent = async () => {
-        if (!eventName) return alert("Please enter an event name");
-        try {
-            const now = new Date();
-            const endDate = new Date(now);
-            endDate.setDate(endDate.getDate() + 30);
+        if (!eventName || !startDate || !endDate)
+            return alert("Please fill in all event details.");
 
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (end < start) return alert("End date cannot be before start date");
+
+        const expiry = new Date(end);
+        expiry.setDate(expiry.getDate() + 30);
+
+        try {
             await addDoc(collection(db, "events"), {
                 name: eventName,
+                startDate: Timestamp.fromDate(start),
+                endDate: Timestamp.fromDate(end),
+                expiryDate: Timestamp.fromDate(expiry),
                 createdAt: serverTimestamp(),
-                startDate: now.toISOString(),
-                endDate: endDate.toISOString(),
                 coverPhotoUrl: "",
             });
 
             setEventName("");
+            setStartDate("");
+            setEndDate("");
             fetchEvents();
         } catch (err) {
             console.error("Failed to create event:", err);
@@ -128,6 +132,15 @@ function AdminEventManager() {
         setNewName(event.name);
     };
 
+    const formatDate = (timestamp) => {
+        return timestamp?.toDate().toLocaleDateString("en-ZA");
+    };
+
+    const isExpired = (expiryTimestamp) => {
+        if (!expiryTimestamp) return false;
+        return expiryTimestamp.toDate() < new Date();
+    };
+
     return (
         <div className="admin-container">
             <h1>📸 Event Admin Panel</h1>
@@ -139,44 +152,60 @@ function AdminEventManager() {
                     value={eventName}
                     onChange={(e) => setEventName(e.target.value)}
                 />
+                <label>Start Date:</label>
+                <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                />
+                <label>End Date:</label>
+                <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                />
                 <button onClick={createEvent}>Create New Event</button>
             </div>
 
             <div className="events-grid">
-                {events.map((event) => (
-                    <div key={event.id} className={`event-row ${isExpired(event.endDate) ? 'expired' : ''}`}>
-                        <div className="event-info">
-                            <QRCodeCanvas
-                                id={`qr-${event.id}`}
-                                value={`https://capture-by-val.vercel.app/?event=${event.id}`}
-                                size={64}
-                            />
-                            {editingId === event.id ? (
-                                <input
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                    onBlur={() => updateEvent(event.id)}
+                {events.map((event) => {
+                    const expired = isExpired(event.expiryDate);
+                    return (
+                        <div key={event.id} className={`event-row ${expired ? "expired" : ""}`}>
+                            <div className="event-info">
+                                <QRCodeCanvas
+                                    id={`qr-${event.id}`}
+                                    value={`https://capture-by-val.vercel.app/?event=${event.id}`}
+                                    size={64}
                                 />
-                            ) : (
-                                <div className="event-details">
-                                    <div className="event-name">
-                                        {event.name} {isExpired(event.endDate) && <span className="expired-label">Expired</span>}
+                                {editingId === event.id ? (
+                                    <input
+                                        value={newName}
+                                        onChange={(e) => setNewName(e.target.value)}
+                                        onBlur={() => updateEvent(event.id)}
+                                    />
+                                ) : (
+                                    <div className="event-details">
+                                        <div className="event-name">{event.name}</div>
+                                        <div className="event-id">ID: {event.id}</div>
+                                        <div className="event-dates">
+                                            <strong>Start:</strong> {formatDate(event.startDate)} <br />
+                                            <strong>End:</strong> {formatDate(event.endDate)} <br />
+                                            <strong>Expires:</strong> {formatDate(event.expiryDate)}
+                                        </div>
+                                        {expired && <div className="expired-label">📵 Expired</div>}
                                     </div>
-                                    <div className="event-id">ID: {event.id}</div>
-                                    <div className="event-dates">
-                                        From {new Date(event.startDate).toLocaleDateString()} to {new Date(event.endDate).toLocaleDateString()}
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
+                            <div className="event-actions">
+                                <button className="copy" onClick={() => copyLink(event.id)}>Copy Link</button>
+                                <button className="download" onClick={() => downloadQRCodePDF(event)}>Download QR</button>
+                                <button className="edit" onClick={() => startEditing(event)}>Edit</button>
+                                <button className="delete" onClick={() => deleteEvent(event.id)}>Delete</button>
+                            </div>
                         </div>
-                        <div className="event-actions">
-                            <button className="copy" onClick={() => copyLink(event.id)}>Copy Link</button>
-                            <button className="download" onClick={() => downloadQRCodePDF(event)}>Download QR</button>
-                            <button className="edit" onClick={() => startEditing(event)}>Edit</button>
-                            <button className="delete" onClick={() => deleteEvent(event.id)}>Delete</button>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

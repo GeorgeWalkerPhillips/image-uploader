@@ -287,3 +287,14 @@ button.delete {
 .event-actions button:hover {
     opacity: 0.9;
 }
+
+.event-row.expired {
+    background-color: #fff6f6;
+    border: 1px solid #fca5a5;
+}
+
+.expired-label {
+    color: #dc2626;
+    font-weight: bold;
+    margin-top: 6px;
+}
