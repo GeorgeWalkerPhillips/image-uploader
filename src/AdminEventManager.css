@@ -132,7 +132,7 @@ h1 {
 
 .event-form button {
     padding: 12px 20px;
-    background: #4f46e5;
+    background: #000000;
     color: white;
     border: none;
     border-radius: 8px;
@@ -189,22 +189,22 @@ h1 {
 }
 
 button.copy {
-    background-color: #2563eb;
+    background-color: #000000;
     color: white;
 }
 
 button.download {
-    background-color: #059669;
+    background-color: #000000;
     color: white;
 }
 
 button.edit {
-    background-color: #f59e0b;
+    background-color: #000000;
     color: white;
 }
 
 button.delete {
-    background-color: #ef4444;
+    background-color: #e70000;
     color: white;
 }
 
