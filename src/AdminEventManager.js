@@ -90,8 +90,8 @@ function AdminEventManager() {
         }
     };
 
-    const downloadQRCodePDF = (id, name) => {
-        const link = `https://capture-by-val.vercel.app/?event=${id}`;
+    const downloadQRCodePDF = (event) => {
+        const { id, name } = event;
         const canvas = document.getElementById(`qr-${id}`);
         const imgData = canvas.toDataURL("image/png");
 
@@ -101,6 +101,18 @@ function AdminEventManager() {
         pdf.addImage(imgData, "PNG", 10, 30, 180, 180);
         pdf.text(`Event ID: ${id}`, 10, 220);
         pdf.save(`${name}_QR.pdf`);
+    };
+
+    const copyLink = (id) => {
+        const link = `https://capture-by-val.vercel.app/?event=${id}`;
+        navigator.clipboard.writeText(link)
+            .then(() => alert("Link copied to clipboard!"))
+            .catch((err) => console.error("Failed to copy:", err));
+    };
+
+    const startEditing = (event) => {
+        setEditingId(event.id);
+        setNewName(event.name);
     };
 
     return (
@@ -117,13 +129,28 @@ function AdminEventManager() {
                 <button onClick={createEvent}>Create New Event</button>
             </div>
 
-            <div className="events-list">
+            <div className="events-grid">
                 {events.map((event) => (
-                    <div key={event.id} className="event-card">
-                        <QRCodeCanvas value={`https://capture-by-val.vercel.app/?event=${event.id}`} size={128} />
-                        <div className="event-name">{event.name}</div>
-                        <div className="event-id">ID: {event.id}</div>
-
+                    <div key={event.id} className="event-row">
+                        <div className="event-info">
+                            <QRCodeCanvas
+                                id={`qr-${event.id}`}
+                                value={`https://capture-by-val.vercel.app/?event=${event.id}`}
+                                size={64}
+                            />
+                            {editingId === event.id ? (
+                                <input
+                                    value={newName}
+                                    onChange={(e) => setNewName(e.target.value)}
+                                    onBlur={() => updateEvent(event.id)}
+                                />
+                            ) : (
+                                <div className="event-details">
+                                    <div className="event-name">{event.name}</div>
+                                    <div className="event-id">ID: {event.id}</div>
+                                </div>
+                            )}
+                        </div>
                         <div className="event-actions">
                             <button className="copy" onClick={() => copyLink(event.id)}>Copy Link</button>
                             <button className="download" onClick={() => downloadQRCodePDF(event)}>Download QR</button>
@@ -133,7 +160,6 @@ function AdminEventManager() {
                     </div>
                 ))}
             </div>
-
         </div>
     );
 }

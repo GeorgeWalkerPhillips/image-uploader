@@ -207,3 +207,83 @@ button.delete {
     background-color: #ef4444;
     color: white;
 }
+
+.events-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 16px 0;
+}
+
+.event-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.event-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.event-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.event-name {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.event-id {
+    font-size: 12px;
+    color: #777;
+}
+
+.event-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.event-actions button {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.event-actions .copy {
+    background: #2563eb;
+    color: white;
+}
+
+.event-actions .download {
+    background: #059669;
+    color: white;
+}
+
+.event-actions .edit {
+    background: #f59e0b;
+    color: white;
+}
+
+.event-actions .delete {
+    background: #ef4444;
+    color: white;
+}
+
+.event-actions button:hover {
+    opacity: 0.9;
+}
