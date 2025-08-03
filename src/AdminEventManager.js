@@ -52,6 +52,12 @@ function AdminEventManager() {
         return () => unsubscribe();
     }, [navigate]);
 
+    const isExpired = (endDateString) => {
+        const now = new Date();
+        const endDate = new Date(endDateString);
+        return now > endDate;
+    };
+
     const fetchEvents = async () => {
         setLoading(true);
         const snapshot = await getDocs(collection(db, "events"));
@@ -63,11 +69,18 @@ function AdminEventManager() {
     const createEvent = async () => {
         if (!eventName) return alert("Please enter an event name");
         try {
-            const docRef = await addDoc(collection(db, "events"), {
+            const now = new Date();
+            const endDate = new Date(now);
+            endDate.setDate(endDate.getDate() + 30);
+
+            await addDoc(collection(db, "events"), {
                 name: eventName,
                 createdAt: serverTimestamp(),
+                startDate: now.toISOString(),
+                endDate: endDate.toISOString(),
                 coverPhotoUrl: "",
             });
+
             setEventName("");
             fetchEvents();
         } catch (err) {
@@ -131,7 +144,7 @@ function AdminEventManager() {
 
             <div className="events-grid">
                 {events.map((event) => (
-                    <div key={event.id} className="event-row">
+                    <div key={event.id} className={`event-row ${isExpired(event.endDate) ? 'expired' : ''}`}>
                         <div className="event-info">
                             <QRCodeCanvas
                                 id={`qr-${event.id}`}
@@ -146,8 +159,13 @@ function AdminEventManager() {
                                 />
                             ) : (
                                 <div className="event-details">
-                                    <div className="event-name">{event.name}</div>
+                                    <div className="event-name">
+                                        {event.name} {isExpired(event.endDate) && <span className="expired-label">Expired</span>}
+                                    </div>
                                     <div className="event-id">ID: {event.id}</div>
+                                    <div className="event-dates">
+                                        From {new Date(event.startDate).toLocaleDateString()} to {new Date(event.endDate).toLocaleDateString()}
+                                    </div>
                                 </div>
                             )}
                         </div>
