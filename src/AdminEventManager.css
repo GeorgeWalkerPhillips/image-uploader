@@ -16,15 +16,30 @@ h1 {
 }
 
 .event-form {
-    background: white;
-    padding: 24px 32px;
+    background: #fff;
+    padding: 24px;
     border-radius: 12px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
-    width: 100%;
-    max-width: 480px;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 40px;
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.form-row {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.form-row input {
+    flex: 1;
+    min-width: 100px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 16px;
 }
 
 .event-form label {

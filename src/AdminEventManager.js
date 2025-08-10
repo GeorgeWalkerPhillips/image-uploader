@@ -145,28 +145,28 @@ function AdminEventManager() {
 
     return (
         <div className="admin-container">
-            <h1>📸 Event Admin Panel</h1>
+            <h1>📸 Capture Event Admin Panel</h1>
 
             <div className="event-form">
-                <input
-                    type="text"
-                    placeholder="e.g., John's Wedding"
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                />
-                <label>Start Date:</label>
-                <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                />
-                <label>End Date:</label>
-                <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                />
-                <button onClick={createEvent}>Create New Event</button>
+                <div className="form-row">
+                    <input
+                        type="text"
+                        placeholder="Event Name"
+                        value={eventName}
+                        onChange={(e) => setEventName(e.target.value)}
+                    />
+                    <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                    />
+                </div>
+                <button onClick={createEvent}>Create Event</button>
             </div>
 
             <div className="events-grid">
