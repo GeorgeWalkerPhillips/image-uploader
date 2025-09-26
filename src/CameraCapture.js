@@ -96,8 +96,8 @@ function CameraCapture() {
 
             await uploadBytes(storageRef, blob);
             await addDoc(collection(db, `events/${eventId}/photos`), {
-                storagePath: path,
-                uploadedAt: serverTimestamp(),
+            storagePath: path,
+            uploadedAt: serverTimestamp(),
             });
 
             console.log("Uploaded:", fileName);
