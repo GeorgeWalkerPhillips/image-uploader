@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-    FaHome, FaHeart, FaCamera, FaCog, FaVideo, FaImages, FaPhotoVideo, FaUser
+    FaHome, FaHeart, FaCamera, FaCog, FaVideo, FaImages, FaPhotoVideo
 } from "react-icons/fa";
 import { db, storage } from "./firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
@@ -14,7 +14,7 @@ function useQuery() {
 
 function Gallery() {
     const queryParams = useQuery();
-    const eventId = queryParams.get("event");   // event ID from URL (?event=abc)
+    const eventId = queryParams.get("event");
 
     const [photos, setPhotos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ function Gallery() {
 
     return (
         <div className="gallery-container">
-            {/* Header */}
+            {/* Fixed Header */}
             <header className="gallery-header">
                 <h2>Photo Gallery</h2>
                 <div className="gallery-meta">
@@ -67,14 +67,13 @@ function Gallery() {
                 </div>
             </header>
 
-            {/* Gallery Section */}
-            {loading ? (
-                <p>Loading photos...</p>
-            ) : photos.length === 0 ? (
-                <p>No photos uploaded yet.</p>
-            ) : (
-                <div className="gallery-section">
-                    <h3 className="gallery-date">Latest Uploads</h3>
+            {/* Scrollable content */}
+            <div className="gallery-scroll">
+                {loading ? (
+                    <p>Loading photos...</p>
+                ) : photos.length === 0 ? (
+                    <p>No photos uploaded yet.</p>
+                ) : (
                     <div className="gallery-grid">
                         {photos.map((photo) => (
                             <div key={photo.id} className="gallery-item">
@@ -82,14 +81,14 @@ function Gallery() {
                             </div>
                         ))}
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
-            {/* Bottom Nav */}
+            {/* Floating Bottom Navigation */}
             <nav className="bottom-nav">
                 <Link to="/"><FaHome /></Link>
                 <Link to="/favorites"><FaHeart /></Link>
-                <Link to="/camera" className="camera-btn"><FaCamera /></Link>
+                <Link to={`/camera?event=${eventId}`} className="camera-btn"><FaCamera /></Link>
                 <Link to={`/gallery?event=${eventId}`}><FaPhotoVideo /></Link>
                 <Link to="/settings"><FaCog /></Link>
             </nav>

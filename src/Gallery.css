@@ -1,20 +1,38 @@
-body {
-    background: #f9f9fb;
-    margin: 0;
-    font-family: 'Inter', sans-serif;
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #f9f9fb;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;   /* no sideways scroll */
+  overflow-y: auto;     /* allow vertical scrolling */
 }
 
-/* Container */
 .gallery-container {
-    padding: 20px;
-    padding-bottom: 120px;
-    /* leave space for nav */
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    /* full viewport */
+    padding-bottom: 70px;
+    /* space for nav */
+}
+
+.gallery-section {
+    max-height: calc(100vh - 200px);
+    /* adjust depending on header + nav size */
+    overflow-y: auto;
+    padding-bottom: 20px;
 }
 
 /* Header */
 .gallery-header {
+    flex-shrink: 0;
+    /* stay fixed at top */
+    background: #f9f9fb;
+    padding: 16px 0;
     text-align: center;
-    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    z-index: 5;
 }
 
 .gallery-header h2 {
@@ -58,6 +76,13 @@ body {
     border-radius: 12px;
     object-fit: cover;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.gallery-scroll {
+    flex: 1;
+    overflow-y: auto;
+    /* scroll only this area */
+    padding: 20px;
 }
 
 /* Bottom Nav (reuse existing styles) */
