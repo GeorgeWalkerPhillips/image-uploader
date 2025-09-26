@@ -28,7 +28,6 @@ function CameraCapture() {
     const [eventName, setEventName] = useState("");
     const [capturedImages, setCapturedImages] = useState([]);
     const [uploading, setUploading] = useState(false);
-    const [uploadComplete, setUploadComplete] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -87,9 +86,8 @@ function CameraCapture() {
     };
 
     const uploadToFirebase = async (imageData) => {
-        if (!eventId) return alert("Missing event ID.");
+        if (!eventId) return;
 
-        setUploading(true);
         try {
             const blob = await fetch(imageData).then((res) => res.blob());
             const fileName = `${Date.now()}.png`;
@@ -105,11 +103,9 @@ function CameraCapture() {
             console.log("Uploaded:", fileName);
         } catch (err) {
             console.error("Upload failed:", err);
-        } finally {
-            setUploading(false);
-            setUploadComplete(true);
         }
     };
+
 
     const flipCamera = () =>
         setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
@@ -128,22 +124,6 @@ function CameraCapture() {
             {/* Video feed */}
             <video ref={videoRef} autoPlay playsInline className="video-feed" />
             <canvas ref={canvasRef} style={{ display: "none" }} />
-
-            {/* Bottom camera controls */}
-            <div className="bottom-bar">
-                <div
-                    className="thumbnail-stack"
-                    onClick={() => setShowGallery(true)}
-                >
-                    {capturedImages.slice(-3).map((img, i) => (
-                        <img key={i} src={img} alt="preview" className="thumbnail" />
-                    ))}
-                </div>
-                <button className="shutter-button" onClick={captureImage}>
-                    <FaCamera />
-                </button>
-                <div style={{ width: "40px" }}></div>
-            </div>
 
             {/* Overlay gallery preview */}
             {showGallery && (
@@ -173,25 +153,22 @@ function CameraCapture() {
                 </div>
             )}
 
-            {/* Uploading popup */}
-            {uploading && (
-                <div className="popup">
-                    <div className="popup-content">
-                        <div className="spinner"></div>
-                        <p>Uploading... Please wait.</p>
-                    </div>
+            {/* Thumbnails preview bar */}
+            <div className="bottom-bar">
+                <div
+                    className="thumbnail-stack"
+                    onClick={() => setShowGallery(true)}
+                >
+                    {capturedImages.slice(-3).map((img, i) => (
+                        <img key={i} src={img} alt="preview" className="thumbnail" />
+                    ))}
                 </div>
-            )}
+            </div>
 
-            {/* Upload complete popup */}
-            {uploadComplete && (
-                <div className="popup">
-                    <div className="popup-content">
-                        <p>Upload complete!</p>
-                        <button onClick={() => setUploadComplete(false)}>OK</button>
-                    </div>
-                </div>
-            )}
+            {/* Shutter button above nav */}
+            <button className="shutter-button" onClick={captureImage}>
+                <FaCamera />
+            </button>
 
             {/* Floating bottom navigation */}
             <nav className="bottom-nav">
@@ -201,6 +178,7 @@ function CameraCapture() {
                 <Link to={`/gallery?event=${eventId}`}><FaPhotoVideo /></Link>
                 <Link to="/settings"><FaCog /></Link>
             </nav>
+
         </div>
     );
 }

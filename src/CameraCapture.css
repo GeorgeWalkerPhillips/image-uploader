@@ -260,3 +260,26 @@ body {
     --app-bg: #000;
     /* bar notch matches camera page’s black bg */
 }
+
+/* Shutter button floats above nav bar */
+.shutter-button {
+    position: absolute;
+    bottom: 110px;
+    /* raise it above nav */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    height: 90px;
+    background: white;
+    border-radius: 50%;
+    border: 6px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 14px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    z-index: 20;
+    /* ensure above nav */
+    transition: transform 0.1s ease;
+}
+
+.shutter-button:active {
+    transform: translateX(-50%) scale(0.95);
+}
