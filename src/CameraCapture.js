@@ -8,7 +8,7 @@ import {
     FaCamera,
     FaHome,
     FaHeart,
-    FaPhotoVideo,
+    FaImages,
     FaCog,
 } from "react-icons/fa";
 import "./CameraCapture.css";
@@ -175,7 +175,7 @@ function CameraCapture() {
                 <Link to="/"><FaHome /></Link>
                 <Link to="/favorites"><FaHeart /></Link>
                 <Link to={`/camera?event=${eventId}`} className="camera-btn"><FaCamera /></Link>
-                <Link to={`/gallery?event=${eventId}`}><FaPhotoVideo /></Link>
+                <Link to={`/gallery?event=${eventId}`}><FaImages /></Link>
                 <Link to="/settings"><FaCog /></Link>
             </nav>
 

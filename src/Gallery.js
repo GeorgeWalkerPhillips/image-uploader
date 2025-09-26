@@ -19,14 +19,16 @@ function Gallery() {
     const [photos, setPhotos] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // For popup viewer
+    const [showViewer, setShowViewer] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
     useEffect(() => {
         const fetchPhotos = async () => {
             if (!eventId) {
-                console.warn("No event ID provided in URL");
                 setLoading(false);
                 return;
             }
-
             try {
                 const photosRef = collection(db, `events/${eventId}/photos`);
                 const q = query(photosRef, orderBy("uploadedAt", "desc"));
@@ -52,13 +54,31 @@ function Gallery() {
                 setLoading(false);
             }
         };
-
         fetchPhotos();
     }, [eventId]);
 
+    // Swipe handlers (basic)
+    const handleTouchStart = (e) => {
+        setTouchStart(e.touches[0].clientX);
+    };
+    const handleTouchEnd = (e) => {
+        if (!touchStart) return;
+        const delta = e.changedTouches[0].clientX - touchStart;
+        if (delta > 50) prevImage();
+        if (delta < -50) nextImage();
+        setTouchStart(null);
+    };
+
+    const [touchStart, setTouchStart] = useState(null);
+
+    const prevImage = () =>
+        setCurrentIndex((i) => Math.max(0, i - 1));
+    const nextImage = () =>
+        setCurrentIndex((i) => Math.min(photos.length - 1, i + 1));
+
     return (
         <div className="gallery-container">
-            {/* Fixed Header */}
+            {/* Header */}
             <header className="gallery-header">
                 <h2>Photo Gallery</h2>
                 <div className="gallery-meta">
@@ -67,7 +87,7 @@ function Gallery() {
                 </div>
             </header>
 
-            {/* Scrollable content */}
+            {/* Scrollable grid */}
             <div className="gallery-scroll">
                 {loading ? (
                     <p>Loading photos...</p>
@@ -75,8 +95,15 @@ function Gallery() {
                     <p>No photos uploaded yet.</p>
                 ) : (
                     <div className="gallery-grid">
-                        {photos.map((photo) => (
-                            <div key={photo.id} className="gallery-item">
+                        {photos.map((photo, index) => (
+                            <div
+                                key={photo.id}
+                                className="gallery-item"
+                                onClick={() => {
+                                    setCurrentIndex(index);
+                                    setShowViewer(true);
+                                }}
+                            >
                                 <img src={photo.url} alt={`photo-${photo.id}`} />
                             </div>
                         ))}
@@ -84,12 +111,44 @@ function Gallery() {
                 )}
             </div>
 
-            {/* Floating Bottom Navigation */}
+            {/* Image viewer popup */}
+            {showViewer && photos.length > 0 && (
+                <div
+                    className="viewer-overlay"
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    <button
+                        className="viewer-close"
+                        onClick={() => setShowViewer(false)}
+                    >
+                        ✕
+                    </button>
+                    <img
+                        src={photos[currentIndex].url}
+                        alt="full-view"
+                        className="viewer-image"
+                    />
+                    <div className="viewer-controls">
+                        <button onClick={prevImage} disabled={currentIndex === 0}>
+                            ◀
+                        </button>
+                        <button
+                            onClick={nextImage}
+                            disabled={currentIndex === photos.length - 1}
+                        >
+                            ▶
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Bottom Nav */}
             <nav className="bottom-nav">
                 <Link to="/"><FaHome /></Link>
                 <Link to="/favorites"><FaHeart /></Link>
                 <Link to={`/camera?event=${eventId}`} className="camera-btn"><FaCamera /></Link>
-                <Link to={`/gallery?event=${eventId}`}><FaPhotoVideo /></Link>
+                <Link to={`/gallery?event=${eventId}`}><FaImages /></Link>
                 <Link to="/settings"><FaCog /></Link>
             </nav>
         </div>
