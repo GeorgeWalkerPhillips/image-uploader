@@ -67,13 +67,12 @@ function Home() {
         <div className="home-container">
 
             <div className="hero">
-                <h1>{eventName || "Welcome to Capture"}</h1>
-                <p className="tagline">Share your best moments with everyone</p>
-
                 {/* Logo under the heading */}
                 <div className="logo-wrapper">
                     <img src="/val_logo_offblack.png" alt="VAL Logo" className="val-logo" />
                 </div>
+                <h1>{eventName || "Welcome to Capture"}</h1>
+                <p className="tagline">Share your best moments with everyone</p>
             </div>
 
             {/* Event Info */}
@@ -113,14 +112,11 @@ function Home() {
             <nav className="bottom-nav">
                 <Link to="/"><FaHome /></Link>
                 <Link to="/favorites"><FaHeart /></Link>
-
-                <Link to="/camera" className="camera-btn">
-                    <FaCamera />
-                </Link>
-
-                <Link to="/gallery"><FaPhotoVideo /></Link>
+                <Link to={`/camera?event=${eventId}`} className="camera-btn"><FaCamera /></Link>
+                <Link to={`/gallery?event=${eventId}`}><FaPhotoVideo /></Link>
                 <Link to="/settings"><FaCog /></Link>
             </nav>
+
         </div>
     );
 }

@@ -178,3 +178,85 @@ body {
     color: black;
     font-weight: bold;
 }
+
+/* ===== Floating bottom nav (with notch) ===== */
+.bottom-nav {
+    --surface: #ffffff;
+    /* bar color */
+    --icon: #444;
+    /* inactive icon */
+    --app-bg: #f9f9fb;
+    /* page background (override per page) */
+
+    position: fixed;
+    z-index: 10;
+    bottom: calc(env(safe-area-inset-bottom, 0) + 0px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 520px;
+    height: 74px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.08);
+    padding: 0 18px;
+
+    /* The notch: paint the page bg in a semicircle, then the bar color underneath */
+    background:
+        radial-gradient(circle at 50% 0,
+            var(--app-bg) 34px,
+            /* notch radius */
+            transparent 35px) top center / 68px 35px no-repeat,
+        var(--surface);
+}
+
+.bottom-nav a {
+    flex: 1;
+    text-align: center;
+    font-size: 22px;
+    color: var(--icon);
+    line-height: 1;
+}
+
+/* Center floating camera button */
+.camera-btn {
+    position: absolute;
+    z-index: 11;
+    top: -34px;
+    /* sits in the notch */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #111;
+    /* off-black */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
+    border: 4px solid #fff;
+    /* white ring so it doesn't visually merge */
+    outline: 1px solid rgba(0, 0, 0, 0.06);
+    /* tiny edge for definition on white bars */
+}
+
+.camera-btn svg {
+    color: #fff;
+    font-size: 24px;
+}
+
+/* Optional: active state for the page you’re on */
+.bottom-nav a.active,
+.bottom-nav a:active {
+    color: #111;
+    transform: translateY(-1px);
+}
+
+/* ===== Camera page background variable ===== */
+.camera-fullscreen {
+    --app-bg: #000;
+    /* bar notch matches camera page’s black bg */
+}

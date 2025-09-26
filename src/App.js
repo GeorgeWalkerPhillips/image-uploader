@@ -4,6 +4,7 @@ import CameraCapture from "./CameraCapture";
 import Home from "./Home";
 import AdminEventManager from "./AdminEventManager"; 
 import Login from "./Login";
+import Gallery from "./Gallery";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/camera" element={<CameraCapture />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<AdminEventManager />} />  {/* ✅ new admin route */}
+        <Route path="/gallery" element={<Gallery />} />
         <Route path="/unauthorized" element={<div>🚫 Unauthorized Access</div>} /> {/* Optional */}
       </Routes>
     </div>
