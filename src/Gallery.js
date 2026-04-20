@@ -47,6 +47,7 @@ function Gallery() {
       const photosWithUrls = data.map((photo) => ({
         id: photo.id,
         url: getPublicPhotoUrl(photo.storage_path),
+        storagePath: photo.storage_path,
         uploadedAt: photo.uploaded_at,
         width: photo.width,
         height: photo.height,
@@ -101,6 +102,31 @@ function Gallery() {
     }
   };
 
+  const deletePhoto = async (photoId, storagePath) => {
+    if (!window.confirm('Delete this photo? This cannot be undone.')) return;
+
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('event-photos')
+        .remove([storagePath]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('photos')
+        .delete()
+        .eq('id', photoId);
+
+      if (dbError) throw dbError;
+
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      toast.success('Photo deleted');
+    } catch (error) {
+      toast.error('Failed to delete photo');
+      console.error('Error:', error);
+    }
+  };
+
   if (!eventId) {
     return (
       <div className="gallery-container">
@@ -137,20 +163,31 @@ function Gallery() {
           <>
             <div className="gallery-grid">
               {photos.map((photo, index) => (
-                <div
-                  key={photo.id}
-                  className="gallery-item"
-                  onClick={() => {
-                    setCurrentIndex(index);
-                    setShowViewer(true);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <img
-                    src={photo.url}
-                    alt={`photo-${photo.id}`}
-                    loading="lazy"
-                  />
+                <div key={photo.id} className="gallery-item-wrapper">
+                  <div
+                    className="gallery-item"
+                    onClick={() => {
+                      setCurrentIndex(index);
+                      setShowViewer(true);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <img
+                      src={photo.url}
+                      alt={`photo-${photo.id}`}
+                      loading="lazy"
+                    />
+                  </div>
+                  <button
+                    className="delete-photo-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePhoto(photo.id, photo.storagePath);
+                    }}
+                    title="Delete photo"
+                  >
+                    🗑️
+                  </button>
                 </div>
               ))}
             </div>

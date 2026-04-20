@@ -73,6 +73,10 @@
   margin-bottom: 20px;
 }
 
+.gallery-item-wrapper {
+  position: relative;
+}
+
 .gallery-item {
   position: relative;
   aspect-ratio: 1;
@@ -91,6 +95,33 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.delete-photo-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+  z-index: 10;
+}
+
+.gallery-item-wrapper:hover .delete-photo-btn {
+  opacity: 1;
+}
+
+.delete-photo-btn:hover {
+  background: rgba(255, 0, 0, 0.8);
 }
 
 .load-more-container {

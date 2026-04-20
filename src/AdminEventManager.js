@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { FaSignOutAlt, FaArrowRight } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
+import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import './AdminEventManager.css';
@@ -176,6 +177,39 @@ function AdminEventManager() {
     return new Date(expiryDate) < new Date();
   };
 
+  const downloadEventPhotos = async (eventId, eventName) => {
+    try {
+      toast.info('Fetching photos...');
+
+      const { data: photos, error } = await supabase
+        .from('photos')
+        .select('id, storage_path')
+        .eq('event_id', eventId);
+
+      if (error) throw error;
+
+      if (photos.length === 0) {
+        toast.error('No photos to download');
+        return;
+      }
+
+      const photosWithUrls = photos.map((p) => ({
+        id: p.id,
+        storagePath: p.storage_path,
+        url: supabase.storage
+          .from('event-photos')
+          .getPublicUrl(p.storage_path).data.publicUrl,
+      }));
+
+      toast.info(`Creating ZIP with ${photos.length} photos...`);
+      await downloadPhotosAsZip(eventName, photosWithUrls);
+      toast.success('Download started!');
+    } catch (error) {
+      toast.error('Download failed: ' + error.message);
+      console.error('Error:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="admin-container">
@@ -318,6 +352,13 @@ function AdminEventManager() {
                       title="Download QR"
                     >
                       QR
+                    </button>
+                    <button
+                      className="action-btn download-btn"
+                      onClick={() => downloadEventPhotos(event.id, event.name)}
+                      title="Download all photos as ZIP"
+                    >
+                      📥
                     </button>
                     <button
                       className="action-btn edit-btn"

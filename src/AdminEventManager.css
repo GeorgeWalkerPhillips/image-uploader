@@ -291,6 +291,16 @@
   background: #388e3c;
 }
 
+.download-btn {
+  background: #00bcd4;
+  color: white;
+  font-size: 14px;
+}
+
+.download-btn:hover {
+  background: #0097a7;
+}
+
 .edit-btn {
   background: #ff9800;
   color: white;
