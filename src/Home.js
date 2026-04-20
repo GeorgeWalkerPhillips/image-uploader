@@ -1,124 +1,225 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
-import { FaUpload, FaCamera, FaHome, FaHeart, FaUser, FaCog, FaPhotoVideo } from "react-icons/fa";
-import "./Home.css";
-import { db, storage } from './firebase';
-import { ref, uploadBytes } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-
-function useQuery() {
-    return new URLSearchParams(useLocation().search);
-}
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import {
+  FaUpload,
+  FaCamera,
+  FaHome,
+  FaPhotoVideo,
+  FaCog,
+  FaSignOutAlt,
+} from 'react-icons/fa';
+import { useAuth } from './context/AuthContext';
+import { supabase } from './supabaseClient';
+import { uploadImage } from './services/uploadService';
+import './Home.css';
 
 function Home() {
-    const query = useQuery();
-    const eventId = query.get("event");
+  const [searchParams] = useSearchParams();
+  const eventId = searchParams.get('event');
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
-    const [eventName, setEventName] = useState("");
-    const [images, setImages] = useState([]);
-    const [fileNames, setFileNames] = useState([]);
-    const [uploading, setUploading] = useState(false);
-    const [uploadComplete, setUploadComplete] = useState(false);
+  const [eventName, setEventName] = useState('');
+  const [eventInfo, setEventInfo] = useState(null);
+  const [images, setImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-    useEffect(() => {
-        const fetchEvent = async () => {
-            if (!eventId) return;
-            try {
-                const docRef = doc(db, "events", eventId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setEventName(docSnap.data().name);
-                }
-            } catch (err) {
-                console.error("Error fetching event:", err);
-            }
-        };
-        fetchEvent();
-    }, [eventId]);
+  useEffect(() => {
+    const fetchEvent = async () => {
+      if (!eventId) return;
 
-    const handleFileChange = (e) => {
-        const files = Array.from(e.target.files);
-        setImages(files);
-        setFileNames(files.map(file => file.name));
-    };
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .single();
 
-    const handleUpload = async () => {
-        if (!eventId || images.length === 0) return;
-        setUploading(true);
-        for (const image of images) {
-            try {
-                const fileName = `${Date.now()}_${image.name}`;
-                const storagePath = `events/${eventId}/${fileName}`;
-                const storageRef = ref(storage, storagePath);
-                await uploadBytes(storageRef, image);
-                await addDoc(collection(db, `events/${eventId}/photos`), {
-                    storagePath,
-                    uploadedAt: serverTimestamp()
-                });
-            } catch (err) {
-                console.error("Upload error:", err);
-            }
+        if (error) throw error;
+
+        if (data) {
+          setEventName(data.name);
+          setEventInfo({
+            id: data.id,
+            name: data.name,
+            description: data.description || 'Upload your photos to be part of the shared gallery!',
+            startDate: data.start_date,
+            endDate: data.end_date,
+          });
         }
-        setUploading(false);
-        setUploadComplete(true);
+      } catch (err) {
+        toast.error('Event not found');
+        console.error('Error fetching event:', err);
+      }
     };
 
-    return (
-        <div className="home-container">
+    fetchEvent();
+  }, [eventId]);
 
-            <div className="hero">
-                {/* Logo under the heading */}
-                <div className="logo-wrapper">
-                    <img src="/val_logo_offblack.png" alt="VAL Logo" className="val-logo" />
-                </div>
-                <h1>{eventName || "Welcome to Capture"}</h1>
-                <p className="tagline">Share your best moments with everyone</p>
-            </div>
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    setImages(files);
+  };
 
-            {/* Event Info */}
-            {eventId && (
-                <div className="event-card">
-                    <p><strong>Event ID:</strong> {eventId}</p>
-                    <p><strong>Date:</strong> 25 Sept 2025</p>
-                    <p><strong>Location:</strong> Cape Town Convention Centre</p>
-                    <p className="desc">
-                        Join us for a night full of energy, music, and unforgettable memories.
-                        Upload your photos to be part of the shared gallery!
-                    </p>
-                </div>
-            )}
+  const handleUpload = async () => {
+    if (!eventId || !user) {
+      toast.error('Missing event or user information');
+      return;
+    }
 
-            {/* Upload Section */}
-            <div className="upload-card">
-                <label className="file-btn">
-                    <input type="file" multiple onChange={handleFileChange} />
-                    <FaUpload /> Choose Photos
-                </label>
+    if (images.length === 0) {
+      toast.error('Please select photos to upload');
+      return;
+    }
 
-                {fileNames.length > 0 && (
-                    <div className="preview-row">
-                        {images.slice(0, 3).map((image, index) => (
-                            <img key={index} src={URL.createObjectURL(image)} alt="thumb" />
-                        ))}
-                    </div>
-                )}
+    setUploading(true);
+    setUploadProgress(0);
 
-                <button className="upload-btn" onClick={handleUpload} disabled={uploading}>
-                    <FaUpload /> Upload
-                </button>
-            </div>
+    let successCount = 0;
+    const totalCount = images.length;
 
-            {/* Floating bottom navigation */}
-            <nav className="bottom-nav">
-                <Link to="/"><FaHome /></Link>
-                <Link to="/favorites"><FaHeart /></Link>
-                <Link to={`/camera?event=${eventId}`} className="camera-btn"><FaCamera /></Link>
-                <Link to={`/gallery?event=${eventId}`}><FaPhotoVideo /></Link>
-                <Link to="/settings"><FaCog /></Link>
-            </nav>
+    for (let i = 0; i < images.length; i++) {
+      try {
+        const result = await uploadImage(images[i], eventId, user.id);
 
+        if (result.success) {
+          successCount++;
+          toast.success(`Photo ${i + 1}/${totalCount} uploaded`);
+        } else {
+          toast.error(`Failed: ${result.error}`);
+        }
+
+        setUploadProgress(Math.round(((i + 1) / totalCount) * 100));
+      } catch (error) {
+        toast.error(`Upload failed: ${error.message}`);
+      }
+    }
+
+    setUploading(false);
+    setUploadProgress(0);
+    setImages([]);
+
+    if (successCount === totalCount) {
+      toast.success(`All ${successCount} photos uploaded!`);
+    } else {
+      toast.warning(
+        `${successCount}/${totalCount} photos uploaded successfully`
+      );
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Signed out');
+      navigate('/');
+    } catch (error) {
+      toast.error('Sign out failed');
+    }
+  };
+
+  return (
+    <div className="home-container">
+      <div className="hero">
+        <h1>{eventName || 'Welcome to Capture'}</h1>
+        <p className="tagline">Share your best moments with everyone</p>
+      </div>
+
+      {eventInfo && (
+        <div className="event-card">
+          <p>
+            <strong>Event:</strong> {eventInfo.name}
+          </p>
+          <p>
+            <strong>Description:</strong> {eventInfo.description}
+          </p>
+          {eventInfo.startDate && (
+            <p>
+              <strong>Date:</strong>{' '}
+              {new Date(eventInfo.startDate).toLocaleDateString()}
+            </p>
+          )}
         </div>
-    );
+      )}
+
+      {!eventId && (
+        <div className="no-event-notice">
+          <p>ℹ️ No event selected. Use a link with event ID to upload photos.</p>
+        </div>
+      )}
+
+      <div className="upload-card">
+        <label className="file-btn" disabled={!eventId || uploading}>
+          <input
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp,image/heic"
+            onChange={handleFileChange}
+            disabled={!eventId || uploading}
+          />
+          <FaUpload /> Choose Photos
+        </label>
+
+        {images.length > 0 && (
+          <div className="file-list">
+            <p>{images.length} file(s) selected</p>
+            <div className="preview-row">
+              {images.slice(0, 3).map((image, index) => (
+                <img
+                  key={index}
+                  src={URL.createObjectURL(image)}
+                  alt="preview"
+                  className="thumbnail"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {uploading && (
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{ width: `${uploadProgress}%` }}
+            />
+            <span className="progress-text">{uploadProgress}%</span>
+          </div>
+        )}
+
+        <button
+          className="upload-btn"
+          onClick={handleUpload}
+          disabled={!eventId || uploading || images.length === 0}
+        >
+          <FaUpload /> {uploading ? `Uploading... ${uploadProgress}%` : 'Upload'}
+        </button>
+      </div>
+
+      <nav className="bottom-nav">
+        <button className="nav-btn" title="Home">
+          <FaHome />
+        </button>
+        <button
+          className="nav-btn"
+          onClick={() => (eventId ? navigate(`/gallery?event=${eventId}`) : null)}
+          title="Gallery"
+          disabled={!eventId}
+        >
+          <FaPhotoVideo />
+        </button>
+        <button className="nav-btn" title="Settings">
+          <FaCog />
+        </button>
+        {user && (
+          <button className="nav-btn logout-btn" onClick={handleSignOut} title="Sign Out">
+            <FaSignOutAlt />
+          </button>
+        )}
+      </nav>
+    </div>
+  );
 }
 
 export default Home;
