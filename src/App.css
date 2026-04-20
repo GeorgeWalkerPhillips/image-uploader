@@ -127,6 +127,15 @@ p {
   }
 }
 
+.error-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-size: 24px;
+  color: #333;
+}
+
 @media screen and (max-width: 768px) {
   body {
     background-position: left center;
