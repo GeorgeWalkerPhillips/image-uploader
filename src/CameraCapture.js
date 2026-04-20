@@ -13,7 +13,7 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
-import { uploadImage, getPublicPhotoUrl } from './services/uploadService';
+import { uploadImage } from './services/uploadService';
 import { CameraFilters, applyVideoFilters, applyCanvasFilters } from './components/CameraFilters';
 import { TimerButton } from './components/CameraTimer';
 import './CameraCapture.css';
@@ -63,6 +63,21 @@ function CameraCapture() {
     fetchEvent();
   }, [eventId]);
 
+  const startCamera = React.useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode },
+        audio: false,
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      toast.error('Could not access camera');
+      console.error('Camera error:', err);
+    }
+  }, [facingMode]);
+
   useEffect(() => {
     startCamera();
     return () => {
@@ -70,7 +85,7 @@ function CameraCapture() {
         videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [facingMode]);
+  }, [startCamera]);
 
   // Apply filters to video feed
   useEffect(() => {
@@ -78,20 +93,6 @@ function CameraCapture() {
       applyVideoFilters(videoRef.current, brightness, contrast, filter);
     }
   }, [brightness, contrast, filter]);
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode },
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err) {
-      toast.error('Camera access denied');
-      console.error('Camera error:', err);
-    }
-  };
 
   const captureImage = () => {
     const video = videoRef.current;

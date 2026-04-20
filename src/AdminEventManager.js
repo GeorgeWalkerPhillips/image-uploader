@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaSignOutAlt, FaArrowRight, FaLock } from 'react-icons/fa';
+import { FaSignOutAlt, FaArrowRight } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
@@ -27,12 +27,7 @@ function AdminEventManager() {
   const [pendingEvent, setPendingEvent] = useState(null);
   const [freeEventsUsed, setFreeEventsUsed] = useState(0);
 
-  useEffect(() => {
-    fetchEvents();
-    checkFreeEventsUsed();
-  }, []);
-
-  const checkFreeEventsUsed = async () => {
+  const checkFreeEventsUsed = React.useCallback(async () => {
     try {
       const { count, error } = await supabase
         .from('events')
@@ -45,9 +40,9 @@ function AdminEventManager() {
     } catch (err) {
       console.error('Error checking free events:', err);
     }
-  };
+  }, [user.id]);
 
-  const fetchEvents = async () => {
+  const fetchEvents = React.useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -63,7 +58,12 @@ function AdminEventManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchEvents();
+    checkFreeEventsUsed();
+  }, [fetchEvents, checkFreeEventsUsed]);
 
   const createEvent = async (e) => {
     e.preventDefault();

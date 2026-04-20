@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaCopy, FaPlus, FaMinus, FaCog } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaCog } from 'react-icons/fa';
 import './CameraFilters.css';
 
 export function CameraFilters({

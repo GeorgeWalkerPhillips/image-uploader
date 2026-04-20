@@ -23,11 +23,7 @@ function Gallery() {
 
   const PHOTOS_PER_PAGE = 20;
 
-  useEffect(() => {
-    fetchPhotos(0);
-  }, [eventId]);
-
-  const fetchPhotos = async (newOffset) => {
+  const fetchPhotosCallback = React.useCallback(async (newOffset) => {
     if (!eventId) {
       setLoading(false);
       return;
@@ -59,18 +55,22 @@ function Gallery() {
         setPhotos((prev) => [...prev, ...photosWithUrls]);
       }
 
-      setHasMore(data.length === PHOTOS_PER_PAGE);
       setOffset(newOffset + PHOTOS_PER_PAGE);
-      setLoading(false);
-    } catch (error) {
+      setHasMore(photosWithUrls.length === PHOTOS_PER_PAGE);
+    } catch (err) {
+      console.error('Error fetching photos:', err);
       toast.error('Failed to load photos');
-      console.error('Error:', error);
+    } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    fetchPhotosCallback(0);
+  }, [eventId, fetchPhotosCallback]);
 
   const loadMore = () => {
-    fetchPhotos(offset);
+    fetchPhotosCallback(offset);
   };
 
   const handleTouchStart = (e) => {

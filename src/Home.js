@@ -3,7 +3,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   FaUpload,
-  FaCamera,
   FaHome,
   FaPhotoVideo,
   FaCog,

@@ -4,7 +4,6 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import CameraCapture from './CameraCapture';
 import Home from './Home';
 import AdminEventManager from './AdminEventManager';
 import Login from './Login';
