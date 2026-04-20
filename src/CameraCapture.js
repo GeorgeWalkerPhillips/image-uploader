@@ -14,6 +14,8 @@ import {
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { uploadImage, getPublicPhotoUrl } from './services/uploadService';
+import { CameraFilters, applyVideoFilters, applyCanvasFilters } from './components/CameraFilters';
+import { TimerButton } from './components/CameraTimer';
 import './CameraCapture.css';
 
 function CameraCapture() {
@@ -32,6 +34,12 @@ function CameraCapture() {
   const [showGallery, setShowGallery] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Filter states
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [filter, setFilter] = useState('normal');
+  const [showGrid, setShowGrid] = useState(false);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -64,6 +72,13 @@ function CameraCapture() {
     };
   }, [facingMode]);
 
+  // Apply filters to video feed
+  useEffect(() => {
+    if (videoRef.current) {
+      applyVideoFilters(videoRef.current, brightness, contrast, filter);
+    }
+  }, [brightness, contrast, filter]);
+
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -78,7 +93,7 @@ function CameraCapture() {
     }
   };
 
-  const captureImage = async () => {
+  const captureImage = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -90,8 +105,12 @@ function CameraCapture() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const imageData = canvas.toDataURL('image/png');
-    setCapturedImages((prev) => [...prev, imageData]);
+    // Apply filters to captured image
+    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    applyCanvasFilters(canvas, ctx, imageData, brightness, contrast, filter);
+
+    const imageDataUrl = canvas.toDataURL('image/png');
+    setCapturedImages((prev) => [...prev, imageDataUrl]);
     setCurrentIndex(capturedImages.length);
 
     toast.success('Photo captured');
@@ -195,6 +214,20 @@ function CameraCapture() {
 
       <video ref={videoRef} autoPlay playsInline className="video-feed" />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      {/* Camera Controls */}
+      <CameraFilters
+        brightness={brightness}
+        contrast={contrast}
+        filter={filter}
+        showGrid={showGrid}
+        onBrightnessChange={setBrightness}
+        onContrastChange={setContrast}
+        onFilterChange={setFilter}
+        onGridToggle={() => setShowGrid(!showGrid)}
+      />
+
+      <TimerButton onCapture={captureImage} />
 
       {showGallery && capturedImages.length > 0 && (
         <div className="preview-overlay">
