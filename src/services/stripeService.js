@@ -1,7 +1,13 @@
-import { loadStripe } from '@stripe/js';
 import { supabase } from '../supabaseClient';
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY);
+const stripePromise = new Promise((resolve) => {
+  const script = document.createElement('script');
+  script.src = 'https://js.stripe.com/v3/';
+  script.onload = () => {
+    resolve(window.Stripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY));
+  };
+  document.head.appendChild(script);
+});
 
 export const getStripe = () => stripePromise;
 
