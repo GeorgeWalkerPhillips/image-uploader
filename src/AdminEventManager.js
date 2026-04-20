@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaSignOutAlt, FaArrowRight } from 'react-icons/fa';
+import { FaSignOutAlt, FaArrowRight, FaLock } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
+import { PricingModal } from './components/PricingModal';
+import { PRICING } from './services/stripeService';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import './AdminEventManager.css';
@@ -21,10 +23,29 @@ function AdminEventManager() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [newName, setNewName] = useState('');
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [pendingEvent, setPendingEvent] = useState(null);
+  const [freeEventsUsed, setFreeEventsUsed] = useState(0);
 
   useEffect(() => {
     fetchEvents();
+    checkFreeEventsUsed();
   }, []);
+
+  const checkFreeEventsUsed = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('events')
+        .select('id', { count: 'exact' })
+        .eq('created_by', user.id)
+        .eq('is_free', true);
+
+      if (error) throw error;
+      setFreeEventsUsed(count || 0);
+    } catch (err) {
+      console.error('Error checking free events:', err);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -60,30 +81,71 @@ function AdminEventManager() {
       return;
     }
 
+    setPendingEvent({ eventName, description, startDate, endDate });
+    setShowPricingModal(true);
+  };
+
+  const finalizEventCreation = async (planType) => {
+    if (!pendingEvent) return;
+
+    const { eventName: name, description: desc, startDate, endDate } = pendingEvent;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
     const expiry = new Date(end);
     expiry.setDate(expiry.getDate() + 30);
 
     try {
-      const { error } = await supabase.from('events').insert({
-        name: eventName.trim(),
-        description: description.trim(),
-        start_date: start.toISOString(),
-        end_date: end.toISOString(),
-        expiry_date: expiry.toISOString(),
-        created_by: user.id,
-      });
+      const { data, error } = await supabase
+        .from('events')
+        .insert({
+          name: name.trim(),
+          description: desc.trim(),
+          start_date: start.toISOString(),
+          end_date: end.toISOString(),
+          expiry_date: expiry.toISOString(),
+          created_by: user.id,
+          is_free: planType === 'free',
+          is_paid: planType === 'paid',
+          payment_status: planType === 'paid' ? 'pending_payment' : 'free',
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast.success('Event created successfully!');
+      toast.success(
+        planType === 'free'
+          ? 'Free event created!'
+          : `Event created! Redirecting to payment...`
+      );
+
       setEventName('');
       setDescription('');
       setStartDate('');
       setEndDate('');
-      fetchEvents();
+      setPendingEvent(null);
+      setShowPricingModal(false);
+
+      if (planType === 'paid') {
+        initiatePayment(data.id, name);
+      } else {
+        fetchEvents();
+        checkFreeEventsUsed();
+      }
     } catch (error) {
-      toast.error('Failed to create event');
+      toast.error('Failed to create event: ' + error.message);
       console.error('Error:', error);
+    }
+  };
+
+  const initiatePayment = async (eventId, eventName) => {
+    try {
+      toast.info('Preparing payment...');
+      const stripeUrl = `https://buy.stripe.com/test?event_id=${eventId}&event_name=${encodeURIComponent(eventName)}`;
+      window.location.href = stripeUrl;
+    } catch (error) {
+      toast.error('Payment failed: ' + error.message);
     }
   };
 
@@ -220,11 +282,24 @@ function AdminEventManager() {
 
   return (
     <div className="admin-container">
+      <PricingModal
+        isOpen={showPricingModal}
+        onClose={() => setShowPricingModal(false)}
+        onSelectPlan={finalizEventCreation}
+        freeEventsUsed={freeEventsUsed}
+      />
+
       <div className="admin-header">
         <h1>📸 Capture Admin Panel</h1>
-        <button className="logout-btn" onClick={handleSignOut} title="Sign Out">
-          <FaSignOutAlt /> Sign Out
-        </button>
+        <div className="header-info">
+          <span className="free-events-remaining">
+            {PRICING.FREE_EVENTS_PER_USER - freeEventsUsed} free event
+            {PRICING.FREE_EVENTS_PER_USER - freeEventsUsed !== 1 ? 's' : ''} left
+          </span>
+          <button className="logout-btn" onClick={handleSignOut} title="Sign Out">
+            <FaSignOutAlt /> Sign Out
+          </button>
+        </div>
       </div>
 
       <div className="event-form">
