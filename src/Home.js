@@ -8,7 +8,7 @@ import {
   FaCog,
   FaSignOutAlt,
   FaCamera,
-  FaShare2,
+  FaShare,
   FaUsers,
 } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
@@ -156,7 +156,7 @@ function Home() {
 
           <div className="feature-card">
             <div className="feature-icon">
-              <FaShare2 />
+              <FaShare />
             </div>
             <h3>Easy Sharing</h3>
             <p>Share event links with your friends. No accounts needed to upload.</p>
