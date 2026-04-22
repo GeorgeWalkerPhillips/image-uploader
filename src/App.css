@@ -1,16 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@400;700&display=swap');
 
-body {
-  background-color: black;
-  font-family: 'Playfair Display', serif;
-  color: #2c2c2c;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
+/* Reset default styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
   margin: 0;
-  padding: 20px;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
 }
 
 .App-header {

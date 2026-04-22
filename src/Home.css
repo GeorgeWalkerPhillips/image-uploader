@@ -8,8 +8,10 @@ body {
 .home-container {
     padding: 20px;
     padding-bottom: 120px;
-    /* space for nav bar */
     text-align: center;
+    min-height: 100vh;
+    background: #f9f9fb;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .event-title {
@@ -310,7 +312,9 @@ body {
 .home-container.landing-page {
     padding: 0;
     padding-bottom: 40px;
-    background: linear-gradient(135deg, #f9f9fb 0%, #f0f0f5 100%);
+    background: linear-gradient(135deg, #f9f9fb 0%, #f0f0f5 100%) !important;
+    min-height: auto;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
 }
 
 .landing-header {
@@ -318,14 +322,16 @@ body {
     padding: 60px 20px 40px;
     background: white;
     border-bottom: 1px solid #e8e8e8;
+    width: 100%;
 }
 
 .brand-title {
     font-size: 48px;
     font-weight: 700;
     margin: 0 0 5px;
-    color: #111;
+    color: #111 !important;
     letter-spacing: -1px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
 }
 
 .brand-subtitle {
@@ -333,6 +339,7 @@ body {
     color: #666;
     margin: 0;
     font-weight: 400;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .hero-section {
@@ -340,14 +347,16 @@ body {
     text-align: center;
     max-width: 600px;
     margin: 0 auto;
+    width: 100%;
 }
 
 .hero-section h2 {
     font-size: 36px;
     font-weight: 700;
     margin: 0 0 20px;
-    color: #111;
+    color: #111 !important;
     line-height: 1.2;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
 }
 
 .hero-description {
@@ -355,6 +364,7 @@ body {
     color: #555;
     line-height: 1.6;
     margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .features-section {
@@ -393,7 +403,8 @@ body {
     font-size: 20px;
     font-weight: 600;
     margin: 0 0 10px;
-    color: #111;
+    color: #111 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .feature-card p {
@@ -401,6 +412,7 @@ body {
     color: #666;
     margin: 0;
     line-height: 1.5;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 @media (min-width: 600px) {
@@ -418,6 +430,7 @@ body {
     padding: 50px 20px;
     background: white;
     margin: 40px 0;
+    width: 100%;
 }
 
 .how-it-works h2 {
@@ -425,7 +438,8 @@ body {
     font-weight: 700;
     text-align: center;
     margin: 0 0 40px;
-    color: #111;
+    color: #111 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .steps {
@@ -466,7 +480,8 @@ body {
     font-size: 18px;
     font-weight: 600;
     margin: 0 0 8px;
-    color: #111;
+    color: #111 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .step-content p {
@@ -474,6 +489,7 @@ body {
     color: #666;
     margin: 0;
     line-height: 1.5;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .cta-section {
@@ -481,13 +497,15 @@ body {
     text-align: center;
     background: white;
     margin: 40px 0;
+    width: 100%;
 }
 
 .cta-text {
     font-size: 20px;
     font-weight: 600;
     margin: 0 0 25px;
-    color: #111;
+    color: #111 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .cta-input-group {
