@@ -114,6 +114,23 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const signInAsGuest = async () => {
+    try {
+      setError(null);
+
+      const { data: { session: existing } } = await supabase.auth.getSession();
+      if (existing?.user) return existing.user;
+
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
+
+      return data.user;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const signOut = async () => {
     try {
       setError(null);
@@ -152,6 +169,7 @@ export function AuthProvider({ children }) {
         error,
         signUp,
         signIn,
+        signInAsGuest,
         signOut,
         logAuditEvent,
       }}

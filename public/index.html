@@ -7,14 +7,37 @@
     <meta name="theme-color" content="#000000" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+    <!--
+      TODO before launch:
+      1. Replace https://your-domain.com below (canonical, og:url,
+         twitter:image, JSON-LD url) with your real production domain.
+      2. logo192.png / logo512.png / favicon.ico are still the default
+         Create React App logo, not your brand. Run the favicon-gen skill
+         (or your own export) from a real logo to replace them — the
+         "VAL." wordmark files in public/ are only 150x150, too low-res
+         for a 512px icon or a social share card.
+    -->
+
+    <title>Wedding &amp; Event Photo Sharing App - No App Required | Capture by Val.</title>
     <meta
       name="description"
-      content="Capture event photos instantly. Collect and share beautiful memories from your events in one shared gallery. Easy upload, beautiful gallery, perfect for weddings, parties, and events."
+      content="Every guest's photos, one shared gallery. Guests scan a QR code and upload straight from their phone — no app download, no account needed. Free to start. Perfect for weddings, parties, and corporate events."
     />
-    <meta name="keywords" content="event photos, shared gallery, photo upload, event app, memory sharing" />
-    <meta property="og:title" content="Capture by Val. - Share Your Best Moments" />
-    <meta property="og:description" content="Collect beautiful photos from your events in one place. Invite friends, share memories, and build a shared gallery instantly." />
+    <meta name="keywords" content="wedding photo sharing app, wedding guest photos, shared photo gallery, QR code photo upload, event photo app, disposable camera app alternative" />
+    <link rel="canonical" href="https://your-domain.com/" />
+
+    <meta property="og:title" content="Capture by Val. - Every Guest's Photos, One Wedding Gallery" />
+    <meta property="og:description" content="Guests scan a QR code and upload photos straight from their phone — no app, no account needed. Watch your shared gallery fill up live, then download everything as one ZIP." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://your-domain.com/" />
+    <meta property="og:image" content="https://your-domain.com/logo512.png" />
+    <meta property="og:site_name" content="Capture by Val." />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Capture by Val. - Every Guest's Photos, One Wedding Gallery" />
+    <meta name="twitter:description" content="No app to download, no account needed. Guests scan a QR code and upload photos straight into your shared event gallery." />
+    <meta name="twitter:image" content="https://your-domain.com/logo512.png" />
+
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
@@ -30,7 +53,24 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>Capture by Val.</title>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Capture by Val.",
+        "url": "https://your-domain.com/",
+        "applicationCategory": "PhotographyApplication",
+        "operatingSystem": "Any (Web-based)",
+        "description": "A shared photo gallery for weddings, parties, and events. Guests scan a QR code and upload photos straight from their phone with no app download or account required.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "ZAR",
+          "description": "First event free; additional events R50 flat, no subscription."
+        }
+      }
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

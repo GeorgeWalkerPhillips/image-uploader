@@ -102,6 +102,16 @@ CREATE POLICY "Users can view photos from events" ON photos
     )
   );
 
+-- RLS Policy: Event access - anyone holding an event's link/QR (including
+-- anonymous guests) can grant themselves upload/view access to that event.
+-- This is what lets guests join instantly with no signup, like scanning a
+-- QR code at a wedding.
+CREATE POLICY "Users can grant themselves event access" ON event_access
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own event access" ON event_access
+  FOR SELECT USING (auth.uid() = user_id);
+
 -- RLS Policy: Audit logs - only admins can see
 CREATE POLICY "Only admins can view audit logs" ON audit_logs
   FOR SELECT USING (

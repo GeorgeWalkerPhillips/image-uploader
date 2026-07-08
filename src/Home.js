@@ -7,26 +7,47 @@ import {
   FaPhotoVideo,
   FaCog,
   FaSignOutAlt,
-  FaCamera,
-  FaShare,
-  FaUsers,
 } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { uploadImage } from './services/uploadService';
+import { joinEventAsGuest } from './services/eventAccessService';
+import LandingPage from './LandingPage';
 import './Home.css';
 
 function Home() {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('event');
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signInAsGuest, signOut } = useAuth();
 
   const [eventName, setEventName] = useState('');
   const [eventInfo, setEventInfo] = useState(null);
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [joining, setJoining] = useState(false);
+
+  useEffect(() => {
+    if (!eventId) return;
+
+    let cancelled = false;
+    setJoining(true);
+
+    joinEventAsGuest(eventId, signInAsGuest)
+      .catch((err) => {
+        console.error('Error joining event:', err);
+        if (!cancelled) toast.error('Could not join this event');
+      })
+      .finally(() => {
+        if (!cancelled) setJoining(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -123,97 +144,7 @@ function Home() {
   };
 
   if (!eventId) {
-    return (
-      <div className="home-container landing-page">
-        <header className="landing-header">
-          <h1 className="brand-title">Capture</h1>
-          <p className="brand-subtitle">by Val.</p>
-        </header>
-
-        <section className="hero-section">
-          <h2>Share Every Moment Together</h2>
-          <p className="hero-description">
-            Collect beautiful photos from your events in one place. Invite friends, share memories, and build a shared gallery instantly.
-          </p>
-        </section>
-
-        <section className="features-section">
-          <div className="feature-card">
-            <div className="feature-icon">
-              <FaCamera />
-            </div>
-            <h3>Easy Upload</h3>
-            <p>Upload multiple photos in seconds. Simple, fast, and intuitive.</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <FaUsers />
-            </div>
-            <h3>Shared Gallery</h3>
-            <p>Everyone contributes. See all photos from your event in one beautiful gallery.</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <FaShare />
-            </div>
-            <h3>Easy Sharing</h3>
-            <p>Share event links with your friends. No accounts needed to upload.</p>
-          </div>
-        </section>
-
-        <section className="how-it-works">
-          <h2>How It Works</h2>
-          <ol className="steps">
-            <li>
-              <span className="step-number">1</span>
-              <div className="step-content">
-                <h4>Get an Event Link</h4>
-                <p>Receive or create an event link from your organizer</p>
-              </div>
-            </li>
-            <li>
-              <span className="step-number">2</span>
-              <div className="step-content">
-                <h4>Upload Your Photos</h4>
-                <p>Select multiple photos and upload them instantly</p>
-              </div>
-            </li>
-            <li>
-              <span className="step-number">3</span>
-              <div className="step-content">
-                <h4>View the Gallery</h4>
-                <p>Browse all photos from your event in a shared gallery</p>
-              </div>
-            </li>
-          </ol>
-        </section>
-
-        <section className="cta-section">
-          <p className="cta-text">Have an event link? Paste it below to get started</p>
-          <div className="cta-input-group">
-            <input
-              type="text"
-              placeholder="Enter event code or use link"
-              className="event-input"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  const code = e.target.value.trim();
-                  if (code) {
-                    navigate(`/?event=${code}`);
-                  }
-                }
-              }}
-            />
-          </div>
-        </section>
-
-        <footer className="landing-footer">
-          <p>&copy; 2024 Capture by Val. All rights reserved.</p>
-        </footer>
-      </div>
-    );
+    return <LandingPage />;
   }
 
   return (
@@ -241,6 +172,8 @@ function Home() {
       )}
 
       <div className="upload-card">
+        {joining && <p className="joining-notice">Joining event…</p>}
+
         <label className="file-btn" disabled={!eventId || uploading}>
           <input
             type="file"
@@ -281,7 +214,7 @@ function Home() {
         <button
           className="upload-btn"
           onClick={handleUpload}
-          disabled={!eventId || uploading || images.length === 0}
+          disabled={!eventId || uploading || joining || images.length === 0}
         >
           <FaUpload /> {uploading ? `Uploading... ${uploadProgress}%` : 'Upload'}
         </button>

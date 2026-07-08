@@ -14,6 +14,7 @@ import {
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { uploadImage } from './services/uploadService';
+import { joinEventAsGuest } from './services/eventAccessService';
 import { CameraFilters, applyVideoFilters, applyCanvasFilters } from './components/CameraFilters';
 import { TimerButton } from './components/CameraTimer';
 import './CameraCapture.css';
@@ -22,7 +23,7 @@ function CameraCapture() {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('event');
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signInAsGuest, signOut } = useAuth();
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -34,6 +35,7 @@ function CameraCapture() {
   const [showGallery, setShowGallery] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [joining, setJoining] = useState(false);
 
   // Filter states
   const [brightness, setBrightness] = useState(100);
@@ -61,6 +63,27 @@ function CameraCapture() {
     };
 
     fetchEvent();
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!eventId) return;
+
+    let cancelled = false;
+    setJoining(true);
+
+    joinEventAsGuest(eventId, signInAsGuest)
+      .catch((err) => {
+        console.error('Error joining event:', err);
+        if (!cancelled) toast.error('Could not join this event');
+      })
+      .finally(() => {
+        if (!cancelled) setJoining(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   const startCamera = React.useCallback(async () => {
@@ -290,9 +313,9 @@ function CameraCapture() {
           <button
             className="upload-all-btn"
             onClick={uploadCapturedImages}
-            disabled={uploading || capturedImages.length === 0}
+            disabled={uploading || joining || capturedImages.length === 0}
           >
-            {uploading ? `Uploading... ${uploadProgress}%` : 'Upload All'}
+            {uploading ? `Uploading... ${uploadProgress}%` : joining ? 'Joining event…' : 'Upload All'}
           </button>
         </div>
       )}

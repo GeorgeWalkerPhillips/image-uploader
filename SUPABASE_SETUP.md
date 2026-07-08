@@ -48,12 +48,30 @@
 ```
 8. Click **Save**
 
-## Step 6: Configure .env
+## Step 6: Enable Anonymous Sign-Ins (required for guest uploads)
+
+Guests scan a QR code / open the event link and should be able to upload
+immediately, with no signup — like a disposable camera. This app uses
+Supabase's anonymous auth to give each guest a session behind the scenes.
+
+1. Go to **Authentication → Sign In / Providers**
+2. Find **Anonymous Sign-Ins** and toggle it **ON**
+3. Save
+
+If this is off, guests visiting an event link will see "Could not join this
+event" and uploads will fail.
+
+> Already applied the schema before this was added? Just re-run the two new
+> `event_access` policies from `supabase-schema.sql` (search for "Users can
+> grant themselves event access") in the SQL Editor — everything else in the
+> schema is unchanged.
+
+## Step 7: Configure .env
 1. Copy `.env.example` to `.env.local`
 2. Fill in your values from Step 2
 3. **Never commit `.env.local`** to git
 
-## Step 7: Test Connection
+## Step 8: Test Connection
 Run:
 ```bash
 npm start
@@ -65,6 +83,7 @@ You should see the app load without Firebase errors.
 - [ ] Project URL and Anon Key copied to `.env.local`
 - [ ] Database schema applied
 - [ ] Storage bucket created with RLS
+- [ ] Anonymous Sign-Ins enabled (guests can't upload without this)
 - [ ] `.env.local` added to `.gitignore` (should already be there)
 - [ ] No credentials in code files
 
