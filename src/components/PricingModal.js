@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaCheck } from 'react-icons/fa';
-import { TIERS, TIER_ORDER, formatGuestCap } from '../services/stripeService';
+import { TIERS, TIER_ORDER, formatGuestCap } from '../services/pricingTiers';
 import './PricingModal.css';
 
 const FEATURES = [

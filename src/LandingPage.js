@@ -9,7 +9,7 @@ import {
   FaShieldAlt,
   FaHeart,
 } from 'react-icons/fa';
-import { TIERS, TIER_ORDER, formatGuestCap } from './services/stripeService';
+import { TIERS, TIER_ORDER, formatGuestCap } from './services/pricingTiers';
 import styles from './LandingPage.module.css';
 
 const POPULAR_TIER = 'growth';

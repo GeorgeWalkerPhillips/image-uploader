@@ -1,15 +1,33 @@
 import { supabase } from '../supabaseClient';
 
-const stripePromise = new Promise((resolve) => {
-  const script = document.createElement('script');
-  script.src = 'https://js.stripe.com/v3/';
-  script.onload = () => {
-    resolve(window.Stripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY));
-  };
-  document.head.appendChild(script);
-});
+// Lazily loads Stripe.js and constructs the client only when checkout is
+// actually initiated — never on page load, so pages that don't touch
+// payments (landing page, guest upload flow) never load Stripe at all.
+let stripePromise = null;
 
-export const getStripe = () => stripePromise;
+export const getStripe = () => {
+  if (!stripePromise) {
+    stripePromise = new Promise((resolve, reject) => {
+      const key = process.env.REACT_APP_STRIPE_PUBLIC_KEY;
+      if (!key) {
+        reject(
+          new Error(
+            'Stripe is not configured. Set REACT_APP_STRIPE_PUBLIC_KEY in .env.local.'
+          )
+        );
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://js.stripe.com/v3/';
+      script.onload = () => resolve(window.Stripe(key));
+      script.onerror = () => reject(new Error('Failed to load Stripe.js'));
+      document.head.appendChild(script);
+    });
+  }
+
+  return stripePromise;
+};
 
 export const createCheckoutSession = async (eventId, eventName, userId, amount, tierKey) => {
   try {
@@ -103,50 +121,4 @@ export const getEventPaymentStatus = async (eventId) => {
     console.error('Payment status error:', error);
     return null;
   }
-};
-
-// Guest-count-based tiers, priced to be directly competitive with POV
-// Camera (free under 10 guests; $4.99 / $19.99 / $49.99 paid tiers by
-// guest count, one-time per event, no subscription).
-export const TIERS = {
-  free: {
-    key: 'free',
-    name: 'Free',
-    guestCap: 10,
-    amountCents: 0,
-    display: 'Free',
-  },
-  starter: {
-    key: 'starter',
-    name: 'Starter',
-    guestCap: 25,
-    amountCents: 9900, // R99
-    display: 'R99',
-  },
-  growth: {
-    key: 'growth',
-    name: 'Growth',
-    guestCap: 100,
-    amountCents: 34900, // R349
-    display: 'R349',
-  },
-  unlimited: {
-    key: 'unlimited',
-    name: 'Unlimited',
-    guestCap: null,
-    amountCents: 89900, // R899
-    display: 'R899',
-  },
-};
-
-export const TIER_ORDER = ['free', 'starter', 'growth', 'unlimited'];
-
-export const formatGuestCap = (guestCap) =>
-  guestCap == null ? 'Unlimited guests' : `Up to ${guestCap} guests`;
-
-export const formatPrice = (amountCents, currency = 'ZAR') => {
-  return (amountCents / 100).toLocaleString('en-ZA', {
-    style: 'currency',
-    currency: currency,
-  });
 };

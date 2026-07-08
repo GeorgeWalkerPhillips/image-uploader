@@ -6,12 +6,11 @@ import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { PricingModal } from './components/PricingModal';
+import { TIERS, formatGuestCap } from './services/pricingTiers';
 import {
-  TIERS,
   createCheckoutSession,
   getStripe,
   updateEventPaymentStatus,
-  formatGuestCap,
 } from './services/stripeService';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';

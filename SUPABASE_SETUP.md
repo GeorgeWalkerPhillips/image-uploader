@@ -17,12 +17,17 @@
    - `anon public` key → `REACT_APP_SUPABASE_ANON_KEY`
 
 ## Step 3: Create Database Schema
-1. In Supabase, go to **SQL Editor**
-2. Click **New Query**
-3. Copy entire contents of `supabase-schema.sql` from this repo
-4. Paste into the query box
-5. Click **Run**
-6. Wait for success message
+Run these three SQL files, in this exact order, in the **SQL Editor**
+(New Query → paste → Run → wait for success message, then move to the next
+file):
+
+1. `supabase-schema.sql` — core tables (events, photos, profiles) and RLS
+2. `payment-schema.sql` — payment/Stripe-related tables and columns
+3. `pricing-tiers-migration.sql` — self-serve account policies + guest-count
+   pricing tiers (free vs. paid plans)
+
+All three must be applied for the app to work — signup, event creation, and
+guest joining all depend on policies added in file 3.
 
 ## Step 4: Create Storage Buckets
 1. Go to **Storage** → **Buckets**
@@ -61,15 +66,15 @@ Supabase's anonymous auth to give each guest a session behind the scenes.
 If this is off, guests visiting an event link will see "Could not join this
 event" and uploads will fail.
 
-> Already applied the schema before this was added? Just re-run the two new
-> `event_access` policies from `supabase-schema.sql` (search for "Users can
-> grant themselves event access") in the SQL Editor — everything else in the
-> schema is unchanged.
-
 ## Step 7: Configure .env
 1. Copy `.env.example` to `.env.local`
 2. Fill in your values from Step 2
-3. **Never commit `.env.local`** to git
+3. Add your Stripe publishable key (see `PAYMENT_SETUP.md`) if you're
+   enabling paid event tiers
+4. **Never commit `.env.local`** to git
+5. **Restart `npm start`** after any change to `.env.local` — Create React
+   App only reads env vars at dev-server startup, so edits won't take effect
+   until you restart
 
 ## Step 8: Test Connection
 Run:
@@ -77,11 +82,16 @@ Run:
 npm start
 ```
 
-You should see the app load without Firebase errors.
+You should see the app load with no errors in the browser console.
+
+If you see `net::ERR_NAME_NOT_RESOLVED` for your Supabase URL, the hostname
+in `REACT_APP_SUPABASE_URL` doesn't match a real, live project — re-copy the
+Project URL from **Settings → API** and confirm the project isn't paused or
+deleted.
 
 ## Security Checklist
 - [ ] Project URL and Anon Key copied to `.env.local`
-- [ ] Database schema applied
+- [ ] All three SQL files applied, in order (Step 3)
 - [ ] Storage bucket created with RLS
 - [ ] Anonymous Sign-Ins enabled (guests can't upload without this)
 - [ ] `.env.local` added to `.gitignore` (should already be there)

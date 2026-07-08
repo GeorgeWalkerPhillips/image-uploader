@@ -66,13 +66,28 @@ export const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Mirror of src/services/pricingTiers.js — keep these two in sync. The
+// server recomputes the amount from the tier key instead of trusting the
+// client-supplied amount, so a tampered request can't pay less than it
+// should.
+const TIER_AMOUNTS_CENTS = {
+  starter: 9900, // R99
+  growth: 34900, // R349
+  unlimited: 89900, // R899
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { eventId, eventName, userId, amount } = await req.json();
+    const { eventId, eventName, userId, tier } = await req.json();
+
+    const amount = TIER_AMOUNTS_CENTS[tier];
+    if (!amount) {
+      throw new Error(`Unknown or free tier: ${tier}`);
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -81,8 +96,8 @@ Deno.serve(async (req) => {
           price_data: {
             currency: "zar",
             product_data: {
-              name: `Event: ${eventName}`,
-              description: "Professional event photo sharing",
+              name: `Event: ${eventName} (${tier})`,
+              description: "Event photo sharing",
             },
             unit_amount: amount,
           },
@@ -95,6 +110,7 @@ Deno.serve(async (req) => {
       metadata: {
         eventId,
         userId,
+        tier,
       },
     });
 
@@ -110,6 +126,10 @@ Deno.serve(async (req) => {
   }
 });
 ```
+
+The app currently sends `amount` too (for its own display purposes) but the
+function above ignores it and always recomputes from `tier` — never trust
+a client-supplied price for what you charge.
 
 5. Click **Deploy**
 6. Go to **Settings → Secrets** and add:
@@ -134,11 +154,12 @@ Create a new Edge Function `webhook-stripe` to handle the webhook.
 ### Test in Development:
 
 1. User creates event
-2. Selects "Pro Event" plan
+2. Selects a paid plan (Starter, Growth, or Unlimited)
 3. Redirected to Stripe test checkout
 4. Use test card: `4242 4242 4242 4242`
 5. Any future date, any CVC
-6. Event is marked as paid
+6. On return, the app reads `?payment=success` from the redirect URL and
+   marks the event paid client-side (see "Security" below for the caveat)
 
 ### Test Cards:
 
@@ -158,11 +179,18 @@ When ready for real payments:
 
 ## Pricing
 
-Current pricing:
-- **Free**: 1 event per user
-- **Paid**: R50 ZAR per event
+Priced by guest count, matching how competitors like POV Camera price
+(free under 10 guests, then flat one-time fees that scale with guest
+count — no subscriptions):
 
-Edit pricing in: `src/services/stripeService.js`
+- **Free**: up to 10 guests
+- **Starter**: R99/event, up to 25 guests
+- **Growth**: R349/event, up to 100 guests
+- **Unlimited**: R899/event, no guest cap
+
+Edit pricing in `src/services/pricingTiers.js` — and keep the
+`TIER_AMOUNTS_CENTS` map in the Edge Function (step 5 above) in sync, since
+that's what actually determines what Stripe charges.
 
 ## Troubleshooting
 
@@ -183,9 +211,17 @@ Edit pricing in: `src/services/stripeService.js`
 ## Security
 
 ✅ Secret Key never exposed to frontend
-✅ All payments validated server-side
+✅ Charge amount is recomputed server-side from the tier key, not trusted from the client
 ✅ RLS policies protect payment data
-✅ Webhook signatures verified
+⚠️ **No webhook is deployed yet.** The app currently confirms payment by
+reading `?payment=success` off the Stripe redirect URL when the browser
+returns to `/admin` — this proves the user completed *a* checkout, but
+doesn't cryptographically verify it with Stripe. A user who cancels but
+manually edits the URL to add `?payment=success&event=<id>` could mark an
+unpaid event as paid. For real production hardening, build the
+`webhook-stripe` function from step 6 and verify
+`stripe-signature` against `payment_intent.succeeded` before calling
+`updateEventPaymentStatus`.
 
 ---
 
