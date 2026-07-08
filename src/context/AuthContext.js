@@ -105,11 +105,13 @@ export function AuthProvider({ children }) {
 
       if (error) throw error;
 
-      await logAuditEvent('login', 'user', data.user?.id);
+      // Fire-and-forget: audit logging is a side effect and must never be
+      // able to block or hang the actual sign-in.
+      logAuditEvent('login', 'user', data.user?.id);
       return data;
     } catch (err) {
       setError(err.message);
-      await logAuditEvent('login_failed', 'user', null);
+      logAuditEvent('login_failed', 'user', null);
       throw err;
     }
   };
