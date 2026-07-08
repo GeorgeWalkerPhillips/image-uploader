@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaSignOutAlt, FaArrowRight } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { PricingModal } from './components/PricingModal';
-import { PRICING } from './services/stripeService';
+import {
+  TIERS,
+  createCheckoutSession,
+  getStripe,
+  updateEventPaymentStatus,
+  formatGuestCap,
+} from './services/stripeService';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import './AdminEventManager.css';
@@ -14,6 +20,7 @@ import './AdminEventManager.css';
 function AdminEventManager() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [eventName, setEventName] = useState('');
   const [description, setDescription] = useState('');
@@ -25,22 +32,6 @@ function AdminEventManager() {
   const [newName, setNewName] = useState('');
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
-  const [freeEventsUsed, setFreeEventsUsed] = useState(0);
-
-  const checkFreeEventsUsed = React.useCallback(async () => {
-    try {
-      const { count, error } = await supabase
-        .from('events')
-        .select('id', { count: 'exact' })
-        .eq('created_by', user.id)
-        .eq('is_free', true);
-
-      if (error) throw error;
-      setFreeEventsUsed(count || 0);
-    } catch (err) {
-      console.error('Error checking free events:', err);
-    }
-  }, [user.id]);
 
   const fetchEvents = React.useCallback(async () => {
     try {
@@ -62,8 +53,35 @@ function AdminEventManager() {
 
   useEffect(() => {
     fetchEvents();
-    checkFreeEventsUsed();
-  }, [fetchEvents, checkFreeEventsUsed]);
+  }, [fetchEvents]);
+
+  // Stripe redirects back here with ?payment=success|cancelled&event=<id>.
+  // A real webhook (see PAYMENT_SETUP.md) is the secure way to confirm a
+  // charge server-side; this client-side confirmation is a pragmatic
+  // stopgap until that's deployed.
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    const paidEventId = searchParams.get('event');
+
+    if (paymentStatus === 'success' && paidEventId) {
+      (async () => {
+        try {
+          await updateEventPaymentStatus(paidEventId, true);
+          toast.success('Payment confirmed! Your event is live.');
+          fetchEvents();
+        } catch (err) {
+          toast.error('Could not confirm payment status');
+          console.error('Payment confirmation error:', err);
+        } finally {
+          setSearchParams({});
+        }
+      })();
+    } else if (paymentStatus === 'cancelled') {
+      toast.info('Payment cancelled');
+      setSearchParams({});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createEvent = async (e) => {
     e.preventDefault();
@@ -85,8 +103,11 @@ function AdminEventManager() {
     setShowPricingModal(true);
   };
 
-  const finalizEventCreation = async (planType) => {
+  const finalizEventCreation = async (tierKey) => {
     if (!pendingEvent) return;
+
+    const tier = TIERS[tierKey];
+    if (!tier) return;
 
     const { eventName: name, description: desc, startDate, endDate } = pendingEvent;
     const start = new Date(startDate);
@@ -105,20 +126,16 @@ function AdminEventManager() {
           end_date: end.toISOString(),
           expiry_date: expiry.toISOString(),
           created_by: user.id,
-          is_free: planType === 'free',
-          is_paid: planType === 'paid',
-          payment_status: planType === 'paid' ? 'pending_payment' : 'free',
+          tier: tier.key,
+          guest_cap: tier.guestCap,
+          is_free: tier.key === 'free',
+          is_paid: tier.key !== 'free',
+          payment_status: tier.key === 'free' ? 'free' : 'pending_payment',
         })
         .select()
         .single();
 
       if (error) throw error;
-
-      toast.success(
-        planType === 'free'
-          ? 'Free event created!'
-          : `Event created! Redirecting to payment...`
-      );
 
       setEventName('');
       setDescription('');
@@ -127,11 +144,12 @@ function AdminEventManager() {
       setPendingEvent(null);
       setShowPricingModal(false);
 
-      if (planType === 'paid') {
-        initiatePayment(data.id, name);
-      } else {
+      if (tier.key === 'free') {
+        toast.success('Free event created!');
         fetchEvents();
-        checkFreeEventsUsed();
+      } else {
+        toast.info('Redirecting to secure payment...');
+        await initiatePayment(data.id, name, tier);
       }
     } catch (error) {
       toast.error('Failed to create event: ' + error.message);
@@ -139,13 +157,23 @@ function AdminEventManager() {
     }
   };
 
-  const initiatePayment = async (eventId, eventName) => {
+  const initiatePayment = async (eventId, name, tier) => {
     try {
-      toast.info('Preparing payment...');
-      const stripeUrl = `https://buy.stripe.com/test?event_id=${eventId}&event_name=${encodeURIComponent(eventName)}`;
-      window.location.href = stripeUrl;
+      const session = await createCheckoutSession(
+        eventId,
+        name,
+        user.id,
+        tier.amountCents,
+        tier.key
+      );
+      const stripe = await getStripe();
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: session.sessionId,
+      });
+      if (error) throw error;
     } catch (error) {
       toast.error('Payment failed: ' + error.message);
+      console.error('Payment error:', error);
     }
   };
 
@@ -286,16 +314,11 @@ function AdminEventManager() {
         isOpen={showPricingModal}
         onClose={() => setShowPricingModal(false)}
         onSelectPlan={finalizEventCreation}
-        freeEventsUsed={freeEventsUsed}
       />
 
       <div className="admin-header">
-        <h1>📸 Capture Admin Panel</h1>
+        <h1>Your Events</h1>
         <div className="header-info">
-          <span className="free-events-remaining">
-            {PRICING.FREE_EVENTS_PER_USER - freeEventsUsed} free event
-            {PRICING.FREE_EVENTS_PER_USER - freeEventsUsed !== 1 ? 's' : ''} left
-          </span>
           <button className="logout-btn" onClick={handleSignOut} title="Sign Out">
             <FaSignOutAlt /> Sign Out
           </button>
@@ -352,6 +375,7 @@ function AdminEventManager() {
           <div className="events-grid">
             {events.map((event) => {
               const expired = isExpired(event.expiry_date);
+              const tier = TIERS[event.tier] || TIERS.free;
               return (
                 <div
                   key={event.id}
@@ -395,6 +419,12 @@ function AdminEventManager() {
                           <p className="event-desc">{event.description}</p>
                         )}
                         <div className="event-dates">
+                          <p>
+                            <strong>Plan:</strong> {tier.name} ({formatGuestCap(event.guest_cap)})
+                            {event.tier !== 'free' && event.payment_status === 'pending_payment' && (
+                              <span className="payment-pending-badge"> · payment pending</span>
+                            )}
+                          </p>
                           <p>
                             <strong>Start:</strong> {formatDate(event.start_date)}
                           </p>

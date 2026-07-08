@@ -13,7 +13,7 @@ export function ProtectedRoute({ children, requireAdmin = false }) {
     );
   }
 
-  if (!user) {
+  if (!user || user.is_anonymous) {
     return <Navigate to="/login" />;
   }
 

@@ -27,13 +27,9 @@
   gap: 16px;
 }
 
-.free-events-remaining {
-  font-size: 14px;
-  color: #667eea;
+.payment-pending-badge {
+  color: #e68900;
   font-weight: 600;
-  background: rgba(102, 126, 234, 0.1);
-  padding: 8px 12px;
-  border-radius: 6px;
 }
 
 .logout-btn {

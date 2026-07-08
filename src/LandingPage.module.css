@@ -321,7 +321,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
-  max-width: 640px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -330,6 +330,26 @@
   border-radius: 16px;
   padding: 32px 24px;
   text-align: center;
+  position: relative;
+}
+
+.pricingCardPopular {
+  border-color: #111;
+}
+
+.pricingBadge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111;
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .pricingCard h3 {
@@ -345,6 +365,12 @@
   font-size: 36px;
   font-weight: 800;
   margin: 0 0 12px;
+}
+
+.pricePeriod {
+  font-size: 14px;
+  color: #999;
+  font-weight: 600;
 }
 
 .pricingCard p:last-child {
@@ -458,6 +484,12 @@
 
   .ctaJoin {
     flex-direction: row;
+  }
+}
+
+@media (min-width: 900px) {
+  .pricingGrid {
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .ctaJoin input {

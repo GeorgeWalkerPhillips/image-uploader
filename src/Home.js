@@ -37,7 +37,7 @@ function Home() {
     joinEventAsGuest(eventId, signInAsGuest)
       .catch((err) => {
         console.error('Error joining event:', err);
-        if (!cancelled) toast.error('Could not join this event');
+        if (!cancelled) toast.error(err.message || 'Could not join this event');
       })
       .finally(() => {
         if (!cancelled) setJoining(false);

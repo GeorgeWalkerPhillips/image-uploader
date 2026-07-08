@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { toast } from 'react-toastify';
-import './Login.css';
+import styles from './Login.module.css';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -43,11 +43,13 @@ function Login() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1>📸 Capture Admin</h1>
-        <p className="subtitle">
-          {isSignUp ? 'Create an account' : 'Sign in to manage events'}
+    <div className={styles.loginContainer}>
+      <div className={styles.loginCard}>
+        <Link to="/" className={styles.brand}>
+          Capture
+        </Link>
+        <p className={styles.subtitle}>
+          {isSignUp ? 'Create an account to host events' : 'Sign in to manage your events'}
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -78,7 +80,7 @@ function Login() {
             required
             minLength={8}
           />
-          <button type="submit" disabled={loading} className="submit-btn">
+          <button type="submit" disabled={loading} className={styles.submitBtn}>
             {loading
               ? 'Loading...'
               : isSignUp
@@ -87,16 +89,20 @@ function Login() {
           </button>
         </form>
 
-        <p className="toggle-auth">
-          {isSignUp ? 'Already have an account? ' : 'No account? '}
+        <p className={styles.toggleAuth}>
+          {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="link-btn"
+            className={styles.linkBtn}
           >
             {isSignUp ? 'Sign In' : 'Create one'}
           </button>
         </p>
+
+        <Link to="/" className={styles.backLink}>
+          ← Back to home
+        </Link>
       </div>
     </div>
   );

@@ -9,7 +9,10 @@ import {
   FaShieldAlt,
   FaHeart,
 } from 'react-icons/fa';
+import { TIERS, TIER_ORDER, formatGuestCap } from './services/stripeService';
 import styles from './LandingPage.module.css';
+
+const POPULAR_TIER = 'growth';
 
 const FAQ_ITEMS = [
   {
@@ -29,8 +32,8 @@ const FAQ_ITEMS = [
     a: 'Yes. From your event dashboard, download every photo from an event as a single ZIP file with one click.',
   },
   {
-    q: 'Is there a limit on how many events we can create?',
-    a: 'Your first event is completely free. After that, each additional event is a flat fee — no subscriptions, no per-guest charges.',
+    q: 'How does pricing work?',
+    a: `Pricing scales with your guest count. Free for up to ${TIERS.free.guestCap} guests, then a flat one-time fee per event as your guest list grows — no subscriptions, ever.`,
   },
   {
     q: 'What photo formats can guests upload?',
@@ -103,7 +106,7 @@ function LandingPage() {
 
           <ul className={styles.trustBar}>
             <li>No app required for guests</li>
-            <li>First event free</li>
+            <li>Free up to {TIERS.free.guestCap} guests</li>
             <li>Ready in under 2 minutes</li>
           </ul>
         </section>
@@ -233,18 +236,31 @@ function LandingPage() {
         </section>
 
         <section aria-labelledby="pricing-heading">
-          <h2 id="pricing-heading">Simple, Honest Pricing</h2>
+          <h2 id="pricing-heading">Priced by Guest Count, Not Subscriptions</h2>
+          <p className={styles.useCasesIntro}>
+            Pay once per event, based on how many guests are contributing —
+            never a monthly fee.
+          </p>
           <div className={styles.pricingGrid}>
-            <div className={styles.pricingCard}>
-              <h3>First Event</h3>
-              <p className={styles.price}>Free</p>
-              <p>Full access to uploads, the shared gallery, and ZIP downloads.</p>
-            </div>
-            <div className={styles.pricingCard}>
-              <h3>Every Event After</h3>
-              <p className={styles.price}>R50 flat</p>
-              <p>One-time per event. No subscriptions, no per-guest fees.</p>
-            </div>
+            {TIER_ORDER.map((tierKey) => {
+              const tier = TIERS[tierKey];
+              const isFree = tierKey === 'free';
+              const isPopular = tierKey === POPULAR_TIER;
+              return (
+                <div
+                  key={tierKey}
+                  className={`${styles.pricingCard}${isPopular ? ` ${styles.pricingCardPopular}` : ''}`}
+                >
+                  {isPopular && <div className={styles.pricingBadge}>MOST POPULAR</div>}
+                  <h3>{tier.name}</h3>
+                  <p className={styles.price}>
+                    {tier.display}
+                    {!isFree && <span className={styles.pricePeriod}>/event</span>}
+                  </p>
+                  <p>{formatGuestCap(tier.guestCap)}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
 

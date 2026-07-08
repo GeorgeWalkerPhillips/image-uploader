@@ -18,9 +18,46 @@ export const grantEventAccess = async (eventId, userId, accessType = 'upload') =
 
 // Ensures the current visitor has a session (creating an anonymous one if
 // needed, mirroring the "scan and shoot, no signup" flow guests expect) and
-// is granted access to the given event.
+// is granted access to the given event — unless the event's plan has a
+// guest cap and it's already full, in which case new guests are turned
+// away (returning guests who already have access are always let back in).
 export const joinEventAsGuest = async (eventId, signInAsGuest) => {
   const user = await signInAsGuest();
+
+  const { data: existingAccess, error: accessError } = await supabase
+    .from('event_access')
+    .select('id')
+    .eq('event_id', eventId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (accessError) throw accessError;
+
+  if (!existingAccess) {
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('guest_cap')
+      .eq('id', eventId)
+      .single();
+
+    if (eventError) throw eventError;
+
+    if (event?.guest_cap != null) {
+      const { data: guestCount, error: countError } = await supabase.rpc(
+        'get_event_guest_count',
+        { p_event_id: eventId }
+      );
+
+      if (countError) throw countError;
+
+      if (guestCount >= event.guest_cap) {
+        throw new Error(
+          "This event's guest limit has been reached. Ask the host to upgrade their plan."
+        );
+      }
+    }
+  }
+
   await grantEventAccess(eventId, user.id, 'upload');
   return user;
 };
