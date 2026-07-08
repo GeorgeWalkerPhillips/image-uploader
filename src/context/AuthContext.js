@@ -134,15 +134,18 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
+    // Clear local state immediately so the UI never hangs waiting on this
+    // network round-trip — the server-side signOut still happens, just
+    // without blocking navigation on it.
+    setError(null);
+    setUser(null);
+    setIsAdmin(false);
+
     try {
-      setError(null);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      setUser(null);
-      setIsAdmin(false);
     } catch (err) {
-      setError(err.message);
-      throw err;
+      console.error('Sign out request failed (local session already cleared):', err);
     }
   };
 

@@ -114,6 +114,29 @@
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 
+.library-button {
+  position: absolute;
+  bottom: 115px;
+  left: calc(50% + 90px);
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  z-index: 20;
+}
+
+.library-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 .bottom-bar {
   position: absolute;
   bottom: 80px;
@@ -296,33 +319,3 @@
   cursor: not-allowed;
 }
 
-.bottom-nav {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 500px;
-  height: 70px;
-  background: white;
-  border-radius: 16px 16px 0 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.nav-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #444;
-  cursor: pointer;
-  padding: 12px;
-  transition: color 0.2s;
-  flex: 1;
-}
-
-.nav-btn:hover {
-  color: #111;
-}

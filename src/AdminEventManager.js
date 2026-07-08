@@ -220,7 +220,7 @@ function AdminEventManager() {
 
   const copyLink = async (id) => {
     const baseUrl = window.location.origin;
-    const link = `${baseUrl}/?event=${id}`;
+    const link = `${baseUrl}/camera?event=${id}`;
     try {
       await navigator.clipboard.writeText(link);
       toast.success('Link copied!');
@@ -383,7 +383,7 @@ function AdminEventManager() {
                   <div className="event-qr">
                     <QRCodeCanvas
                       id={`qr-${event.id}`}
-                      value={`${window.location.origin}/?event=${event.id}`}
+                      value={`${window.location.origin}/camera?event=${event.id}`}
                       size={100}
                     />
                   </div>
@@ -484,7 +484,7 @@ function AdminEventManager() {
                     <button
                       className="action-btn view-btn"
                       onClick={() =>
-                        window.open(`/?event=${event.id}`, '_blank')
+                        window.open(`/camera?event=${event.id}`, '_blank')
                       }
                       title="View event"
                     >

@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Home from './Home';
+import CameraCapture from './CameraCapture';
 import AdminEventManager from './AdminEventManager';
 import Login from './Login';
 import Gallery from './Gallery';
@@ -15,7 +16,7 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/camera" element={<Home />} />
+        <Route path="/camera" element={<CameraCapture />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/admin"

@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaHome, FaCamera, FaCog, FaSignOutAlt, FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
-import { useAuth } from './context/AuthContext';
+import { FaChevronLeft, FaChevronRight, FaTimes, FaDownload, FaCheckSquare } from 'react-icons/fa';
 import { supabase } from './supabaseClient';
 import { getPublicPhotoUrl } from './services/uploadService';
+import { downloadPhotosAsZip } from './utils/downloadPhotos';
+import { BottomNav } from './components/BottomNav';
 import './Gallery.css';
 
 function Gallery() {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('event');
-  const navigate = useNavigate();
-  const { user, signOut } = useAuth();
 
+  const [eventName, setEventName] = useState('');
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -20,8 +20,26 @@ function Gallery() {
   const [showViewer, setShowViewer] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [downloading, setDownloading] = useState(false);
 
   const PHOTOS_PER_PAGE = 20;
+
+  useEffect(() => {
+    if (!eventId) return;
+
+    const fetchEventName = async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('name')
+        .eq('id', eventId)
+        .single();
+      if (data) setEventName(data.name);
+    };
+
+    fetchEventName();
+  }, [eventId]);
 
   const fetchPhotosCallback = React.useCallback(async (newOffset) => {
     if (!eventId) {
@@ -93,15 +111,6 @@ function Gallery() {
     setCurrentIndex((i) => Math.min(photos.length - 1, i + 1));
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      toast.error('Sign out failed');
-    }
-  };
-
   const deletePhoto = async (photoId, storagePath) => {
     if (!window.confirm('Delete this photo? This cannot be undone.')) return;
 
@@ -127,6 +136,52 @@ function Gallery() {
     }
   };
 
+  const toggleSelectMode = () => {
+    setSelectMode((prev) => !prev);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelected = (photoId) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(photoId)) {
+        next.delete(photoId);
+      } else {
+        next.add(photoId);
+      }
+      return next;
+    });
+  };
+
+  const downloadPhotos = async (photosToDownload) => {
+    if (photosToDownload.length === 0) {
+      toast.error('No photos to download');
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      toast.info(`Preparing ${photosToDownload.length} photo(s)...`);
+      await downloadPhotosAsZip(eventName, photosToDownload);
+      toast.success('Download started!');
+    } catch (error) {
+      toast.error('Download failed: ' + error.message);
+      console.error('Download error:', error);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadAll = () => downloadPhotos(photos);
+
+  const handleDownloadSelected = () => {
+    const selected = photos.filter((p) => selectedIds.has(p.id));
+    downloadPhotos(selected).then(() => {
+      setSelectMode(false);
+      setSelectedIds(new Set());
+    });
+  };
+
   if (!eventId) {
     return (
       <div className="gallery-container">
@@ -146,10 +201,24 @@ function Gallery() {
         <h2>Photo Gallery</h2>
         <div className="gallery-stats">
           <span>{photos.length} photos</span>
-          {user && (
-            <button className="logout-btn" onClick={handleSignOut}>
-              <FaSignOutAlt />
-            </button>
+          {photos.length > 0 && (
+            <>
+              <button
+                className="select-toggle-btn"
+                onClick={toggleSelectMode}
+                title={selectMode ? 'Cancel selection' : 'Select photos'}
+              >
+                <FaCheckSquare /> {selectMode ? 'Cancel' : 'Select'}
+              </button>
+              <button
+                className="download-all-btn"
+                onClick={handleDownloadAll}
+                disabled={downloading}
+                title="Download all photos"
+              >
+                <FaDownload /> All
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -167,8 +236,12 @@ function Gallery() {
                   <div
                     className="gallery-item"
                     onClick={() => {
-                      setCurrentIndex(index);
-                      setShowViewer(true);
+                      if (selectMode) {
+                        toggleSelected(photo.id);
+                      } else {
+                        setCurrentIndex(index);
+                        setShowViewer(true);
+                      }
                     }}
                     style={{ cursor: 'pointer' }}
                   >
@@ -177,17 +250,26 @@ function Gallery() {
                       alt={`photo-${photo.id}`}
                       loading="lazy"
                     />
+                    {selectMode && (
+                      <div
+                        className={`select-checkbox ${selectedIds.has(photo.id) ? 'checked' : ''}`}
+                      >
+                        {selectedIds.has(photo.id) && <FaCheckSquare />}
+                      </div>
+                    )}
                   </div>
-                  <button
-                    className="delete-photo-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deletePhoto(photo.id, photo.storagePath);
-                    }}
-                    title="Delete photo"
-                  >
-                    🗑️
-                  </button>
+                  {!selectMode && (
+                    <button
+                      className="delete-photo-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deletePhoto(photo.id, photo.storagePath);
+                      }}
+                      title="Delete photo"
+                    >
+                      🗑️
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -202,6 +284,19 @@ function Gallery() {
           </>
         )}
       </div>
+
+      {selectMode && (
+        <div className="selection-bar">
+          <span>{selectedIds.size} selected</span>
+          <button
+            className="download-selected-btn"
+            onClick={handleDownloadSelected}
+            disabled={downloading || selectedIds.size === 0}
+          >
+            <FaDownload /> Download Selected
+          </button>
+        </div>
+      )}
 
       {showViewer && photos.length > 0 && (
         <div
@@ -249,17 +344,7 @@ function Gallery() {
         </div>
       )}
 
-      <nav className="bottom-nav">
-        <button className="nav-btn" onClick={() => navigate('/')} title="Home">
-          <FaHome />
-        </button>
-        <button className="nav-btn" title="Camera" onClick={() => navigate(`/camera?event=${eventId}`)}>
-          <FaCamera />
-        </button>
-        <button className="nav-btn" title="Settings">
-          <FaCog />
-        </button>
-      </nav>
+      <BottomNav eventId={eventId} active="gallery" />
     </div>
   );
 }

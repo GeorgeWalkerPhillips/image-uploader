@@ -4,10 +4,7 @@ import { toast } from 'react-toastify';
 import {
   FaSyncAlt,
   FaCamera,
-  FaHome,
-  FaPhotoVideo,
-  FaCog,
-  FaSignOutAlt,
+  FaImages,
   FaChevronLeft,
   FaChevronRight,
 } from 'react-icons/fa';
@@ -17,16 +14,18 @@ import { uploadImage } from './services/uploadService';
 import { joinEventAsGuest } from './services/eventAccessService';
 import { CameraFilters, applyVideoFilters, applyCanvasFilters } from './components/CameraFilters';
 import { TimerButton } from './components/CameraTimer';
+import { BottomNav } from './components/BottomNav';
 import './CameraCapture.css';
 
 function CameraCapture() {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('event');
   const navigate = useNavigate();
-  const { user, signInAsGuest, signOut } = useAuth();
+  const { user, signInAsGuest } = useAuth();
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const [facingMode, setFacingMode] = useState('user');
   const [eventName, setEventName] = useState('');
@@ -103,9 +102,10 @@ function CameraCapture() {
 
   useEffect(() => {
     startCamera();
+    const video = videoRef.current;
     return () => {
-      if (videoRef.current?.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      if (video?.srcObject) {
+        video.srcObject.getTracks().forEach((track) => track.stop());
       }
     };
   }, [startCamera]);
@@ -117,7 +117,7 @@ function CameraCapture() {
     }
   }, [brightness, contrast, filter]);
 
-  const captureImage = () => {
+  const captureImage = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -134,10 +134,31 @@ function CameraCapture() {
     applyCanvasFilters(canvas, ctx, imageData, brightness, contrast, filter);
 
     const imageDataUrl = canvas.toDataURL('image/png');
-    setCapturedImages((prev) => [...prev, imageDataUrl]);
-    setCurrentIndex(capturedImages.length);
+    const blob = await fetch(imageDataUrl).then((res) => res.blob());
+    const file = new File([blob], `capture-${Date.now()}.png`, { type: 'image/png' });
+
+    setCapturedImages((prev) => {
+      const next = [...prev, { id: `${Date.now()}-${prev.length}`, previewUrl: imageDataUrl, file }];
+      setCurrentIndex(next.length - 1);
+      return next;
+    });
 
     toast.success('Photo captured');
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const newItems = files.map((file, i) => ({
+      id: `${Date.now()}-${i}`,
+      previewUrl: URL.createObjectURL(file),
+      file,
+    }));
+
+    setCapturedImages((prev) => [...prev, ...newItems]);
+    setShowGallery(true);
+    e.target.value = '';
   };
 
   const uploadCapturedImages = async () => {
@@ -159,12 +180,7 @@ function CameraCapture() {
 
     for (let i = 0; i < capturedImages.length; i++) {
       try {
-        const blob = await fetch(capturedImages[i]).then((res) => res.blob());
-        const file = new File([blob], `capture-${Date.now()}-${i}.png`, {
-          type: 'image/png',
-        });
-
-        const result = await uploadImage(file, eventId, user.id);
+        const result = await uploadImage(capturedImages[i].file, eventId, user.id);
 
         if (result.success) {
           successCount++;
@@ -200,15 +216,6 @@ function CameraCapture() {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      toast.error('Sign out failed');
-    }
-  };
-
   const flipCamera = () => {
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
   };
@@ -231,13 +238,19 @@ function CameraCapture() {
           <FaSyncAlt />
         </button>
         <span className="event-name">{eventName || 'Camera'}</span>
-        <button className="icon-button" onClick={handleSignOut} title="Sign Out">
-          <FaSignOutAlt />
-        </button>
       </div>
 
       <video ref={videoRef} autoPlay playsInline className="video-feed" />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic"
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleFileSelect}
+      />
 
       {/* Camera Controls */}
       <CameraFilters
@@ -276,7 +289,7 @@ function CameraCapture() {
           </div>
 
           <img
-            src={capturedImages[currentIndex]}
+            src={capturedImages[currentIndex].previewUrl}
             alt="Captured"
             className="preview-image"
           />
@@ -322,8 +335,8 @@ function CameraCapture() {
 
       <div className="bottom-bar">
         <div className="thumbnail-stack" onClick={() => setShowGallery(true)}>
-          {capturedImages.slice(-3).map((img, i) => (
-            <img key={i} src={img} alt="preview" className="thumbnail" />
+          {capturedImages.slice(-3).map((img) => (
+            <img key={img.id} src={img.previewUrl} alt="preview" className="thumbnail" />
           ))}
           {capturedImages.length > 0 && (
             <div className="photo-count">{capturedImages.length}</div>
@@ -331,25 +344,19 @@ function CameraCapture() {
         </div>
       </div>
 
+      <button
+        className="library-button"
+        onClick={() => fileInputRef.current?.click()}
+        title="Choose from camera roll"
+      >
+        <FaImages />
+      </button>
+
       <button className="shutter-button" onClick={captureImage} title="Capture">
         <FaCamera />
       </button>
 
-      <nav className="bottom-nav">
-        <button className="nav-btn" onClick={() => navigate('/')} title="Home">
-          <FaHome />
-        </button>
-        <button
-          className="nav-btn"
-          onClick={() => navigate(`/gallery?event=${eventId}`)}
-          title="Gallery"
-        >
-          <FaPhotoVideo />
-        </button>
-        <button className="nav-btn" title="Settings">
-          <FaCog />
-        </button>
-      </nav>
+      <BottomNav eventId={eventId} active="camera" />
     </div>
   );
 }
