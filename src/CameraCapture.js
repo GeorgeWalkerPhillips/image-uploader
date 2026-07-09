@@ -107,8 +107,17 @@ function CameraCapture() {
 
   const startCamera = React.useCallback(async () => {
     try {
+      // Without explicit width/height constraints, browsers often default
+      // to a modest video resolution — far below what the phone's camera
+      // can actually do — so every photo starts life already soft before
+      // any compression happens. Ask for the highest resolution available;
+      // the browser negotiates down to whatever the device truly supports.
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode },
+        video: {
+          facingMode,
+          width: { ideal: 3840 },
+          height: { ideal: 2160 },
+        },
         audio: false,
       });
       if (videoRef.current) {
@@ -199,9 +208,12 @@ function CameraCapture() {
     let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     applyCanvasFilters(canvas, ctx, imageData, brightness, contrast, filter);
 
-    const imageDataUrl = canvas.toDataURL('image/png');
+    // JPEG, not PNG: at up to 4K, a lossless PNG of a busy scene can easily
+    // clear the 10MB upload cap before compression ever gets a chance to
+    // shrink it, so captures would fail validation outright.
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.92);
     const blob = await fetch(imageDataUrl).then((res) => res.blob());
-    const file = new File([blob], `capture-${Date.now()}.png`, { type: 'image/png' });
+    const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
     const item = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       previewUrl: imageDataUrl,

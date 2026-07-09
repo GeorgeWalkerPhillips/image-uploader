@@ -68,7 +68,7 @@ export const compressImage = async (file) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        const maxDimension = 2048;
+        const maxDimension = 3000;
         let width = img.width;
         let height = img.height;
 
@@ -98,7 +98,7 @@ export const compressImage = async (file) => {
             );
           },
           'image/jpeg',
-          0.85
+          0.92
         );
       };
 
