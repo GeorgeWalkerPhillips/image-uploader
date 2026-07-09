@@ -328,45 +328,32 @@
   cursor: not-allowed;
 }
 
-.upload-progress {
-  width: 100%;
-  max-width: 200px;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 20px;
+.upload-status {
+  min-height: 24px;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.retry-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: white;
-}
-
-.progress-bar {
-  height: 100%;
-  background: white;
-  border-radius: 3px;
-  transition: width 0.3s;
-}
-
-.upload-all-btn {
-  padding: 12px 24px;
+  gap: 8px;
   background: white;
   color: #111;
   border: none;
+  padding: 10px 18px;
   border-radius: 30px;
   font-weight: 700;
+  font-size: 13px;
   cursor: pointer;
-  font-size: 16px;
-  transition: background 0.2s;
 }
 
-.upload-all-btn:hover:not(:disabled) {
+.retry-btn:hover {
   background: #ddd;
 }
 
-.upload-all-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.info-pill-alert {
+  border-color: white;
+  background: rgba(180, 30, 30, 0.55);
 }

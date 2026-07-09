@@ -10,6 +10,7 @@ import {
   FaPhotoVideo,
   FaChevronLeft,
   FaChevronRight,
+  FaRedo,
 } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
@@ -35,11 +36,12 @@ function CameraCapture() {
   const [facingMode, setFacingMode] = useState('user');
   const [eventName, setEventName] = useState('');
   const [guestCount, setGuestCount] = useState(null);
-  const [capturedImages, setCapturedImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  // Each item: { id, previewUrl, file, status: 'pending' | 'uploading' | 'failed' }
+  // Items are removed as soon as they upload successfully — this list is
+  // only ever "things still in flight or that need attention."
+  const [pendingUploads, setPendingUploads] = useState([]);
   const [showGallery, setShowGallery] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [joining, setJoining] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -135,6 +137,52 @@ function CameraCapture() {
     }
   }, [brightness, contrast, filter]);
 
+  // Uploads a single item in the background the moment it's captured/picked
+  // — guests never have to remember to hit a separate "upload" button.
+  const uploadItem = React.useCallback(
+    async (item) => {
+      if (!eventId || !user) {
+        setPendingUploads((prev) =>
+          prev.map((p) => (p.id === item.id ? { ...p, status: 'pending' } : p))
+        );
+        return;
+      }
+
+      setPendingUploads((prev) =>
+        prev.map((p) => (p.id === item.id ? { ...p, status: 'uploading' } : p))
+      );
+
+      try {
+        const result = await uploadImage(item.file, eventId, user.id);
+
+        if (result.success) {
+          setPendingUploads((prev) => prev.filter((p) => p.id !== item.id));
+          refreshGuestCount();
+        } else {
+          toast.error(`Upload failed: ${result.error}`);
+          setPendingUploads((prev) =>
+            prev.map((p) => (p.id === item.id ? { ...p, status: 'failed' } : p))
+          );
+        }
+      } catch (error) {
+        toast.error(`Upload failed: ${error.message}`);
+        setPendingUploads((prev) =>
+          prev.map((p) => (p.id === item.id ? { ...p, status: 'failed' } : p))
+        );
+      }
+    },
+    [eventId, user, refreshGuestCount]
+  );
+
+  // Flushes any photos captured before the guest session finished joining.
+  useEffect(() => {
+    if (joining || !user) return;
+    pendingUploads
+      .filter((item) => item.status === 'pending')
+      .forEach((item) => uploadItem(item));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joining, user]);
+
   const captureImage = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -154,14 +202,20 @@ function CameraCapture() {
     const imageDataUrl = canvas.toDataURL('image/png');
     const blob = await fetch(imageDataUrl).then((res) => res.blob());
     const file = new File([blob], `capture-${Date.now()}.png`, { type: 'image/png' });
+    const item = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      previewUrl: imageDataUrl,
+      file,
+      status: 'pending',
+    };
 
-    setCapturedImages((prev) => {
-      const next = [...prev, { id: `${Date.now()}-${prev.length}`, previewUrl: imageDataUrl, file }];
+    setPendingUploads((prev) => {
+      const next = [...prev, item];
       setCurrentIndex(next.length - 1);
       return next;
     });
-
     toast.success('Photo captured');
+    uploadItem(item);
   };
 
   const handleShutterPress = () => {
@@ -200,65 +254,20 @@ function CameraCapture() {
       id: `${Date.now()}-${i}`,
       previewUrl: URL.createObjectURL(file),
       file,
+      status: 'pending',
     }));
 
-    setCapturedImages((prev) => [...prev, ...newItems]);
+    setPendingUploads((prev) => [...prev, ...newItems]);
     setShowGallery(true);
+    newItems.forEach((item) => uploadItem(item));
     e.target.value = '';
   };
 
-  const uploadCapturedImages = async () => {
-    if (!eventId || !user) {
-      toast.error('Missing event or user information');
-      return;
-    }
+  const retryItem = (item) => uploadItem(item);
 
-    if (capturedImages.length === 0) {
-      toast.error('No photos to upload');
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress(0);
-
-    let successCount = 0;
-    const totalCount = capturedImages.length;
-
-    for (let i = 0; i < capturedImages.length; i++) {
-      try {
-        const result = await uploadImage(capturedImages[i].file, eventId, user.id);
-
-        if (result.success) {
-          successCount++;
-          toast.success(`Photo ${i + 1}/${totalCount} uploaded`);
-        } else {
-          toast.error(`Upload failed: ${result.error}`);
-        }
-
-        setUploadProgress(Math.round(((i + 1) / totalCount) * 100));
-      } catch (error) {
-        toast.error(`Upload failed: ${error.message}`);
-      }
-    }
-
-    setUploading(false);
-    setUploadProgress(0);
-    setCapturedImages([]);
-    setShowGallery(false);
-    refreshGuestCount();
-
-    if (successCount === totalCount) {
-      toast.success(`All ${successCount} photos uploaded!`);
-    } else {
-      toast.warning(
-        `${successCount}/${totalCount} photos uploaded successfully`
-      );
-    }
-  };
-
-  const deleteImage = (index) => {
-    setCapturedImages((prev) => prev.filter((_, i) => i !== index));
-    if (currentIndex >= capturedImages.length - 1) {
+  const discardItem = (index) => {
+    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
+    if (currentIndex >= pendingUploads.length - 1) {
       setCurrentIndex(Math.max(0, currentIndex - 1));
     }
   };
@@ -277,6 +286,9 @@ function CameraCapture() {
       </div>
     );
   }
+
+  const failedCount = pendingUploads.filter((i) => i.status === 'failed').length;
+  const currentItem = pendingUploads[currentIndex];
 
   return (
     <div className="camera-fullscreen">
@@ -336,7 +348,7 @@ function CameraCapture() {
 
       <TimerCountdownOverlay countdown={countdown} onCancel={() => setCountdown(null)} />
 
-      {showGallery && capturedImages.length > 0 && (
+      {showGallery && currentItem && (
         <div className="preview-overlay">
           <div className="preview-header">
             <button
@@ -347,22 +359,32 @@ function CameraCapture() {
               ✕
             </button>
             <span className="preview-counter">
-              {currentIndex + 1} / {capturedImages.length}
+              {currentIndex + 1} / {pendingUploads.length}
             </span>
             <button
               className="delete-btn"
-              onClick={() => deleteImage(currentIndex)}
-              title="Delete"
+              onClick={() => discardItem(currentIndex)}
+              title="Discard"
             >
               🗑️
             </button>
           </div>
 
           <img
-            src={capturedImages[currentIndex].previewUrl}
+            src={currentItem.previewUrl}
             alt="Captured"
             className="preview-image"
           />
+
+          <div className="upload-status">
+            {currentItem.status === 'uploading' && <span>Uploading…</span>}
+            {currentItem.status === 'pending' && <span>Waiting to upload…</span>}
+            {currentItem.status === 'failed' && (
+              <button className="retry-btn" onClick={() => retryItem(currentItem)}>
+                <FaRedo /> Upload failed — Retry
+              </button>
+            )}
+          </div>
 
           <div className="gallery-controls">
             <button
@@ -374,32 +396,14 @@ function CameraCapture() {
             </button>
             <button
               onClick={() =>
-                setCurrentIndex(Math.min(capturedImages.length - 1, currentIndex + 1))
+                setCurrentIndex(Math.min(pendingUploads.length - 1, currentIndex + 1))
               }
-              disabled={currentIndex === capturedImages.length - 1}
+              disabled={currentIndex === pendingUploads.length - 1}
               title="Next"
             >
               <FaChevronRight />
             </button>
           </div>
-
-          {uploading && (
-            <div className="upload-progress">
-              <div
-                className="progress-bar"
-                style={{ width: `${uploadProgress}%` }}
-              />
-              <span>{uploadProgress}%</span>
-            </div>
-          )}
-
-          <button
-            className="upload-all-btn"
-            onClick={uploadCapturedImages}
-            disabled={uploading || joining || capturedImages.length === 0}
-          >
-            {uploading ? `Uploading... ${uploadProgress}%` : joining ? 'Joining event…' : 'Upload All'}
-          </button>
         </div>
       )}
 
@@ -419,14 +423,22 @@ function CameraCapture() {
 
       <div className="bottom-info-bar">
         <button
-          className="info-pill"
-          onClick={() => (capturedImages.length > 0 ? setShowGallery(true) : fileInputRef.current?.click())}
-          title={capturedImages.length > 0 ? 'Review photos' : 'Choose from camera roll'}
+          className={`info-pill ${failedCount > 0 ? 'info-pill-alert' : ''}`}
+          onClick={() =>
+            pendingUploads.length > 0 ? setShowGallery(true) : fileInputRef.current?.click()
+          }
+          title={pendingUploads.length > 0 ? 'Review uploads' : 'Choose from camera roll'}
         >
-          {capturedImages.length > 0 ? (
+          {pendingUploads.length > 0 ? (
             <>
-              <img src={capturedImages[capturedImages.length - 1].previewUrl} alt="" className="info-pill-thumb" />
-              {capturedImages.length} ready
+              <img
+                src={pendingUploads[pendingUploads.length - 1].previewUrl}
+                alt=""
+                className="info-pill-thumb"
+              />
+              {failedCount > 0
+                ? `${failedCount} failed — tap to retry`
+                : `Uploading ${pendingUploads.length}…`}
             </>
           ) : (
             <>
