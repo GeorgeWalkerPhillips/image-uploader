@@ -16,7 +16,10 @@ export function AuthProvider({ children }) {
 
         if (session?.user) {
           setUser(session.user);
-          await checkAdminStatus(session.user.id);
+          // Fire-and-forget: the admin flag isn't needed for the core
+          // logged-in experience, so it must never block the app from
+          // finishing its initial load.
+          checkAdminStatus(session.user.id);
         }
 
         setLoading(false);
@@ -30,10 +33,13 @@ export function AuthProvider({ children }) {
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (session?.user) {
           setUser(session.user);
-          await checkAdminStatus(session.user.id);
+          // Fire-and-forget, same reasoning as above — this listener is
+          // invoked as part of Supabase's own sign-in flow, so awaiting it
+          // here would stall signIn()/signInWithPassword() itself.
+          checkAdminStatus(session.user.id);
         } else {
           setUser(null);
           setIsAdmin(false);
