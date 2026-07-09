@@ -1,84 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import './CameraTimer.css';
+import React from 'react';
 
-export function TimerButton({ onCapture }) {
-  const [timerMode, setTimerMode] = useState(null);
-  const [countdown, setCountdown] = useState(null);
+const DURATIONS = [3, 5, 10];
 
-  useEffect(() => {
-    if (countdown === null || countdown === undefined) return;
-
-    if (countdown === 0) {
-      onCapture();
-      setCountdown(null);
-      setTimerMode(null);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setCountdown(countdown - 1);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [countdown, onCapture]);
-
-  const startTimer = (seconds) => {
-    setTimerMode(seconds);
-    setCountdown(seconds);
-  };
-
-  const cancelTimer = () => {
-    setTimerMode(null);
-    setCountdown(null);
-  };
-
-  if (countdown !== null && countdown > 0) {
-    return (
-      <div className="timer-display">
-        <div className="timer-number">{countdown}</div>
-        <button className="timer-cancel" onClick={cancelTimer}>
-          Cancel
+// Picker shown inside the settings sheet — selecting a duration arms the
+// timer; the actual countdown is owned by CameraCapture so it can drive
+// the capture flow.
+export function TimerControls({ armedSeconds, onArm }) {
+  return (
+    <div className="settings-row">
+      <label>Self-Timer</label>
+      <div className="filter-buttons timer-picker">
+        <button
+          className={`filter-btn ${armedSeconds === null ? 'active' : ''}`}
+          onClick={() => onArm(null)}
+        >
+          Off
         </button>
-      </div>
-    );
-  }
-
-  if (timerMode) {
-    return (
-      <div className="timer-menu">
-        <p>Timer set to {timerMode}s</p>
-        <div className="timer-buttons">
-          <button onClick={() => startTimer(timerMode)}>Ready? Start</button>
-          <button onClick={cancelTimer} className="cancel-btn">
-            Cancel
+        {DURATIONS.map((seconds) => (
+          <button
+            key={seconds}
+            className={`filter-btn ${armedSeconds === seconds ? 'active' : ''}`}
+            onClick={() => onArm(seconds)}
+          >
+            {seconds}s
           </button>
-        </div>
+        ))}
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+// Full-screen countdown, shown while a timed capture is in progress.
+export function TimerCountdownOverlay({ countdown, onCancel }) {
+  if (countdown === null) return null;
 
   return (
-    <div className="timer-options">
-      <button
-        className="timer-btn"
-        onClick={() => startTimer(3)}
-        title="3 second timer"
-      >
-        ⏱️ 3s
-      </button>
-      <button
-        className="timer-btn"
-        onClick={() => startTimer(5)}
-        title="5 second timer"
-      >
-        ⏱️ 5s
-      </button>
-      <button
-        className="timer-btn"
-        onClick={() => startTimer(10)}
-        title="10 second timer"
-      >
-        ⏱️ 10s
+    <div className="timer-display">
+      <div className="timer-number">{countdown}</div>
+      <button className="timer-cancel" onClick={onCancel}>
+        Cancel
       </button>
     </div>
   );

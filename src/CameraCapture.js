@@ -2,9 +2,12 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
+  FaTimes,
+  FaCog,
   FaSyncAlt,
   FaCamera,
   FaImages,
+  FaPhotoVideo,
   FaChevronLeft,
   FaChevronRight,
 } from 'react-icons/fa';
@@ -12,10 +15,12 @@ import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { uploadImage } from './services/uploadService';
 import { joinEventAsGuest } from './services/eventAccessService';
-import { CameraFilters, applyVideoFilters, applyCanvasFilters } from './components/CameraFilters';
-import { TimerButton } from './components/CameraTimer';
-import { BottomNav } from './components/BottomNav';
+import { applyVideoFilters, applyCanvasFilters, FILTER_ORDER } from './components/CameraFilters';
+import { TimerCountdownOverlay } from './components/CameraTimer';
+import { CameraSettingsSheet } from './components/CameraSettingsSheet';
 import './CameraCapture.css';
+
+const FILTER_LABELS = { normal: 'Normal', bw: 'B&W', sepia: 'Sepia' };
 
 function CameraCapture() {
   const [searchParams] = useSearchParams();
@@ -29,18 +34,30 @@ function CameraCapture() {
 
   const [facingMode, setFacingMode] = useState('user');
   const [eventName, setEventName] = useState('');
+  const [guestCount, setGuestCount] = useState(null);
   const [capturedImages, setCapturedImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [joining, setJoining] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Filter states
+  // Filter/timer states
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const [filter, setFilter] = useState('normal');
   const [showGrid, setShowGrid] = useState(false);
+  const [armedSeconds, setArmedSeconds] = useState(null);
+  const [countdown, setCountdown] = useState(null);
+
+  const refreshGuestCount = React.useCallback(async () => {
+    if (!eventId) return;
+    const { data, error } = await supabase.rpc('get_event_guest_count', {
+      p_event_id: eventId,
+    });
+    if (!error && typeof data === 'number') setGuestCount(data);
+  }, [eventId]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -62,7 +79,8 @@ function CameraCapture() {
     };
 
     fetchEvent();
-  }, [eventId]);
+    refreshGuestCount();
+  }, [eventId, refreshGuestCount]);
 
   useEffect(() => {
     if (!eventId) return;
@@ -146,6 +164,34 @@ function CameraCapture() {
     toast.success('Photo captured');
   };
 
+  const handleShutterPress = () => {
+    if (armedSeconds) {
+      setCountdown(armedSeconds);
+    } else {
+      captureImage();
+    }
+  };
+
+  // Countdown ticks down once armed, capturing on reaching zero.
+  useEffect(() => {
+    if (countdown === null) return;
+
+    if (countdown === 0) {
+      captureImage();
+      setCountdown(null);
+      return;
+    }
+
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countdown]);
+
+  const cycleFilter = () => {
+    const currentIdx = FILTER_ORDER.indexOf(filter);
+    setFilter(FILTER_ORDER[(currentIdx + 1) % FILTER_ORDER.length]);
+  };
+
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -199,6 +245,7 @@ function CameraCapture() {
     setUploadProgress(0);
     setCapturedImages([]);
     setShowGallery(false);
+    refreshGuestCount();
 
     if (successCount === totalCount) {
       toast.success(`All ${successCount} photos uploaded!`);
@@ -234,14 +281,34 @@ function CameraCapture() {
   return (
     <div className="camera-fullscreen">
       <div className="top-bar">
-        <button className="icon-button" onClick={flipCamera} title="Flip camera">
-          <FaSyncAlt />
+        <button
+          className="icon-button"
+          onClick={() => navigate(`/gallery?event=${eventId}`)}
+          title="Close"
+        >
+          <FaTimes />
         </button>
-        <span className="event-name">{eventName || 'Camera'}</span>
+        <div className="event-name-block">
+          <span className="event-name">{eventName || 'Camera'}</span>
+          {guestCount !== null && (
+            <span className="event-participants">
+              {guestCount} {guestCount === 1 ? 'guest' : 'guests'}
+            </span>
+          )}
+        </div>
+        <button
+          className="icon-button"
+          onClick={() => setShowSettings(true)}
+          title="Camera settings"
+        >
+          <FaCog />
+        </button>
       </div>
 
       <video ref={videoRef} autoPlay playsInline className="video-feed" />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      {showGrid && <div className="grid-overlay" />}
 
       <input
         ref={fileInputRef}
@@ -252,8 +319,9 @@ function CameraCapture() {
         onChange={handleFileSelect}
       />
 
-      {/* Camera Controls */}
-      <CameraFilters
+      <CameraSettingsSheet
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
         brightness={brightness}
         contrast={contrast}
         filter={filter}
@@ -262,9 +330,11 @@ function CameraCapture() {
         onContrastChange={setContrast}
         onFilterChange={setFilter}
         onGridToggle={() => setShowGrid(!showGrid)}
+        armedSeconds={armedSeconds}
+        onArmTimer={setArmedSeconds}
       />
 
-      <TimerButton onCapture={captureImage} />
+      <TimerCountdownOverlay countdown={countdown} onCancel={() => setCountdown(null)} />
 
       {showGallery && capturedImages.length > 0 && (
         <div className="preview-overlay">
@@ -333,30 +403,46 @@ function CameraCapture() {
         </div>
       )}
 
-      <div className="bottom-bar">
-        <div className="thumbnail-stack" onClick={() => setShowGallery(true)}>
-          {capturedImages.slice(-3).map((img) => (
-            <img key={img.id} src={img.previewUrl} alt="preview" className="thumbnail" />
-          ))}
-          {capturedImages.length > 0 && (
-            <div className="photo-count">{capturedImages.length}</div>
-          )}
-        </div>
+      <div className="shutter-row">
+        <button className="filter-pill" onClick={cycleFilter} title="Cycle filter">
+          {FILTER_LABELS[filter]}
+        </button>
+
+        <button className="shutter-button" onClick={handleShutterPress} title="Capture">
+          <FaCamera />
+        </button>
+
+        <button className="flip-button" onClick={flipCamera} title="Flip camera">
+          <FaSyncAlt />
+        </button>
       </div>
 
-      <button
-        className="library-button"
-        onClick={() => fileInputRef.current?.click()}
-        title="Choose from camera roll"
-      >
-        <FaImages />
-      </button>
+      <div className="bottom-info-bar">
+        <button
+          className="info-pill"
+          onClick={() => (capturedImages.length > 0 ? setShowGallery(true) : fileInputRef.current?.click())}
+          title={capturedImages.length > 0 ? 'Review photos' : 'Choose from camera roll'}
+        >
+          {capturedImages.length > 0 ? (
+            <>
+              <img src={capturedImages[capturedImages.length - 1].previewUrl} alt="" className="info-pill-thumb" />
+              {capturedImages.length} ready
+            </>
+          ) : (
+            <>
+              <FaImages /> Camera roll
+            </>
+          )}
+        </button>
 
-      <button className="shutter-button" onClick={captureImage} title="Capture">
-        <FaCamera />
-      </button>
-
-      <BottomNav eventId={eventId} active="camera" />
+        <button
+          className="info-pill"
+          onClick={() => navigate(`/gallery?event=${eventId}`)}
+          title="View shared gallery"
+        >
+          <FaPhotoVideo /> Gallery
+        </button>
+      </div>
     </div>
   );
 }

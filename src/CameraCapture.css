@@ -12,6 +12,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .no-event-message {
@@ -27,17 +28,17 @@
 
 .no-event-message button {
   padding: 12px 24px;
-  background: #667eea;
-  color: white;
+  background: white;
+  color: #111;
   border: none;
-  border-radius: 6px;
-  font-weight: 600;
+  border-radius: 30px;
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .no-event-message button:hover {
-  background: #5568d3;
+  background: #ddd;
 }
 
 .top-bar {
@@ -47,37 +48,55 @@
   right: 0;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.5);
+  align-items: flex-start;
+  padding: 16px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent);
   z-index: 10;
 }
 
 .icon-button {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   color: white;
   border: none;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  flex-shrink: 0;
 }
 
 .icon-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.event-name-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: white;
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
 }
 
 .event-name {
-  color: white;
-  font-weight: 600;
-  font-size: 16px;
-  flex: 1;
-  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.event-participants {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .video-feed {
@@ -89,38 +108,77 @@
   object-fit: cover;
 }
 
-.shutter-button {
+/* Grid Overlay */
+.grid-overlay {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  bottom: 70px;
+  pointer-events: none;
+  z-index: 5;
+  background-image:
+    linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.1) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, 0.1) 75%, rgba(255, 255, 255, 0.1) 76%, transparent 77%, transparent),
+    linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.1) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, 0.1) 75%, rgba(255, 255, 255, 0.1) 76%, transparent 77%, transparent);
+  background-size: 33.333% 33.333%;
+  background-position: 0 0;
+}
+
+/* Shutter row: filter pill (left) — shutter (center) — flip (right) */
+.shutter-row {
   position: absolute;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 108px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  z-index: 20;
+}
+
+.filter-pill {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  min-width: 64px;
+}
+
+.filter-pill:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.shutter-button {
   width: 70px;
   height: 70px;
   background: white;
-  border: 4px solid rgba(255, 255, 255, 0.8);
+  border: 4px solid rgba(255, 255, 255, 0.5);
   border-radius: 50%;
   color: #000;
-  font-size: 32px;
+  font-size: 28px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  z-index: 20;
+  flex-shrink: 0;
 }
 
 .shutter-button:active {
-  transform: translateX(-50%) scale(0.9);
+  transform: scale(0.9);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 
-.library-button {
-  position: absolute;
-  bottom: 115px;
-  left: calc(50% + 90px);
+.flip-button {
   width: 44px;
   height: 44px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   border-radius: 50%;
   color: white;
@@ -130,56 +188,50 @@
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.flip-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Bottom info bar: camera roll / review pill (left) — gallery pill (right) */
+.bottom-info-bar {
+  position: absolute;
+  bottom: 24px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   z-index: 20;
 }
 
-.library-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.bottom-bar {
-  position: absolute;
-  bottom: 80px;
-  left: 0;
-  right: 0;
-  height: 80px;
+.info-pill {
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 0 16px;
-}
-
-.thumbnail-stack {
-  display: flex;
-  gap: 6px;
-  cursor: pointer;
-  position: relative;
-}
-
-.thumbnail {
-  width: 60px;
-  height: 60px;
-  border-radius: 6px;
-  border: 2px solid white;
-  object-fit: cover;
-  transition: transform 0.2s;
-}
-
-.thumbnail:hover {
-  transform: scale(1.05);
-}
-
-.photo-count {
-  position: absolute;
-  bottom: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  color: #000;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s;
+}
+
+.info-pill:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.info-pill-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  object-fit: cover;
 }
 
 .preview-overlay {
@@ -188,7 +240,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.92);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -211,7 +263,7 @@
 
 .close-btn,
 .delete-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   color: white;
   border: none;
   width: 40px;
@@ -227,7 +279,7 @@
 
 .close-btn:hover,
 .delete-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .delete-btn {
@@ -253,7 +305,7 @@
 }
 
 .gallery-controls button {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   color: white;
   border: none;
   width: 44px;
@@ -268,7 +320,7 @@
 }
 
 .gallery-controls button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .gallery-controls button:disabled {
@@ -293,29 +345,28 @@
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: white;
   border-radius: 3px;
   transition: width 0.3s;
 }
 
 .upload-all-btn {
   padding: 12px 24px;
-  background: #4caf50;
-  color: white;
+  background: white;
+  color: #111;
   border: none;
-  border-radius: 6px;
-  font-weight: 600;
+  border-radius: 30px;
+  font-weight: 700;
   cursor: pointer;
   font-size: 16px;
   transition: background 0.2s;
 }
 
 .upload-all-btn:hover:not(:disabled) {
-  background: #388e3c;
+  background: #ddd;
 }
 
 .upload-all-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-

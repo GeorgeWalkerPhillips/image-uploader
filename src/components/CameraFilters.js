@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
-import { FaPlus, FaMinus, FaCog } from 'react-icons/fa';
-import './CameraFilters.css';
+import React from 'react';
+import { FaPlus, FaMinus } from 'react-icons/fa';
 
-export function CameraFilters({
+const FILTERS = [
+  { id: 'normal', label: 'Normal' },
+  { id: 'bw', label: 'B&W' },
+  { id: 'sepia', label: 'Sepia' },
+];
+
+export const FILTER_ORDER = FILTERS.map((f) => f.id);
+
+// Plain settings content — no self-toggle. The parent (CameraSettingsSheet)
+// decides when this is visible.
+export function FilterControls({
   brightness,
   contrast,
   filter,
@@ -12,141 +21,83 @@ export function CameraFilters({
   onFilterChange,
   onGridToggle,
 }) {
-  const [showSettings, setShowSettings] = useState(false);
-
-  const filters = [
-    { id: 'normal', label: 'Normal', style: {} },
-    {
-      id: 'bw',
-      label: 'B&W',
-      style: { filter: 'grayscale(100%)' },
-    },
-    {
-      id: 'sepia',
-      label: 'Sepia',
-      style: { filter: 'sepia(100%)' },
-    },
-  ];
-
   return (
     <>
-      {/* Settings Panel */}
-      <div className={`filter-settings ${showSettings ? 'open' : ''}`}>
-        <button
-          className="settings-toggle"
-          onClick={() => setShowSettings(!showSettings)}
-          title="Filters & Effects"
-        >
-          <FaCog />
-        </button>
-
-        {showSettings && (
-          <div className="settings-panel">
-            {/* Brightness Control */}
-            <div className="control-group">
-              <label>Brightness</label>
-              <div className="slider-group">
-                <button
-                  className="control-btn"
-                  onClick={() =>
-                    onBrightnessChange(Math.max(50, brightness - 10))
-                  }
-                >
-                  <FaMinus />
-                </button>
-                <input
-                  type="range"
-                  min="50"
-                  max="150"
-                  value={brightness}
-                  onChange={(e) => onBrightnessChange(Number(e.target.value))}
-                  className="slider"
-                />
-                <button
-                  className="control-btn"
-                  onClick={() =>
-                    onBrightnessChange(Math.min(150, brightness + 10))
-                  }
-                >
-                  <FaPlus />
-                </button>
-              </div>
-            </div>
-
-            {/* Contrast Control */}
-            <div className="control-group">
-              <label>Contrast</label>
-              <div className="slider-group">
-                <button
-                  className="control-btn"
-                  onClick={() =>
-                    onContrastChange(Math.max(50, contrast - 10))
-                  }
-                >
-                  <FaMinus />
-                </button>
-                <input
-                  type="range"
-                  min="50"
-                  max="150"
-                  value={contrast}
-                  onChange={(e) => onContrastChange(Number(e.target.value))}
-                  className="slider"
-                />
-                <button
-                  className="control-btn"
-                  onClick={() =>
-                    onContrastChange(Math.min(150, contrast + 10))
-                  }
-                >
-                  <FaPlus />
-                </button>
-              </div>
-            </div>
-
-            {/* Filters */}
-            <div className="control-group">
-              <label>Filter</label>
-              <div className="filter-buttons">
-                {filters.map((f) => (
-                  <button
-                    key={f.id}
-                    className={`filter-btn ${filter === f.id ? 'active' : ''}`}
-                    onClick={() => onFilterChange(f.id)}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Grid Toggle */}
-            <div className="control-group">
-              <button
-                className={`grid-toggle-btn ${showGrid ? 'active' : ''}`}
-                onClick={onGridToggle}
-              >
-                {showGrid ? '✓ Grid ON' : 'Grid OFF'}
-              </button>
-            </div>
-
+      <div className="settings-row">
+        <label>Filter</label>
+        <div className="filter-buttons">
+          {FILTERS.map((f) => (
             <button
-              className="close-settings"
-              onClick={() => setShowSettings(false)}
+              key={f.id}
+              className={`filter-btn ${filter === f.id ? 'active' : ''}`}
+              onClick={() => onFilterChange(f.id)}
             >
-              Done
+              {f.label}
             </button>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
-      {/* Filter Indicator */}
-      {filter !== 'normal' && (
-        <div className="filter-indicator">📸 {filter.toUpperCase()}</div>
-      )}
+      <div className="settings-row">
+        <label>Brightness</label>
+        <div className="slider-group">
+          <button
+            className="control-btn"
+            onClick={() => onBrightnessChange(Math.max(50, brightness - 10))}
+          >
+            <FaMinus />
+          </button>
+          <input
+            type="range"
+            min="50"
+            max="150"
+            value={brightness}
+            onChange={(e) => onBrightnessChange(Number(e.target.value))}
+            className="slider"
+          />
+          <button
+            className="control-btn"
+            onClick={() => onBrightnessChange(Math.min(150, brightness + 10))}
+          >
+            <FaPlus />
+          </button>
+        </div>
+      </div>
 
-      {/* Grid Overlay */}
-      {showGrid && <div className="grid-overlay" />}
+      <div className="settings-row">
+        <label>Contrast</label>
+        <div className="slider-group">
+          <button
+            className="control-btn"
+            onClick={() => onContrastChange(Math.max(50, contrast - 10))}
+          >
+            <FaMinus />
+          </button>
+          <input
+            type="range"
+            min="50"
+            max="150"
+            value={contrast}
+            onChange={(e) => onContrastChange(Number(e.target.value))}
+            className="slider"
+          />
+          <button
+            className="control-btn"
+            onClick={() => onContrastChange(Math.min(150, contrast + 10))}
+          >
+            <FaPlus />
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <button
+          className={`grid-toggle-btn ${showGrid ? 'active' : ''}`}
+          onClick={onGridToggle}
+        >
+          {showGrid ? '✓ Grid ON' : 'Grid OFF'}
+        </button>
+      </div>
     </>
   );
 }
