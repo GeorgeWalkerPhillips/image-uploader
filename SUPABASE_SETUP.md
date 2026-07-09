@@ -17,7 +17,7 @@
    - `anon public` key → `REACT_APP_SUPABASE_ANON_KEY`
 
 ## Step 3: Create Database Schema
-Run these three SQL files, in this exact order, in the **SQL Editor**
+Run these four SQL files, in this exact order, in the **SQL Editor**
 (New Query → paste → Run → wait for success message, then move to the next
 file):
 
@@ -25,9 +25,12 @@ file):
 2. `payment-schema.sql` — payment/Stripe-related tables and columns
 3. `pricing-tiers-migration.sql` — self-serve account policies + guest-count
    pricing tiers (free vs. paid plans)
+4. `event-owner-photos-fix.sql` — lets an event's creator view/manage its
+   photos directly, without needing to join their own event as a guest
 
-All three must be applied for the app to work — signup, event creation, and
-guest joining all depend on policies added in file 3.
+All four must be applied for the app to work — signup, event creation,
+guest joining, and organizers actually seeing their own event's gallery all
+depend on policies added in files 3 and 4.
 
 ## Step 4: Create Storage Buckets
 1. Go to **Storage** → **Buckets**
@@ -91,7 +94,7 @@ deleted.
 
 ## Security Checklist
 - [ ] Project URL and Anon Key copied to `.env.local`
-- [ ] All three SQL files applied, in order (Step 3)
+- [ ] All four SQL files applied, in order (Step 3)
 - [ ] Storage bucket created with RLS
 - [ ] Anonymous Sign-Ins enabled (guests can't upload without this)
 - [ ] `.env.local` added to `.gitignore` (should already be there)
