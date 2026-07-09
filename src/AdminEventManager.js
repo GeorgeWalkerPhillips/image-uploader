@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaSignOutAlt, FaArrowRight } from 'react-icons/fa';
+import {
+  FaSignOutAlt,
+  FaLink,
+  FaQrcode,
+  FaDownload,
+  FaPhotoVideo,
+  FaCamera,
+  FaEdit,
+  FaTrash,
+} from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
@@ -14,7 +23,7 @@ import {
 } from './services/stripeService';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
-import './AdminEventManager.css';
+import styles from './AdminEventManager.module.css';
 
 function AdminEventManager() {
   const { user, signOut } = useAuth();
@@ -247,13 +256,11 @@ function AdminEventManager() {
     pdf.save(`${event.name}_QR.pdf`);
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      toast.error('Sign out failed');
-    }
+  const handleSignOut = () => {
+    // Don't wait on the network round-trip — local session state clears
+    // synchronously inside signOut(), so navigation can happen immediately.
+    signOut();
+    navigate('/');
   };
 
   const formatDate = (dateString) => {
@@ -301,30 +308,31 @@ function AdminEventManager() {
 
   if (loading) {
     return (
-      <div className="admin-container">
+      <div className={styles.adminContainer}>
         <p>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-container">
+    <div className={styles.adminContainer}>
       <PricingModal
         isOpen={showPricingModal}
         onClose={() => setShowPricingModal(false)}
         onSelectPlan={finalizEventCreation}
       />
 
-      <div className="admin-header">
-        <h1>Your Events</h1>
-        <div className="header-info">
-          <button className="logout-btn" onClick={handleSignOut} title="Sign Out">
-            <FaSignOutAlt /> Sign Out
-          </button>
+      <div className={styles.adminHeader}>
+        <div>
+          <Link to="/" className={styles.headerBrand}>Capture</Link>
+          <h1>Your Events</h1>
         </div>
+        <button className={styles.signOutBtn} onClick={handleSignOut} title="Sign Out">
+          <FaSignOutAlt /> Sign Out
+        </button>
       </div>
 
-      <div className="event-form">
+      <div className={styles.eventForm}>
         <h2>Create New Event</h2>
         <form onSubmit={createEvent}>
           <input
@@ -340,7 +348,7 @@ function AdminEventManager() {
             onChange={(e) => setDescription(e.target.value)}
             rows="3"
           />
-          <div className="date-inputs">
+          <div className={styles.dateInputs}>
             <div>
               <label>Start Date</label>
               <input
@@ -360,37 +368,37 @@ function AdminEventManager() {
               />
             </div>
           </div>
-          <button type="submit" className="create-btn">
+          <button type="submit" className={styles.createBtn}>
             Create Event
           </button>
         </form>
       </div>
 
-      <div className="events-section">
+      <div className={styles.eventsSection}>
         <h2>Your Events ({events.length})</h2>
         {events.length === 0 ? (
-          <p className="no-events">No events yet. Create one to get started!</p>
+          <p className={styles.noEvents}>No events yet. Create one to get started!</p>
         ) : (
-          <div className="events-grid">
+          <div className={styles.eventsGrid}>
             {events.map((event) => {
               const expired = isExpired(event.expiry_date);
               const tier = TIERS[event.tier] || TIERS.free;
               return (
                 <div
                   key={event.id}
-                  className={`event-card ${expired ? 'expired' : ''}`}
+                  className={`${styles.eventCard} ${expired ? styles.eventCardExpired : ''}`}
                 >
-                  <div className="event-qr">
+                  <div className={styles.eventQr}>
                     <QRCodeCanvas
                       id={`qr-${event.id}`}
                       value={`${window.location.origin}/camera?event=${event.id}`}
-                      size={100}
+                      size={112}
                     />
                   </div>
 
-                  <div className="event-details">
+                  <div className={styles.eventDetails}>
                     {editingId === event.id ? (
-                      <div className="edit-mode">
+                      <div className={styles.editMode}>
                         <input
                           type="text"
                           value={newName}
@@ -398,13 +406,13 @@ function AdminEventManager() {
                           autoFocus
                         />
                         <button
-                          className="save-btn"
+                          className={styles.saveBtn}
                           onClick={() => updateEvent(event.id)}
                         >
                           Save
                         </button>
                         <button
-                          className="cancel-btn"
+                          className={styles.cancelBtn}
                           onClick={() => setEditingId(null)}
                         >
                           Cancel
@@ -413,82 +421,86 @@ function AdminEventManager() {
                     ) : (
                       <>
                         <h3>{event.name}</h3>
-                        <p className="event-id">ID: {event.id}</p>
                         {event.description && (
-                          <p className="event-desc">{event.description}</p>
+                          <p className={styles.eventDesc}>{event.description}</p>
                         )}
-                        <div className="event-dates">
+                        <div className={styles.eventMeta}>
                           <p>
                             <strong>Plan:</strong> {tier.name} ({formatGuestCap(event.guest_cap)})
                             {event.tier !== 'free' && event.payment_status === 'pending_payment' && (
-                              <span className="payment-pending-badge"> · payment pending</span>
+                              <span className={styles.paymentPendingBadge}> · payment pending</span>
                             )}
                           </p>
                           <p>
-                            <strong>Start:</strong> {formatDate(event.start_date)}
+                            <strong>Dates:</strong> {formatDate(event.start_date)} – {formatDate(event.end_date)}
                           </p>
                           <p>
-                            <strong>End:</strong> {formatDate(event.end_date)}
-                          </p>
-                          <p>
-                            <strong>Expires:</strong>{' '}
-                            {formatDate(event.expiry_date)}
+                            <strong>Expires:</strong> {formatDate(event.expiry_date)}
                           </p>
                         </div>
                         {expired && (
-                          <div className="expired-badge">📵 Expired</div>
+                          <div className={styles.expiredBadge}>Expired</div>
                         )}
                       </>
                     )}
                   </div>
 
-                  <div className="event-actions">
+                  <div className={styles.eventActions}>
                     <button
-                      className="action-btn copy-btn"
+                      className={styles.actionBtn}
                       onClick={() => copyLink(event.id)}
-                      title="Copy link"
+                      title="Copy guest link"
                     >
-                      Link
+                      <FaLink /> Link
                     </button>
                     <button
-                      className="action-btn qr-btn"
+                      className={styles.actionBtn}
                       onClick={() => downloadQRCodePDF(event)}
-                      title="Download QR"
+                      title="Download QR code"
                     >
-                      QR
+                      <FaQrcode /> QR
                     </button>
                     <button
-                      className="action-btn download-btn"
+                      className={styles.actionBtn}
+                      onClick={() =>
+                        window.open(`/gallery?event=${event.id}`, '_blank')
+                      }
+                      title="View shared gallery"
+                    >
+                      <FaPhotoVideo /> Gallery
+                    </button>
+                    <button
+                      className={styles.actionBtn}
                       onClick={() => downloadEventPhotos(event.id, event.name)}
                       title="Download all photos as ZIP"
                     >
-                      📥
+                      <FaDownload /> Download
                     </button>
                     <button
-                      className="action-btn edit-btn"
+                      className={styles.actionBtn}
+                      onClick={() =>
+                        window.open(`/camera?event=${event.id}`, '_blank')
+                      }
+                      title="Preview guest camera"
+                    >
+                      <FaCamera /> Preview
+                    </button>
+                    <button
+                      className={styles.actionBtn}
                       onClick={() => {
                         setEditingId(event.id);
                         setNewName(event.name);
                       }}
-                      title="Edit event"
+                      title="Edit event name"
                     >
-                      Edit
+                      <FaEdit /> Edit
                     </button>
                     <button
-                      className="action-btn delete-btn"
+                      className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
                       onClick={() => deleteEvent(event.id)}
                       title="Delete event"
                     >
-                      Delete
-                    </button>
-                    <button
-                      className="action-btn view-btn"
-                      onClick={() =>
-                        window.open(`/camera?event=${event.id}`, '_blank')
-                      }
-                      title="View event"
-                    >
-                      <FaArrowRight />
+                      <FaTrash /> Delete
                     </button>
                   </div>
                 </div>

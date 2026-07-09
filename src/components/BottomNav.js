@@ -11,8 +11,10 @@ export function BottomNav({ eventId, active }) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = () => {
+    // Don't wait on the network round-trip — local session state clears
+    // synchronously inside signOut(), so navigation can happen immediately.
+    signOut();
     toast.success('Signed out');
     navigate('/');
   };

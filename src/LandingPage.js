@@ -72,9 +72,14 @@ function LandingPage() {
 
       <header className={styles.landingNav}>
         <span className={styles.landingNavBrand}>Capture</span>
-        <button className={styles.landingNavCta} onClick={() => navigate('/login')}>
-          Create an Event
-        </button>
+        <div className={styles.landingNavActions}>
+          <button className={styles.landingNavSignIn} onClick={() => navigate('/login?mode=signin')}>
+            Sign In
+          </button>
+          <button className={styles.landingNavCta} onClick={() => navigate('/login?mode=signup')}>
+            Create an Event
+          </button>
+        </div>
       </header>
 
       <main>
@@ -88,7 +93,7 @@ function LandingPage() {
           </p>
 
           <div className={styles.heroActions}>
-            <button className={styles.btnPrimary} onClick={() => navigate('/login')}>
+            <button className={styles.btnPrimary} onClick={() => navigate('/login?mode=signup')}>
               Create Your Free Event
             </button>
             <form className={styles.heroJoin} onSubmit={handleJoinEvent}>
