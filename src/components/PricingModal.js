@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { FaCheck } from 'react-icons/fa';
-import { TIERS, TIER_ORDER, formatGuestCap } from '../services/pricingTiers';
+import { TIERS, TIER_ORDER, formatGuestCap, formatPhotoCap } from '../services/pricingTiers';
 import './PricingModal.css';
 
 const FEATURES = [
   'Guests upload with no app or signup',
   'Built-in camera with filters and timer',
-  'Unlimited photo uploads per guest',
   '30-day shared gallery',
   'Download every photo as one ZIP',
   'QR code and shareable link included',
@@ -58,7 +57,9 @@ export function PricingModal({ isOpen, onClose, onSelectPlan }) {
                   {tier.display}
                   {!isFree && <span className="period">/event</span>}
                 </div>
-                <p className="plan-desc">{formatGuestCap(tier.guestCap)}</p>
+                <p className="plan-desc">
+                  {formatGuestCap(tier.guestCap)} · {formatPhotoCap(tier.photosPerGuest)}
+                </p>
 
                 <ul className="features">
                   {FEATURES.map((feature) => (

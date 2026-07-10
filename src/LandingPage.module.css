@@ -394,10 +394,10 @@
   font-weight: 600;
 }
 
-.pricingCard p:last-child {
+.pricingCard p:not(.price) {
   color: #666;
   font-size: 14px;
-  margin: 0;
+  margin: 4px 0 0;
 }
 
 /* FAQ */

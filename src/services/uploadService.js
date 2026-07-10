@@ -20,6 +20,34 @@ export const uploadImage = async (
       throw new Error(validationErrors.join(', '));
     }
 
+    // Fail fast with a friendly message if this guest is already at their
+    // event's per-guest photo limit — the real enforcement is a DB trigger
+    // (can't be bypassed), this just avoids wasting a storage upload on a
+    // photo that would get rejected anyway.
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('photo_cap_per_guest')
+      .eq('id', eventId)
+      .single();
+
+    if (eventError) throw eventError;
+
+    if (event?.photo_cap_per_guest != null) {
+      const { count, error: countError } = await supabase
+        .from('photos')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', eventId)
+        .eq('uploaded_by', userId);
+
+      if (countError) throw countError;
+
+      if (count >= event.photo_cap_per_guest) {
+        throw new Error(
+          `You've reached the ${event.photo_cap_per_guest}-photo limit for this event.`
+        );
+      }
+    }
+
     const compressedFile = await compressImage(file);
 
     const { width, height } = await getImageDimensions(compressedFile);

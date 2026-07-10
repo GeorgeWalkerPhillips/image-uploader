@@ -9,7 +9,7 @@ import {
   FaShieldAlt,
   FaHeart,
 } from 'react-icons/fa';
-import { TIERS, TIER_ORDER, formatGuestCap } from './services/pricingTiers';
+import { TIERS, TIER_ORDER, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
 import styles from './LandingPage.module.css';
 
 const POPULAR_TIER = 'growth';
@@ -34,6 +34,10 @@ const FAQ_ITEMS = [
   {
     q: 'How does pricing work?',
     a: `Pricing scales with your guest count. Free for up to ${TIERS.free.guestCap} guests, then a flat one-time fee per event as your guest list grows — no subscriptions, ever.`,
+  },
+  {
+    q: 'Is there a limit on how many photos each guest can upload?',
+    a: `Like a disposable camera, each guest gets a set number of shots on the Free, Starter, and Growth plans (from ${TIERS.free.photosPerGuest} up to ${TIERS.growth.photosPerGuest}, depending on plan). The Unlimited plan removes the cap entirely.`,
   },
   {
     q: 'What photo formats can guests upload?',
@@ -263,6 +267,7 @@ function LandingPage() {
                     {!isFree && <span className={styles.pricePeriod}>/event</span>}
                   </p>
                   <p>{formatGuestCap(tier.guestCap)}</p>
+                  <p>{formatPhotoCap(tier.photosPerGuest)}</p>
                 </div>
               );
             })}

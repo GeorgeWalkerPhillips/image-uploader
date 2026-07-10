@@ -36,6 +36,8 @@ function CameraCapture() {
   const [facingMode, setFacingMode] = useState('user');
   const [eventName, setEventName] = useState('');
   const [guestCount, setGuestCount] = useState(null);
+  const [photoCap, setPhotoCap] = useState(null);
+  const [myUploadCount, setMyUploadCount] = useState(0);
   // Each item: { id, previewUrl, file, status: 'pending' | 'uploading' | 'failed' }
   // Items are removed as soon as they upload successfully — this list is
   // only ever "things still in flight or that need attention."
@@ -60,6 +62,34 @@ function CameraCapture() {
     });
     if (!error && typeof data === 'number') setGuestCount(data);
   }, [eventId]);
+
+  // Tracks the per-guest shot quota (a competitive, POV-style scarcity
+  // mechanic on lower tiers) so the shutter can show/enforce it live.
+  const refreshMyUploadCount = React.useCallback(async () => {
+    if (!eventId || !user) return;
+    const { count, error } = await supabase
+      .from('photos')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('uploaded_by', user.id);
+    if (!error && typeof count === 'number') setMyUploadCount(count);
+  }, [eventId, user]);
+
+  useEffect(() => {
+    if (!eventId || !user) return;
+
+    const fetchPhotoCap = async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('photo_cap_per_guest')
+        .eq('id', eventId)
+        .single();
+      if (!error) setPhotoCap(data?.photo_cap_per_guest ?? null);
+    };
+
+    fetchPhotoCap();
+    refreshMyUploadCount();
+  }, [eventId, user, refreshMyUploadCount]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -166,6 +196,7 @@ function CameraCapture() {
 
         if (result.success) {
           setPendingUploads((prev) => prev.filter((p) => p.id !== item.id));
+          setMyUploadCount((prev) => prev + 1);
           refreshGuestCount();
         } else {
           toast.error(`Upload failed: ${result.error}`);
@@ -193,6 +224,11 @@ function CameraCapture() {
   }, [joining, user]);
 
   const captureImage = async () => {
+    if (photoCap != null && myUploadCount >= photoCap) {
+      toast.error(`You've used all ${photoCap} of your photos for this event.`);
+      return;
+    }
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -231,6 +267,11 @@ function CameraCapture() {
   };
 
   const handleShutterPress = () => {
+    if (photoCap != null && myUploadCount >= photoCap) {
+      toast.error(`You've used all ${photoCap} of your photos for this event.`);
+      return;
+    }
+
     if (armedSeconds) {
       setCountdown(armedSeconds);
     } else {
@@ -261,6 +302,19 @@ function CameraCapture() {
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+
+    if (photoCap != null) {
+      const remaining = Math.max(0, photoCap - myUploadCount);
+      if (remaining === 0) {
+        toast.error(`You've used all ${photoCap} of your photos for this event.`);
+        e.target.value = '';
+        return;
+      }
+      if (files.length > remaining) {
+        toast.warning(`Only ${remaining} more photo(s) allowed — uploading the first ${remaining}.`);
+        files.length = remaining;
+      }
+    }
 
     const newItems = files.map((file, i) => ({
       id: `${Date.now()}-${i}`,
@@ -301,6 +355,8 @@ function CameraCapture() {
 
   const failedCount = pendingUploads.filter((i) => i.status === 'failed').length;
   const currentItem = pendingUploads[currentIndex];
+  const remainingShots = photoCap == null ? null : Math.max(0, photoCap - myUploadCount);
+  const outOfShots = remainingShots === 0;
 
   return (
     <div className="camera-fullscreen">
@@ -314,9 +370,11 @@ function CameraCapture() {
         </button>
         <div className="event-name-block">
           <span className="event-name">{eventName || 'Camera'}</span>
-          {guestCount !== null && (
+          {(guestCount !== null || remainingShots !== null) && (
             <span className="event-participants">
-              {guestCount} {guestCount === 1 ? 'guest' : 'guests'}
+              {guestCount !== null && `${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}`}
+              {guestCount !== null && remainingShots !== null && ' · '}
+              {remainingShots !== null && `${remainingShots} shots left`}
             </span>
           )}
         </div>
@@ -424,7 +482,12 @@ function CameraCapture() {
           {FILTER_LABELS[filter]}
         </button>
 
-        <button className="shutter-button" onClick={handleShutterPress} title="Capture">
+        <button
+          className="shutter-button"
+          onClick={handleShutterPress}
+          title={outOfShots ? "You've used all your shots for this event" : 'Capture'}
+          disabled={outOfShots}
+        >
           <FaCamera />
         </button>
 
@@ -439,7 +502,14 @@ function CameraCapture() {
           onClick={() =>
             pendingUploads.length > 0 ? setShowGallery(true) : fileInputRef.current?.click()
           }
-          title={pendingUploads.length > 0 ? 'Review uploads' : 'Choose from camera roll'}
+          title={
+            pendingUploads.length > 0
+              ? 'Review uploads'
+              : outOfShots
+              ? "You've used all your shots for this event"
+              : 'Choose from camera roll'
+          }
+          disabled={pendingUploads.length === 0 && outOfShots}
         >
           {pendingUploads.length > 0 ? (
             <>
@@ -452,6 +522,8 @@ function CameraCapture() {
                 ? `${failedCount} failed — tap to retry`
                 : `Uploading ${pendingUploads.length}…`}
             </>
+          ) : outOfShots ? (
+            'Out of shots'
           ) : (
             <>
               <FaImages /> Camera roll

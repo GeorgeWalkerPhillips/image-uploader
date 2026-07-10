@@ -15,7 +15,7 @@ import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { PricingModal } from './components/PricingModal';
-import { TIERS, formatGuestCap } from './services/pricingTiers';
+import { TIERS, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
 import {
   createCheckoutSession,
   getStripe,
@@ -136,6 +136,7 @@ function AdminEventManager() {
           created_by: user.id,
           tier: tier.key,
           guest_cap: tier.guestCap,
+          photo_cap_per_guest: tier.photosPerGuest,
           is_free: tier.key === 'free',
           is_paid: tier.key !== 'free',
           payment_status: tier.key === 'free' ? 'free' : 'pending_payment',
@@ -426,7 +427,7 @@ function AdminEventManager() {
                         )}
                         <div className={styles.eventMeta}>
                           <p>
-                            <strong>Plan:</strong> {tier.name} ({formatGuestCap(event.guest_cap)})
+                            <strong>Plan:</strong> {tier.name} ({formatGuestCap(event.guest_cap)}, {formatPhotoCap(event.photo_cap_per_guest)})
                             {event.tier !== 'free' && event.payment_status === 'pending_payment' && (
                               <span className={styles.paymentPendingBadge}> · payment pending</span>
                             )}
