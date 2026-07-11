@@ -33,7 +33,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How does pricing work?',
-    a: `Pricing scales with your guest count. Free for up to ${TIERS.free.guestCap} guests, then a flat one-time fee per event as your guest list grows — no subscriptions, ever.`,
+    a: `Your first event is free, for up to ${TIERS.free.guestCap} guests. Every event after that is priced by guest count — a flat one-time fee, no subscriptions, ever.`,
   },
   {
     q: 'Is there a limit on how many photos each guest can upload?',
@@ -115,7 +115,7 @@ function LandingPage() {
 
           <ul className={styles.trustBar}>
             <li>No app required for guests</li>
-            <li>Free up to {TIERS.free.guestCap} guests</li>
+            <li>First event free</li>
             <li>Ready in under 2 minutes</li>
           </ul>
         </section>
@@ -268,6 +268,7 @@ function LandingPage() {
                   </p>
                   <p>{formatGuestCap(tier.guestCap)}</p>
                   <p>{formatPhotoCap(tier.photosPerGuest)}</p>
+                  {isFree && <p>One per account</p>}
                 </div>
               );
             })}

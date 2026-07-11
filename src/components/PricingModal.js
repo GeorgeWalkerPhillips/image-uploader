@@ -13,7 +13,7 @@ const FEATURES = [
 
 const POPULAR_TIER = 'growth';
 
-export function PricingModal({ isOpen, onClose, onSelectPlan }) {
+export function PricingModal({ isOpen, onClose, onSelectPlan, freeTierUsed }) {
   const [loadingTier, setLoadingTier] = useState(null);
 
   const handleSelect = async (tierKey) => {
@@ -44,6 +44,7 @@ export function PricingModal({ isOpen, onClose, onSelectPlan }) {
             const tier = TIERS[tierKey];
             const isFree = tierKey === 'free';
             const isPopular = tierKey === POPULAR_TIER;
+            const freeAlreadyUsed = isFree && freeTierUsed;
 
             return (
               <div
@@ -58,7 +59,9 @@ export function PricingModal({ isOpen, onClose, onSelectPlan }) {
                   {!isFree && <span className="period">/event</span>}
                 </div>
                 <p className="plan-desc">
-                  {formatGuestCap(tier.guestCap)} · {formatPhotoCap(tier.photosPerGuest)}
+                  {freeAlreadyUsed
+                    ? "You've already used your one free event"
+                    : `${formatGuestCap(tier.guestCap)} · ${formatPhotoCap(tier.photosPerGuest)}`}
                 </p>
 
                 <ul className="features">
@@ -73,10 +76,12 @@ export function PricingModal({ isOpen, onClose, onSelectPlan }) {
                 <button
                   className={`plan-btn ${isFree ? 'free-btn' : 'paid-btn'}`}
                   onClick={() => handleSelect(tierKey)}
-                  disabled={loadingTier !== null}
+                  disabled={loadingTier !== null || freeAlreadyUsed}
                 >
                   {loadingTier === tierKey
                     ? 'Processing...'
+                    : freeAlreadyUsed
+                    ? 'Already Used'
                     : isFree
                     ? 'Use Free Plan'
                     : `Choose ${tier.name}`}

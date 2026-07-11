@@ -173,7 +173,11 @@ function AdminEventManager() {
         await initiatePayment(data.id, name, tier);
       }
     } catch (error) {
-      toast.error('Failed to create event: ' + error.message);
+      if (error.message?.includes('free_tier_limit_reached')) {
+        toast.error("You've already used your one free event — choose a paid plan for this one.");
+      } else {
+        toast.error('Failed to create event: ' + error.message);
+      }
       console.error('Error:', error);
     }
   };
@@ -330,12 +334,15 @@ function AdminEventManager() {
     );
   }
 
+  const hasFreeEvent = events.some((e) => e.tier === 'free');
+
   return (
     <div className={styles.adminContainer}>
       <PricingModal
         isOpen={showPricingModal}
         onClose={() => setShowPricingModal(false)}
         onSelectPlan={finalizEventCreation}
+        freeTierUsed={hasFreeEvent}
       />
 
       <div className={styles.adminHeader}>
