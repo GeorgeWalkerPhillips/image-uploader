@@ -27,10 +27,6 @@ function App() {
           }
         />
         <Route path="/gallery" element={<Gallery />} />
-        <Route
-          path="/unauthorized"
-          element={<div className="error-page">🚫 Unauthorized Access</div>}
-        />
       </Routes>
       <ToastContainer
         position="bottom-right"

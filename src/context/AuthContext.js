@@ -6,7 +6,6 @@ export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -17,10 +16,6 @@ export function AuthProvider({ children }) {
 
         if (session?.user) {
           setUser(session.user);
-          // Fire-and-forget: the admin flag isn't needed for the core
-          // logged-in experience, so it must never block the app from
-          // finishing its initial load.
-          checkAdminStatus(session.user.id);
         }
 
         setLoading(false);
@@ -37,13 +32,8 @@ export function AuthProvider({ children }) {
       (event, session) => {
         if (session?.user) {
           setUser(session.user);
-          // Fire-and-forget, same reasoning as above — this listener is
-          // invoked as part of Supabase's own sign-in flow, so awaiting it
-          // here would stall signIn()/signInWithPassword() itself.
-          checkAdminStatus(session.user.id);
         } else {
           setUser(null);
-          setIsAdmin(false);
         }
       }
     );
@@ -52,22 +42,6 @@ export function AuthProvider({ children }) {
       subscription?.unsubscribe();
     };
   }, []);
-
-  const checkAdminStatus = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('is_admin')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      setIsAdmin(data?.is_admin || false);
-    } catch (err) {
-      logError('checkAdminStatus', err, { userId, severity: 'warning' });
-      setIsAdmin(false);
-    }
-  };
 
   const signUp = async (email, password, fullName) => {
     try {
@@ -149,7 +123,6 @@ export function AuthProvider({ children }) {
     // without blocking navigation on it.
     setError(null);
     setUser(null);
-    setIsAdmin(false);
 
     try {
       const { error } = await supabase.auth.signOut();
@@ -179,7 +152,6 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
-        isAdmin,
         loading,
         error,
         signUp,

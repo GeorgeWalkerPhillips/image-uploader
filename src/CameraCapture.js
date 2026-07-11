@@ -47,6 +47,7 @@ function CameraCapture() {
   const [showGallery, setShowGallery] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [displayName, setDisplayName] = useState(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
@@ -130,6 +131,7 @@ function CameraCapture() {
 
     let cancelled = false;
     setJoining(true);
+    setJoinError(null);
 
     joinEventAsGuest(eventId, signInAsGuest)
       .then(({ displayName: savedName }) => {
@@ -142,7 +144,10 @@ function CameraCapture() {
       })
       .catch((err) => {
         console.error('Error joining event:', err);
-        if (!cancelled) toast.error(err.message || 'Could not join this event');
+        if (!cancelled) {
+          setJoinError(err.message || 'Could not join this event');
+          toast.error(err.message || 'Could not join this event');
+        }
       })
       .finally(() => {
         if (!cancelled) setJoining(false);
@@ -223,6 +228,16 @@ function CameraCapture() {
   // — guests never have to remember to hit a separate "upload" button.
   const uploadItem = React.useCallback(
     async (item) => {
+      if (joinError) {
+        // Never got an event_access row, so this would only fail RLS —
+        // surfacing that raw error is more confusing than the blocking
+        // join-error screen the guest is already looking at.
+        setPendingUploads((prev) =>
+          prev.map((p) => (p.id === item.id ? { ...p, status: 'failed' } : p))
+        );
+        return;
+      }
+
       if (!eventId || !user) {
         setPendingUploads((prev) =>
           prev.map((p) => (p.id === item.id ? { ...p, status: 'pending' } : p))
@@ -254,7 +269,7 @@ function CameraCapture() {
         );
       }
     },
-    [eventId, user, refreshGuestCount, displayName]
+    [eventId, user, refreshGuestCount, displayName, joinError]
   );
 
   // Flushes any photos captured before the guest session finished joining.
@@ -391,6 +406,19 @@ function CameraCapture() {
         <div className="no-event-message">
           <p>No event selected</p>
           <button onClick={() => navigate('/')}>Go Back</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (joinError) {
+    return (
+      <div className="camera-fullscreen">
+        <div className="no-event-message">
+          <p>{joinError}</p>
+          <button onClick={() => navigate(`/gallery?event=${eventId}`)}>
+            View Gallery Instead
+          </button>
         </div>
       </div>
     );
