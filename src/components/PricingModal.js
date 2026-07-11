@@ -88,7 +88,7 @@ export function PricingModal({ isOpen, onClose, onSelectPlan }) {
 
         <div className="pricing-footer">
           <p>Events stay live for 30 days after your event date</p>
-          <p>Paid plans are processed securely with Stripe</p>
+          <p>Paid plans are processed securely with Paystack</p>
         </div>
       </div>
     </div>

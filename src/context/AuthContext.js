@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { logError } from '../services/errorLogger';
 
 export const AuthContext = createContext();
 
@@ -63,7 +64,7 @@ export function AuthProvider({ children }) {
       if (error) throw error;
       setIsAdmin(data?.is_admin || false);
     } catch (err) {
-      console.error('Admin check failed:', err);
+      logError('checkAdminStatus', err, { userId, severity: 'warning' });
       setIsAdmin(false);
     }
   };
@@ -96,6 +97,7 @@ export function AuthProvider({ children }) {
       return data;
     } catch (err) {
       setError(err.message);
+      logError('signUp', err, { email });
       throw err;
     }
   };
@@ -118,6 +120,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       setError(err.message);
       logAuditEvent('login_failed', 'user', null);
+      logError('signIn', err, { email });
       throw err;
     }
   };
@@ -135,6 +138,7 @@ export function AuthProvider({ children }) {
       return data.user;
     } catch (err) {
       setError(err.message);
+      logError('signInAsGuest', err, { severity: 'critical' });
       throw err;
     }
   };
@@ -151,7 +155,7 @@ export function AuthProvider({ children }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (err) {
-      console.error('Sign out request failed (local session already cleared):', err);
+      logError('signOut', err, { severity: 'warning' });
     }
   };
 

@@ -1,0 +1,94 @@
+.guest-name-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+}
+
+.guest-name-card {
+  background: #111;
+  color: white;
+  border-radius: 20px;
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.guest-name-card h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.guest-name-card p {
+  margin: 0 0 20px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.guest-name-card input {
+  width: 100%;
+  padding: 13px 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 15px;
+  font-family: inherit;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.guest-name-card input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.guest-name-card input:focus {
+  outline: none;
+  border-color: white;
+}
+
+.guest-name-submit {
+  width: 100%;
+  padding: 13px;
+  background: white;
+  color: #111;
+  border: none;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.guest-name-submit:hover:not(:disabled) {
+  background: #ddd;
+}
+
+.guest-name-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.guest-name-skip {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.guest-name-skip:hover {
+  color: white;
+}

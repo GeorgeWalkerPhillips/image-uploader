@@ -15,13 +15,15 @@ import {
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { uploadImage } from './services/uploadService';
-import { joinEventAsGuest } from './services/eventAccessService';
+import { joinEventAsGuest, setGuestDisplayName } from './services/eventAccessService';
 import { applyVideoFilters, applyCanvasFilters, FILTER_ORDER } from './components/CameraFilters';
 import { TimerCountdownOverlay } from './components/CameraTimer';
 import { CameraSettingsSheet } from './components/CameraSettingsSheet';
+import { GuestNamePrompt } from './components/GuestNamePrompt';
 import './CameraCapture.css';
 
 const FILTER_LABELS = { normal: 'Normal', bw: 'B&W', sepia: 'Sepia' };
+const GUEST_NAME_STORAGE_KEY = 'capture_guest_name';
 
 function CameraCapture() {
   const [searchParams] = useSearchParams();
@@ -46,6 +48,15 @@ function CameraCapture() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [joining, setJoining] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [displayName, setDisplayName] = useState(null);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [cachedName] = useState(() => {
+    try {
+      return localStorage.getItem(GUEST_NAME_STORAGE_KEY) || '';
+    } catch (err) {
+      return '';
+    }
+  });
 
   // Filter/timer states
   const [brightness, setBrightness] = useState(100);
@@ -121,6 +132,14 @@ function CameraCapture() {
     setJoining(true);
 
     joinEventAsGuest(eventId, signInAsGuest)
+      .then(({ displayName: savedName }) => {
+        if (cancelled) return;
+        if (savedName) {
+          setDisplayName(savedName);
+        } else {
+          setShowNamePrompt(true);
+        }
+      })
       .catch((err) => {
         console.error('Error joining event:', err);
         if (!cancelled) toast.error(err.message || 'Could not join this event');
@@ -134,6 +153,30 @@ function CameraCapture() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
+
+  const handleNameSubmit = async (name) => {
+    setShowNamePrompt(false);
+    setDisplayName(name);
+    try {
+      localStorage.setItem(GUEST_NAME_STORAGE_KEY, name);
+    } catch (err) {
+      // Private browsing / storage disabled — fine, it just won't be
+      // pre-filled next time.
+    }
+
+    if (user) {
+      try {
+        await setGuestDisplayName(eventId, user.id, name);
+      } catch (err) {
+        toast.error("Couldn't save your name, but you can still upload");
+      }
+    }
+  };
+
+  const handleNameSkip = () => {
+    setShowNamePrompt(false);
+    setDisplayName('Guest');
+  };
 
   const startCamera = React.useCallback(async () => {
     try {
@@ -192,7 +235,7 @@ function CameraCapture() {
       );
 
       try {
-        const result = await uploadImage(item.file, eventId, user.id);
+        const result = await uploadImage(item.file, eventId, user.id, null, displayName);
 
         if (result.success) {
           setPendingUploads((prev) => prev.filter((p) => p.id !== item.id));
@@ -211,7 +254,7 @@ function CameraCapture() {
         );
       }
     },
-    [eventId, user, refreshGuestCount]
+    [eventId, user, refreshGuestCount, displayName]
   );
 
   // Flushes any photos captured before the guest session finished joining.
@@ -417,6 +460,13 @@ function CameraCapture() {
       />
 
       <TimerCountdownOverlay countdown={countdown} onCancel={() => setCountdown(null)} />
+
+      <GuestNamePrompt
+        open={showNamePrompt}
+        defaultValue={cachedName}
+        onSubmit={handleNameSubmit}
+        onSkip={handleNameSkip}
+      />
 
       {showGallery && currentItem && (
         <div className="preview-overlay">

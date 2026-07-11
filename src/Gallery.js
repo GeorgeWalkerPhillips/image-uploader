@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaChevronLeft, FaChevronRight, FaTimes, FaDownload, FaCheckSquare } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaTimes, FaDownload, FaCheckSquare, FaThLarge, FaUserFriends } from 'react-icons/fa';
 import { supabase } from './supabaseClient';
 import { getPublicPhotoUrl } from './services/uploadService';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { BottomNav } from './components/BottomNav';
+import { useAuth } from './context/AuthContext';
 import './Gallery.css';
+
+const UNNAMED_ALBUM = 'Guest';
 
 function Gallery() {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('event');
+  const { user } = useAuth();
 
   const [eventName, setEventName] = useState('');
+  const [eventOwnerId, setEventOwnerId] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -23,6 +28,7 @@ function Gallery() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [downloading, setDownloading] = useState(false);
+  const [viewMode, setViewMode] = useState('albums'); // 'albums' | 'all'
 
   const PHOTOS_PER_PAGE = 20;
 
@@ -32,10 +38,13 @@ function Gallery() {
     const fetchEventName = async () => {
       const { data } = await supabase
         .from('events')
-        .select('name')
+        .select('name, created_by')
         .eq('id', eventId)
         .single();
-      if (data) setEventName(data.name);
+      if (data) {
+        setEventName(data.name);
+        setEventOwnerId(data.created_by);
+      }
     };
 
     fetchEventName();
@@ -51,7 +60,7 @@ function Gallery() {
       setLoading(true);
       const { data, error } = await supabase
         .from('photos')
-        .select('id, storage_path, uploaded_at, width, height')
+        .select('id, storage_path, uploaded_at, width, height, uploader_name')
         .eq('event_id', eventId)
         .order('uploaded_at', { ascending: false })
         .range(newOffset, newOffset + PHOTOS_PER_PAGE - 1);
@@ -65,6 +74,7 @@ function Gallery() {
         uploadedAt: photo.uploaded_at,
         width: photo.width,
         height: photo.height,
+        uploaderName: photo.uploader_name || UNNAMED_ALBUM,
       }));
 
       if (newOffset === 0) {
@@ -182,6 +192,61 @@ function Gallery() {
     });
   };
 
+  const albums = useMemo(() => {
+    const byName = new Map();
+    for (const photo of photos) {
+      const name = photo.uploaderName;
+      if (!byName.has(name)) byName.set(name, []);
+      byName.get(name).push(photo);
+    }
+
+    return [...byName.entries()]
+      .map(([name, albumPhotos]) => ({ name, photos: albumPhotos }))
+      .sort((a, b) => {
+        if (a.name === UNNAMED_ALBUM) return 1;
+        if (b.name === UNNAMED_ALBUM) return -1;
+        return a.name.localeCompare(b.name);
+      });
+  }, [photos]);
+
+  const isOwner = Boolean(user && eventOwnerId && user.id === eventOwnerId);
+
+  const renderPhotoTile = (photo, index) => (
+    <div key={photo.id} className="gallery-item-wrapper">
+      <div
+        className="gallery-item"
+        onClick={() => {
+          if (selectMode) {
+            toggleSelected(photo.id);
+          } else {
+            setCurrentIndex(index);
+            setShowViewer(true);
+          }
+        }}
+        style={{ cursor: 'pointer' }}
+      >
+        <img src={photo.url} alt={`photo-${photo.id}`} loading="lazy" />
+        {selectMode && (
+          <div className={`select-checkbox ${selectedIds.has(photo.id) ? 'checked' : ''}`}>
+            {selectedIds.has(photo.id) && <FaCheckSquare />}
+          </div>
+        )}
+      </div>
+      {!selectMode && isOwner && (
+        <button
+          className="delete-photo-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            deletePhoto(photo.id, photo.storagePath);
+          }}
+          title="Delete photo"
+        >
+          🗑️
+        </button>
+      )}
+    </div>
+  );
+
   if (!eventId) {
     return (
       <div className="gallery-container">
@@ -203,6 +268,14 @@ function Gallery() {
           <span>{photos.length} photos</span>
           {photos.length > 0 && (
             <>
+              <button
+                className="view-toggle-btn"
+                onClick={() => setViewMode((m) => (m === 'albums' ? 'all' : 'albums'))}
+                title={viewMode === 'albums' ? 'Show all photos in one grid' : 'Group by guest'}
+              >
+                {viewMode === 'albums' ? <FaThLarge /> : <FaUserFriends />}
+                {viewMode === 'albums' ? 'All' : 'Albums'}
+              </button>
               <button
                 className="select-toggle-btn"
                 onClick={toggleSelectMode}
@@ -228,50 +301,41 @@ function Gallery() {
           <p className="loading-text">Loading photos...</p>
         ) : photos.length === 0 ? (
           <p className="empty-text">No photos uploaded yet.</p>
+        ) : viewMode === 'albums' ? (
+          <>
+            {albums.map((album) => (
+              <div key={album.name} className="album-section">
+                <div className="album-header">
+                  <h3>{album.name} <span className="album-count">· {album.photos.length}</span></h3>
+                  <button
+                    className="album-download-btn"
+                    onClick={() => downloadPhotos(album.photos)}
+                    disabled={downloading}
+                    title={`Download ${album.name}'s photos`}
+                  >
+                    <FaDownload />
+                  </button>
+                </div>
+                <div className="gallery-grid">
+                  {album.photos.map((photo) =>
+                    renderPhotoTile(photo, photos.findIndex((p) => p.id === photo.id))
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {hasMore && (
+              <div className="load-more-container">
+                <button className="load-more-btn" onClick={loadMore}>
+                  Load More Photos
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <>
             <div className="gallery-grid">
-              {photos.map((photo, index) => (
-                <div key={photo.id} className="gallery-item-wrapper">
-                  <div
-                    className="gallery-item"
-                    onClick={() => {
-                      if (selectMode) {
-                        toggleSelected(photo.id);
-                      } else {
-                        setCurrentIndex(index);
-                        setShowViewer(true);
-                      }
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <img
-                      src={photo.url}
-                      alt={`photo-${photo.id}`}
-                      loading="lazy"
-                    />
-                    {selectMode && (
-                      <div
-                        className={`select-checkbox ${selectedIds.has(photo.id) ? 'checked' : ''}`}
-                      >
-                        {selectedIds.has(photo.id) && <FaCheckSquare />}
-                      </div>
-                    )}
-                  </div>
-                  {!selectMode && (
-                    <button
-                      className="delete-photo-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deletePhoto(photo.id, photo.storagePath);
-                      }}
-                      title="Delete photo"
-                    >
-                      🗑️
-                    </button>
-                  )}
-                </div>
-              ))}
+              {photos.map((photo, index) => renderPhotoTile(photo, index))}
             </div>
 
             {hasMore && (

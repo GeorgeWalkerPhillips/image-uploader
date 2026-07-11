@@ -16,11 +16,7 @@ import { supabase } from './supabaseClient';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { PricingModal } from './components/PricingModal';
 import { TIERS, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
-import {
-  createCheckoutSession,
-  getStripe,
-  updateEventPaymentStatus,
-} from './services/stripeService';
+import { initializePaystackTransaction } from './services/paystackService';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import styles from './AdminEventManager.module.css';
@@ -63,27 +59,43 @@ function AdminEventManager() {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Stripe redirects back here with ?payment=success|cancelled&event=<id>.
-  // A real webhook (see PAYMENT_SETUP.md) is the secure way to confirm a
-  // charge server-side; this client-side confirmation is a pragmatic
-  // stopgap until that's deployed.
+  // Paystack redirects back here with ?payment=success&event=<id> once the
+  // hosted checkout page completes. The Paystack webhook (server-side,
+  // verified signature) is the only thing that can actually mark an event
+  // paid — a DB trigger rejects any client attempt to set is_paid directly.
+  // So on return, we just poll briefly for the webhook to have landed
+  // rather than writing the status ourselves.
+  const pollForPaymentConfirmation = React.useCallback(async (eventId, attempt = 0) => {
+    const { data } = await supabase
+      .from('events')
+      .select('is_paid')
+      .eq('id', eventId)
+      .single();
+
+    if (data?.is_paid) {
+      toast.success('Payment confirmed! Your event is live.');
+      fetchEvents();
+      return;
+    }
+
+    if (attempt < 6) {
+      setTimeout(() => pollForPaymentConfirmation(eventId, attempt + 1), 2000);
+    } else {
+      toast.warning(
+        "Still confirming your payment with Paystack — refresh in a moment if your event doesn't update."
+      );
+      fetchEvents();
+    }
+  }, [fetchEvents]);
+
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     const paidEventId = searchParams.get('event');
 
     if (paymentStatus === 'success' && paidEventId) {
-      (async () => {
-        try {
-          await updateEventPaymentStatus(paidEventId, true);
-          toast.success('Payment confirmed! Your event is live.');
-          fetchEvents();
-        } catch (err) {
-          toast.error('Could not confirm payment status');
-          console.error('Payment confirmation error:', err);
-        } finally {
-          setSearchParams({});
-        }
-      })();
+      toast.info('Payment received — confirming with Paystack...');
+      pollForPaymentConfirmation(paidEventId);
+      setSearchParams({});
     } else if (paymentStatus === 'cancelled') {
       toast.info('Payment cancelled');
       setSearchParams({});
@@ -135,11 +147,11 @@ function AdminEventManager() {
           expiry_date: expiry.toISOString(),
           created_by: user.id,
           tier: tier.key,
-          guest_cap: tier.guestCap,
-          photo_cap_per_guest: tier.photosPerGuest,
           is_free: tier.key === 'free',
-          is_paid: tier.key !== 'free',
-          payment_status: tier.key === 'free' ? 'free' : 'pending_payment',
+          // guest_cap, photo_cap_per_guest, is_paid, and payment_status are
+          // deliberately NOT set here — the enforce_event_billing_integrity
+          // DB trigger derives them from `tier` alone server-side. Only the
+          // Paystack webhook (service role) can ever mark an event paid.
         })
         .select()
         .single();
@@ -168,18 +180,21 @@ function AdminEventManager() {
 
   const initiatePayment = async (eventId, name, tier) => {
     try {
-      const session = await createCheckoutSession(
+      const { authorization_url: authorizationUrl } = await initializePaystackTransaction(
         eventId,
         name,
         user.id,
-        tier.amountCents,
+        user.email,
         tier.key
       );
-      const stripe = await getStripe();
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: session.sessionId,
-      });
-      if (error) throw error;
+
+      if (!authorizationUrl) {
+        throw new Error('Paystack did not return a checkout URL');
+      }
+
+      // Full redirect to Paystack's hosted checkout page — no client SDK
+      // involved, matches how the previous Stripe redirect flow worked.
+      window.location.href = authorizationUrl;
     } catch (error) {
       toast.error('Payment failed: ' + error.message);
       console.error('Payment error:', error);

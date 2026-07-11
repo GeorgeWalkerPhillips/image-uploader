@@ -1,67 +1,80 @@
 # Payment System Setup Guide
 
-This app uses **Stripe** for processing payments. Follow these steps to enable payments.
+This app uses **Paystack** for processing payments. (We started with Stripe,
+but Stripe doesn't support South African businesses for settlement/payouts —
+Paystack is Stripe's own product for the African market and settles ZAR
+directly to a South African bank account.) Follow these steps to enable
+payments.
 
-## 1. Create Stripe Account
+## 1. Create a Paystack Account
 
-1. Go to [stripe.com](https://stripe.com)
-2. Sign up for a free account
-3. Complete your business information (Stripe will ask for basic details)
-4. Verify your email
+1. Go to [paystack.com](https://paystack.com) and sign up
+2. If you're operating as a sole proprietor (no registered company), choose
+   the **Sole Proprietorship** business type during onboarding — this is a
+   normal, explicitly-supported path, not a workaround. You'll need: your SA
+   ID, a bank confirmation letter (<6 months old), and proof of address
+   (<6 months old) — the names on all three must match. Verification takes
+   1–3 business days.
+3. Complete the compliance/KYC review before going live (test mode works
+   immediately without this)
 
 ## 2. Get API Keys
 
-1. Go to **Dashboard → Developers → API Keys**
-2. You'll see two keys:
-   - **Publishable Key** (starts with `pk_test_` for testing)
-   - **Secret Key** (starts with `sk_test_` for testing)
+1. Go to **Settings → API Keys & Webhooks**
+2. You'll see two keys per mode (Test/Live):
+   - **Public Key** (starts with `pk_test_`/`pk_live_`) — not used by this
+     app at all (see note below)
+   - **Secret Key** (starts with `sk_test_`/`sk_live_`) — server-side only
 
-⚠️ **NEVER share the Secret Key! Only use in backend!**
+⚠️ **NEVER share the Secret Key! Only use it in Edge Functions, never in
+the React app.**
 
-## 3. Add to Environment
+> **Why no public key in the frontend:** this app uses Paystack's "Standard"
+> hosted-checkout flow — an Edge Function initializes the transaction
+> server-side and returns a URL, and the browser just redirects there and
+> back. There's no Paystack JavaScript SDK loaded client-side and no
+> `REACT_APP_PAYSTACK_PUBLIC_KEY` needed. (Paystack's alternative "Inline"
+> popup flow does use the public key client-side, but we're not using that
+> flow here.)
 
-Create `.env.local` in your project root and add:
+## 3. Update Database Schema
 
-```
-REACT_APP_SUPABASE_URL=your_supabase_url
-REACT_APP_SUPABASE_ANON_KEY=your_anon_key
-REACT_APP_STRIPE_PUBLIC_KEY=pk_test_your_publishable_key
-```
+Run, in order, in your Supabase SQL Editor (if you already ran the Stripe
+versions of these from an earlier setup, you still need this — the billing
+security model doesn't change, only the payment provider):
 
-Only the **Publishable Key** goes in `.env.local` (it's safe for frontend).
+1. `payment-schema.sql` — payment fields on events, payments table, RLS
+   (if not already applied)
+2. `security-hardening.sql` — **required**, not optional. This locks
+   `events.tier`, `guest_cap`, `photo_cap_per_guest`, `is_paid`, and
+   `payment_status` so only the webhook (step 5, using the service role)
+   can ever mark an event paid — no client request, however crafted, can
+   set these fields itself. Without this file, anyone can open DevTools
+   and mark their own event paid for free. This file is fully
+   provider-agnostic (it only checks `auth.role() = 'service_role'`) — no
+   changes needed even though the payment provider changed.
+3. `paystack-migration.sql` — renames a column that was named
+   `stripe_payment_intent_id` to the provider-neutral `payment_reference`
 
-## 4. Update Database Schema
+## 4. Create the Paystack-Initialize Edge Function (Server-side)
 
-Run the SQL from `payment-schema.sql` in your Supabase SQL Editor:
-
-```sql
--- Copy entire contents of payment-schema.sql
--- Paste into Supabase SQL Editor
--- Click Run
-```
-
-This creates:
-- Payment fields on events table
-- Payments table for transaction history
-- User subscriptions table (for future)
-- Row-level security policies
-
-## 5. Create Supabase Edge Function (Server-side)
-
-You need a serverless function to handle checkout. In Supabase:
+In Supabase:
 
 1. Go to **Edge Functions** (in left sidebar)
 2. Click **Create Function**
-3. Name it: `create-checkout-session`
+3. Name it: `paystack-initialize`
 4. Replace the code with:
 
 ```javascript
-import Stripe from "https://esm.sh/stripe@14.0.0";
+// Set this to your real deployed origin (Settings → Secrets →
+// ALLOWED_ORIGIN). Falls back to the known production domain below —
+// update both if you add a custom domain. Do NOT use "*" here: that lets
+// any website on the internet trigger checkout sessions against your
+// Paystack account.
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "https://capture-by-val.vercel.app";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
-
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const corsHeaders = {
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
@@ -69,7 +82,8 @@ export const corsHeaders = {
 // Mirror of src/services/pricingTiers.js — keep these two in sync. The
 // server recomputes the amount from the tier key instead of trusting the
 // client-supplied amount, so a tampered request can't pay less than it
-// should.
+// should. Paystack amounts are in the smallest currency unit (cents for
+// ZAR), same as Stripe.
 const TIER_AMOUNTS_CENTS = {
   starter: 9900, // R99
   growth: 34900, // R349
@@ -82,42 +96,52 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { eventId, eventName, userId, tier } = await req.json();
+    const { eventId, eventName, userId, email, tier } = await req.json();
 
     const amount = TIER_AMOUNTS_CENTS[tier];
     if (!amount) {
       throw new Error(`Unknown or free tier: ${tier}`);
     }
+    if (!email) {
+      throw new Error("Paystack requires an email to initialize a transaction");
+    }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "zar",
-            product_data: {
-              name: `Event: ${eventName} (${tier})`,
-              description: "Event photo sharing",
-            },
-            unit_amount: amount,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      success_url: `${req.headers.get("origin")}/admin?payment=success&event=${eventId}`,
-      cancel_url: `${req.headers.get("origin")}/admin?payment=cancelled`,
-      metadata: {
-        eventId,
-        userId,
-        tier,
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${Deno.env.get("PAYSTACK_SECRET_KEY")}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        email,
+        amount,
+        currency: "ZAR",
+        callback_url: `${req.headers.get("origin")}/admin?payment=success&event=${eventId}`,
+        metadata: {
+          eventId,
+          userId,
+          tier,
+          eventName,
+        },
+      }),
     });
 
-    return new Response(JSON.stringify({ sessionId: session.id }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    const result = await response.json();
+
+    if (!result.status) {
+      throw new Error(result.message || "Paystack initialize failed");
+    }
+
+    return new Response(
+      JSON.stringify({
+        authorization_url: result.data.authorization_url,
+        reference: result.data.reference,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -127,55 +151,177 @@ Deno.serve(async (req) => {
 });
 ```
 
-The app currently sends `amount` too (for its own display purposes) but the
-function above ignores it and always recomputes from `tier` — never trust
-a client-supplied price for what you charge.
+The app sends `eventName`/`tier` too but the function above always
+recomputes the actual `amount` charged from `tier` alone — never trust a
+client-supplied price for what you charge.
 
 5. Click **Deploy**
 6. Go to **Settings → Secrets** and add:
-   - Key: `STRIPE_SECRET_KEY`
-   - Value: Your Stripe **Secret Key** (from API Keys)
+   - Key: `PAYSTACK_SECRET_KEY`, Value: your Paystack **Secret Key**
+   - Key: `ALLOWED_ORIGIN`, Value: your real production URL (e.g.
+     `https://capture-by-val.vercel.app`)
 
-## 6. Set Stripe Webhook (Optional but Recommended)
+## 5. Create the Paystack Webhook (required, not optional)
 
-For production, add a webhook to auto-confirm payments:
+This is the only thing allowed to mark an event as paid — the DB trigger
+from step 3 rejects every other attempt. Without this deployed, **paid
+events will never actually confirm**, they'll sit at "payment pending"
+forever after a successful Paystack charge.
 
-1. In Stripe Dashboard: **Developers → Webhooks**
-2. Click **Add Endpoint**
-3. Endpoint URL: `https://your-project.supabase.co/functions/v1/webhook-stripe`
-4. Events to send:
-   - `payment_intent.succeeded`
-   - `charge.refunded`
+1. In Supabase: **Edge Functions → Create Function**, name it `paystack-webhook`
+2. Replace the code with:
 
-Create a new Edge Function `webhook-stripe` to handle the webhook.
+```javascript
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-## 7. Testing
+const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
+
+// The service role key bypasses RLS entirely — that's intentional and
+// safe here because this function only runs after verifying the request
+// really came from Paystack (signature check below). Never expose this
+// key to the frontend.
+const supabaseAdmin = createClient(
+  Deno.env.get("SUPABASE_URL"),
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+);
+
+// Mirror of src/services/pricingTiers.js and security-hardening.sql's
+// enforce_event_billing_integrity() — keep all three in sync.
+const TIER_CONFIG = {
+  starter: { guestCap: 25, photoCap: 25 },
+  growth: { guestCap: 100, photoCap: 40 },
+  unlimited: { guestCap: null, photoCap: null },
+};
+
+// Paystack signs webhooks with HMAC-SHA512 of the raw request body, using
+// your secret key — there's no separate webhook signing secret like
+// Stripe's whsec_. Deno's Web Crypto API (not Node's `crypto` module)
+// verifies it.
+async function verifyPaystackSignature(rawBody, signatureHeader) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(paystackSecretKey),
+    { name: "HMAC", hash: "SHA-512" },
+    false,
+    ["sign"]
+  );
+  const sigBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody));
+  const computedHex = Array.from(new Uint8Array(sigBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return computedHex === signatureHeader;
+}
+
+Deno.serve(async (req) => {
+  const signature = req.headers.get("x-paystack-signature");
+  const rawBody = await req.text();
+
+  if (!signature || !(await verifyPaystackSignature(rawBody, signature))) {
+    console.error("Paystack webhook signature verification failed");
+    return new Response("Invalid signature", { status: 400 });
+  }
+
+  const event = JSON.parse(rawBody);
+
+  if (event.event === "charge.success") {
+    const data = event.data;
+    const { eventId, userId, tier } = data.metadata || {};
+    const tierConfig = TIER_CONFIG[tier];
+
+    if (!eventId || !tierConfig) {
+      console.error("Missing/unknown eventId or tier in transaction metadata:", data.metadata);
+      return new Response("Invalid metadata", { status: 400 });
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from("events")
+      .update({
+        is_paid: true,
+        payment_status: "completed",
+        paid_at: new Date().toISOString(),
+        guest_cap: tierConfig.guestCap,
+        photo_cap_per_guest: tierConfig.photoCap,
+      })
+      .eq("id", eventId);
+
+    if (updateError) {
+      console.error("Failed to mark event paid:", updateError);
+      return new Response("Database update failed", { status: 500 });
+    }
+
+    // payment_reference has a UNIQUE constraint — if Paystack retries the
+    // same webhook delivery, this insert fails harmlessly the second time
+    // instead of double-processing.
+    const { error: paymentError } = await supabaseAdmin.from("payments").insert({
+      event_id: eventId,
+      user_id: userId,
+      payment_reference: data.reference,
+      amount_cents: data.amount,
+      currency: (data.currency || "ZAR").toUpperCase(),
+      status: "succeeded",
+      metadata: { tier },
+    });
+
+    if (paymentError && paymentError.code !== "23505") {
+      // 23505 = unique_violation (duplicate webhook delivery) — expected
+      // and fine to ignore. Anything else is worth knowing about, though
+      // the event is already marked paid at this point either way.
+      console.error("Failed to record payment:", paymentError);
+    }
+  }
+
+  return new Response(JSON.stringify({ received: true }), {
+    headers: { "Content-Type": "application/json" },
+    status: 200,
+  });
+});
+```
+
+3. Click **Deploy**
+4. Go to **Settings → Secrets** and confirm `SUPABASE_URL` and
+   `SUPABASE_SERVICE_ROLE_KEY` are present (Supabase usually injects these
+   automatically for Edge Functions — if not, add them from **Settings →
+   API**)
+5. In the **Paystack Dashboard**: **Settings → API Keys & Webhooks**
+   - Webhook URL: `https://<your-project-ref>.supabase.co/functions/v1/paystack-webhook`
+   - Save. Paystack automatically sends `charge.success` (and other events,
+     which this function ignores) to this URL — there's no separate
+     "select events" step or signing-secret exchange like Stripe's; the
+     signature is always computed from your Secret Key.
+
+## 6. Testing
 
 ### Test in Development:
 
 1. User creates event
 2. Selects a paid plan (Starter, Growth, or Unlimited)
-3. Redirected to Stripe test checkout
-4. Use test card: `4242 4242 4242 4242`
-5. Any future date, any CVC
-6. On return, the app reads `?payment=success` from the redirect URL and
-   marks the event paid client-side (see "Security" below for the caveat)
+3. Redirected to Paystack's hosted test checkout page
+4. Use a [Paystack test card](https://paystack.com/docs/payments/test-payments/)
+5. On return, the app polls the event for a few seconds waiting for the
+   webhook to confirm it — you should see "Payment confirmed!" within
+   ~10s. If it times out, check **Paystack Dashboard → Transactions**
+   and **Settings → API Keys & Webhooks → webhook logs** for the actual
+   error.
 
 ### Test Cards:
 
-- **Successful**: `4242 4242 4242 4242`
-- **Declined**: `4000 0000 0000 0002`
-- **3D Secure**: `4000 0025 0000 3155`
+- **Successful**: `4084 0840 8408 4081`, any future expiry, CVV `408`,
+  PIN `0000`, OTP `123456`
+- See [Paystack's test cards page](https://paystack.com/docs/payments/test-payments/)
+  for declined-card and other scenarios — they're region/card-type specific.
 
-## 8. Go Live
+## 7. Go Live
 
 When ready for real payments:
 
-1. In Stripe: Switch from **Test Mode** to **Live Mode**
-2. Get live API keys (start with `pk_live_`)
-3. Update environment variables
-4. Update Supabase secrets with live secret key
-5. Test again with small transaction
+1. Complete Paystack's compliance/KYC review (required before Live Mode
+   API calls work at all)
+2. Switch **Settings → API Keys & Webhooks** to **Live** mode, get live keys
+3. Update the `PAYSTACK_SECRET_KEY` secret on **both** Edge Functions
+4. Re-register the webhook URL under Live mode settings (test and live
+   webhooks are configured separately)
+5. Test again with a small real transaction before announcing
 
 ## Pricing
 
@@ -189,42 +335,58 @@ count — no subscriptions):
 - **Unlimited**: R899/event, no guest cap
 
 Edit pricing in `src/services/pricingTiers.js` — and keep the
-`TIER_AMOUNTS_CENTS` map in the Edge Function (step 5 above) in sync, since
-that's what actually determines what Stripe charges.
+`TIER_AMOUNTS_CENTS` map in the Edge Function (step 4 above) in sync, since
+that's what actually determines what Paystack charges.
 
 ## Troubleshooting
 
 **Payment not processing?**
-- Check Stripe API keys are correct
-- Verify Edge Function is deployed
+- Check the Paystack Secret Key is correct and for the right mode (test
+  vs. live)
+- Verify both Edge Functions (`paystack-initialize` and
+  `paystack-webhook`) are deployed
 - Check browser console for errors
-- Look at Stripe Dashboard → Events for failures
+- Look at **Paystack Dashboard → Transactions** for failures
 
-**Events not marked as paid?**
-- Webhook may not be configured
-- Manual update: In Supabase, update event `is_paid = true`
+**Events stuck on "payment pending"?**
+- This means the webhook hasn't fired/succeeded — check the webhook logs
+  in **Paystack Dashboard → Settings → API Keys & Webhooks**
+- There is deliberately no manual "just flip `is_paid = true`" escape
+  hatch anymore — `security-hardening.sql` blocks that for everyone except
+  the service role, which is the whole point. If you need to manually
+  comp an event, do it from the Supabase SQL Editor using the **service
+  role** connection (not the table editor's default role), or temporarily
+  disable `trg_enforce_event_billing_integrity`.
 
 **Currency showing wrong?**
-- Stripe expects amounts in cents (R50 = 5000 cents)
+- Paystack expects amounts in the smallest currency unit (R50 = 5000 cents)
 - All amounts are in ZAR
 
 ## Security
 
-✅ Secret Key never exposed to frontend
+✅ Secret Key never exposed to frontend — and unlike Stripe, there isn't
+   even a public key in the frontend at all, since this app uses the
+   hosted-redirect flow, not Paystack's client-side Inline popup
 ✅ Charge amount is recomputed server-side from the tier key, not trusted from the client
-✅ RLS policies protect payment data
-⚠️ **No webhook is deployed yet.** The app currently confirms payment by
-reading `?payment=success` off the Stripe redirect URL when the browser
-returns to `/admin` — this proves the user completed *a* checkout, but
-doesn't cryptographically verify it with Stripe. A user who cancels but
-manually edits the URL to add `?payment=success&event=<id>` could mark an
-unpaid event as paid. For real production hardening, build the
-`webhook-stripe` function from step 6 and verify
-`stripe-signature` against `payment_intent.succeeded` before calling
-`updateEventPaymentStatus`.
+✅ Only the Paystack webhook (HMAC-SHA512 signature verified, service
+   role) can mark an event paid or write a payment record — enforced by a
+   DB trigger, not just app logic, so it can't be bypassed by calling the
+   REST API directly
+✅ CORS on both Edge Functions is locked to your real origin, not `*`
+✅ Duplicate webhook deliveries can't double-process a payment (`payment_reference` has a UNIQUE constraint)
+
+This closes the gap flagged in earlier reviews: previously the app
+confirmed payment by reading `?payment=success` off the redirect URL and
+writing `is_paid = true` directly from the client — which anyone could
+trigger by hand-editing the URL, no payment required. That path no longer
+exists; `security-hardening.sql` rejects any non-webhook attempt to change
+billing fields at the database level, regardless of what the frontend code
+does or doesn't check.
 
 ---
 
 **Need help?**
-- Stripe Docs: https://stripe.com/docs
+- Paystack Docs: https://paystack.com/docs
+- Paystack Standard (hosted checkout) integration: https://paystack.com/docs/payments/accept-payments/#standard
+- Paystack Webhooks: https://paystack.com/docs/payments/webhooks/
 - Supabase Edge Functions: https://supabase.com/docs/guides/functions

@@ -1,5 +1,5 @@
 // Pure pricing data — safe to import anywhere (landing page, pricing modal,
-// admin dashboard) without pulling in Stripe or any other side effects.
+// admin dashboard) without pulling in Paystack or any other side effects.
 //
 // Guest-count-based tiers, priced to be directly competitive with POV
 // Camera (free under 10 guests; $4.99 / $19.99 / $49.99 paid tiers by

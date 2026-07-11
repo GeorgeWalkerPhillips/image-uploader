@@ -28,11 +28,14 @@
 .gallery-stats {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
   font-size: 14px;
   color: #666;
 }
 
+.view-toggle-btn,
 .select-toggle-btn,
 .download-all-btn {
   display: flex;
@@ -49,6 +52,7 @@
   transition: all 0.2s;
 }
 
+.view-toggle-btn:hover,
 .select-toggle-btn:hover,
 .download-all-btn:hover:not(:disabled) {
   background: #111;
@@ -56,6 +60,50 @@
 }
 
 .download-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.album-section {
+  margin-bottom: 28px;
+}
+
+.album-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.album-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #222;
+}
+
+.album-count {
+  font-weight: 500;
+  color: #999;
+}
+
+.album-download-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: color 0.2s;
+}
+
+.album-download-btn:hover:not(:disabled) {
+  color: #111;
+}
+
+.album-download-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -310,5 +358,18 @@
   .gallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     gap: 6px;
+  }
+
+  .gallery-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gallery-header h2 {
+    order: -1;
+  }
+
+  .gallery-stats {
+    justify-content: center;
   }
 }

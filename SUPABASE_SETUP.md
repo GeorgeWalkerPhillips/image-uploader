@@ -17,22 +17,51 @@
    - `anon public` key → `REACT_APP_SUPABASE_ANON_KEY`
 
 ## Step 3: Create Database Schema
-Run these five SQL files, in this exact order, in the **SQL Editor**
+Run these nine SQL files, in this exact order, in the **SQL Editor**
 (New Query → paste → Run → wait for success message, then move to the next
 file):
 
 1. `supabase-schema.sql` — core tables (events, photos, profiles) and RLS
-2. `payment-schema.sql` — payment/Stripe-related tables and columns
+2. `payment-schema.sql` — payment/billing tables and columns
 3. `pricing-tiers-migration.sql` — self-serve account policies + guest-count
    pricing tiers (free vs. paid plans)
 4. `event-owner-photos-fix.sql` — lets an event's creator view/manage its
    photos directly, without needing to join their own event as a guest
 5. `photo-cap-per-guest.sql` — per-guest photo quota by tier (disposable
    camera style "N shots" limit), enforced server-side via trigger
+6. `error-logging.sql` — critical error log table, written to automatically
+   by the app so bugs can be diagnosed without needing DevTools on the
+   device that hit them
+7. `guest-display-names.sql` — lets guests name themselves on join, so the
+   gallery can group photos into per-guest albums
+8. `security-hardening.sql` — **required before accepting real payments.**
+   Locks `events.tier`/`guest_cap`/`photo_cap_per_guest`/`is_paid`/
+   `payment_status` so only the payment webhook (service role) can ever
+   mark an event paid — closes the gap where any signed-in user could
+   open DevTools and mark their own event paid for free. Also moves guest
+   cap and upload rate limiting from client-only checks to real DB
+   enforcement. Fully payment-provider-agnostic. See `PAYMENT_SETUP.md`
+   for the webhook this depends on.
+9. `paystack-migration.sql` — renames a Stripe-specific column now that
+   the app uses Paystack (Stripe doesn't support South African merchant
+   payouts — see `PAYMENT_SETUP.md`)
 
-All five must be applied for the app to work — signup, event creation,
-guest joining, organizers seeing their own event's gallery, and per-guest
-photo limits all depend on policies added in files 3 through 5.
+All nine must be applied for the app to work — signup, event creation,
+guest joining, organizers seeing their own event's gallery, per-guest
+photo limits, and payment integrity all depend on policies added in files
+3 through 5, and 7 through 9. File 6 is diagnostic only (nothing breaks
+without it, but you'll fly blind on bugs).
+
+### Checking error logs
+Once file 6 is applied, run this in the SQL Editor any time something goes
+wrong to see exactly what happened, on any device, without needing
+DevTools:
+```sql
+SELECT created_at, severity, source, message, context
+FROM error_logs
+ORDER BY created_at DESC
+LIMIT 20;
+```
 
 ## Step 4: Create Storage Buckets
 1. Go to **Storage** → **Buckets**
@@ -74,8 +103,9 @@ event" and uploads will fail.
 ## Step 7: Configure .env
 1. Copy `.env.example` to `.env.local`
 2. Fill in your values from Step 2
-3. Add your Stripe publishable key (see `PAYMENT_SETUP.md`) if you're
-   enabling paid event tiers
+3. No payment-related env var is needed here — Paystack's secret key lives
+   only in the Edge Function secrets (see `PAYMENT_SETUP.md`), never in the
+   React app
 4. **Never commit `.env.local`** to git
 5. **Restart `npm start`** after any change to `.env.local` — Create React
    App only reads env vars at dev-server startup, so edits won't take effect
@@ -96,7 +126,7 @@ deleted.
 
 ## Security Checklist
 - [ ] Project URL and Anon Key copied to `.env.local`
-- [ ] All five SQL files applied, in order (Step 3)
+- [ ] All nine SQL files applied, in order (Step 3)
 - [ ] Storage bucket created with RLS
 - [ ] Anonymous Sign-Ins enabled (guests can't upload without this)
 - [ ] `.env.local` added to `.gitignore` (should already be there)
