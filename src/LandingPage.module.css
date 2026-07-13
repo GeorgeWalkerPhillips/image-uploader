@@ -1,8 +1,13 @@
 .landing {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #111;
-  background: #fff;
   min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(147, 130, 255, 0.18), transparent 60%),
+    radial-gradient(1000px 600px at 88% 8%, rgba(255, 145, 180, 0.16), transparent 60%),
+    radial-gradient(900px 500px at 50% 55%, rgba(120, 190, 255, 0.13), transparent 60%),
+    #f7f7fb;
+  background-attachment: fixed;
 }
 
 .landing h1,
@@ -12,25 +17,55 @@
   letter-spacing: -0.02em;
 }
 
-/* Nav */
+/* Nav — floating liquid-glass pill */
 .landingNav {
+  position: sticky;
+  top: 16px;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  max-width: 1100px;
-  margin: 0 auto;
+  gap: 16px;
+  padding: 10px 10px 10px 24px;
+  max-width: 880px;
+  margin: 16px auto 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 8px 32px rgba(17, 17, 17, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .landingNavBrand {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.landingNavLinks {
+  display: none;
+  align-items: center;
+  gap: 26px;
+}
+
+.landingNavLinks a {
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.landingNavLinks a:hover {
+  color: #111;
 }
 
 .landingNavActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .landingNavSignIn {
@@ -58,10 +93,17 @@
   cursor: pointer;
   transition: background 0.2s ease;
   white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .landingNavCta:hover {
   background: #333;
+}
+
+@media (min-width: 760px) {
+  .landingNavLinks {
+    display: flex;
+  }
 }
 
 /* Hero */
@@ -139,10 +181,13 @@
 .heroJoin input {
   flex: 1;
   padding: 12px 16px;
-  border: 2px solid #e0e0e0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 30px;
   font-size: 15px;
   font-family: inherit;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
 }
 
 .heroJoin input:focus {
@@ -180,6 +225,7 @@
   padding: 56px 24px;
   max-width: 1100px;
   margin: 0 auto;
+  scroll-margin-top: 90px;
 }
 
 .landing section h2 {
@@ -191,10 +237,12 @@
 
 /* How it works */
 .howItWorks {
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(30px) saturate(140%);
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
   max-width: none;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 .howItWorks .steps {
@@ -249,17 +297,20 @@
 }
 
 .featureCard {
-  background: #fff;
-  border: 1px solid #eee;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   padding: 28px 22px;
-  border-radius: 16px;
+  border-radius: 20px;
   text-align: center;
+  box-shadow: 0 4px 24px rgba(17, 17, 17, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .featureCard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 14px 32px rgba(17, 17, 17, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .featureIcon {
@@ -281,10 +332,12 @@
 
 /* Use cases */
 .useCases {
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(30px) saturate(140%);
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
   max-width: none;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 .useCasesIntro {
@@ -305,10 +358,13 @@
 }
 
 .useCaseCard {
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
   padding: 24px;
+  box-shadow: 0 4px 24px rgba(17, 17, 17, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .useCaseCard h3 {
@@ -324,8 +380,11 @@
 }
 
 .useCasePrimary {
-  background: #111;
-  border-color: #111;
+  background: rgba(17, 17, 17, 0.82);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px rgba(17, 17, 17, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .useCasePrimary h3,
@@ -347,15 +406,20 @@
 }
 
 .pricingCard {
-  border: 1px solid #eee;
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
   padding: 32px 24px;
   text-align: center;
   position: relative;
+  box-shadow: 0 4px 24px rgba(17, 17, 17, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .pricingCardPopular {
-  border-color: #111;
+  border-color: rgba(17, 17, 17, 0.5);
+  box-shadow: 0 8px 28px rgba(17, 17, 17, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .pricingBadge {
@@ -442,9 +506,11 @@
 /* Final CTA */
 .ctaSection {
   text-align: center;
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(30px) saturate(140%);
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
   max-width: none;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 .ctaSection p {
@@ -462,10 +528,13 @@
 
 .ctaJoin input {
   padding: 14px 18px;
-  border: 2px solid #e0e0e0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 30px;
   font-size: 16px;
   font-family: inherit;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
 }
 
 .ctaJoin input:focus {

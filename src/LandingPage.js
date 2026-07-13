@@ -76,6 +76,11 @@ function LandingPage() {
 
       <header className={styles.landingNav}>
         <span className={styles.landingNavBrand}>Capture</span>
+        <nav className={styles.landingNavLinks}>
+          <a href="#how-it-works">How it works</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#faq">FAQ</a>
+        </nav>
         <div className={styles.landingNavActions}>
           <button className={styles.landingNavSignIn} onClick={() => navigate('/login?mode=signin')}>
             Sign In
@@ -120,7 +125,7 @@ function LandingPage() {
           </ul>
         </section>
 
-        <section className={styles.howItWorks} aria-labelledby="how-heading">
+        <section id="how-it-works" className={styles.howItWorks} aria-labelledby="how-heading">
           <h2 id="how-heading">How It Works</h2>
           <ol className={styles.steps}>
             <li>
@@ -244,7 +249,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section aria-labelledby="pricing-heading">
+        <section id="pricing" aria-labelledby="pricing-heading">
           <h2 id="pricing-heading">Priced by Guest Count, Not Subscriptions</h2>
           <p className={styles.useCasesIntro}>
             Pay once per event, based on how many guests are contributing —
@@ -275,7 +280,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section aria-labelledby="faq-heading">
+        <section id="faq" aria-labelledby="faq-heading">
           <h2 id="faq-heading">Frequently Asked Questions</h2>
           <div className={styles.faqList}>
             {FAQ_ITEMS.map((item) => (

@@ -3,17 +3,20 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: #fafafa;
+  background: var(--app-gradient-bg);
+  background-attachment: fixed;
   padding: 20px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .loginCard {
-  background: white;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid #eee;
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow);
+  border: 1px solid var(--glass-border);
   width: 100%;
   max-width: 400px;
   text-align: center;
@@ -43,10 +46,11 @@
 
 .loginCard input {
   padding: 13px 16px;
-  border: 2px solid #eee;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 30px;
   font-size: 14px;
   font-family: inherit;
+  background: rgba(255, 255, 255, 0.6);
   transition: border-color 0.2s;
 }
 

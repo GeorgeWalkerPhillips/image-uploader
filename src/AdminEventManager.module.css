@@ -3,7 +3,8 @@
   margin: 0 auto;
   padding: 40px 24px 80px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #fafafa;
+  background: var(--app-gradient-bg);
+  background-attachment: fixed;
   min-height: 100vh;
   color: #111;
 }
@@ -14,6 +15,16 @@
   align-items: flex-start;
   margin-bottom: 40px;
   gap: 16px;
+  position: sticky;
+  top: 16px;
+  z-index: 50;
+  padding: 16px 22px;
+  border-radius: 24px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 .headerBrand {
@@ -59,10 +70,13 @@
 }
 
 .eventForm {
-  background: white;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   padding: 28px;
-  border-radius: 16px;
-  border: 1px solid #eee;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
   margin-bottom: 40px;
 }
 
@@ -77,11 +91,12 @@
 .eventForm textarea {
   width: 100%;
   padding: 13px 16px;
-  border: 2px solid #eee;
-  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
   font-size: 14px;
   font-family: inherit;
   margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.55);
   transition: border-color 0.2s;
 }
 
@@ -152,9 +167,12 @@
   text-align: center;
   color: #999;
   padding: 48px;
-  background: white;
-  border-radius: 16px;
-  border: 1px solid #eee;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 .eventsGrid {
@@ -164,20 +182,23 @@
 }
 
 .eventCard {
-  background: white;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   padding: 24px;
-  border-radius: 16px;
-  border: 1px solid #eee;
-  transition: box-shadow 0.2s;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
 .eventCard:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(17, 17, 17, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .eventCardExpired {
-  background: #fafafa;
-  border-color: #eee;
+  background: rgba(255, 255, 255, 0.35);
   opacity: 0.75;
 }
 
@@ -186,7 +207,7 @@
   justify-content: center;
   margin-bottom: 16px;
   padding: 16px;
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.6);
   border-radius: 12px;
 }
 

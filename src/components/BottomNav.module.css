@@ -1,17 +1,20 @@
 .bottomNav {
   position: fixed;
-  bottom: 0;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  width: 100%;
-  max-width: 500px;
-  height: 70px;
-  background: white;
-  border-radius: 16px 16px 0 0;
+  width: calc(100% - 32px);
+  max-width: 460px;
+  height: 64px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--glass-shadow);
   z-index: 100;
 }
 
