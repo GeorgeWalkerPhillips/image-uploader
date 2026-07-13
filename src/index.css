@@ -24,6 +24,12 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Single source of truth for the gradient backdrop — painted on body so
+     it always spans the full viewport width, even when a page's own
+     container is centered with a max-width (which would otherwise clip
+     the gradient to that narrower box and leave blank strips on the sides). */
+  background: var(--app-gradient-bg);
+  background-attachment: fixed;
 }
 
 code {
