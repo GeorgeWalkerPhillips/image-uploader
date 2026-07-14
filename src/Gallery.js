@@ -6,6 +6,7 @@ import { supabase } from './supabaseClient';
 import { getPublicPhotoUrl } from './services/uploadService';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { BottomNav } from './components/BottomNav';
+import { UserBadge } from './components/UserBadge';
 import { useAuth } from './context/AuthContext';
 import './Gallery.css';
 
@@ -36,10 +37,12 @@ function Gallery() {
     if (!eventId) return;
 
     const fetchEventName = async () => {
+      // Reads through the SECURITY DEFINER get_public_event_info() rather
+      // than the events table directly, since RLS now scopes events to
+      // the owner or an existing event_access holder — see
+      // fix-events-rls-leak.sql.
       const { data } = await supabase
-        .from('events')
-        .select('name, created_by')
-        .eq('id', eventId)
+        .rpc('get_public_event_info', { p_event_id: eventId })
         .single();
       if (data) {
         setEventName(data.name);
@@ -293,6 +296,7 @@ function Gallery() {
               </button>
             </>
           )}
+          <UserBadge />
         </div>
       </div>
 

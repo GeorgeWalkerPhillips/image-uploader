@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
-  FaSignOutAlt,
   FaLink,
   FaQrcode,
   FaDownload,
@@ -15,6 +14,7 @@ import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { PricingModal } from './components/PricingModal';
+import { UserBadge } from './components/UserBadge';
 import { TIERS, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
 import { initializePaystackTransaction } from './services/paystackService';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -22,7 +22,7 @@ import jsPDF from 'jspdf';
 import styles from './AdminEventManager.module.css';
 
 function AdminEventManager() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -38,11 +38,18 @@ function AdminEventManager() {
   const [pendingEvent, setPendingEvent] = useState(null);
 
   const fetchEvents = React.useCallback(async () => {
+    if (!user) return;
+
     try {
       setLoading(true);
+      // Explicit owner filter as defense-in-depth — RLS already scopes
+      // this (see fix-events-rls-leak.sql), but this dashboard should
+      // never rely on RLS as its only safeguard against showing another
+      // user's events.
       const { data, error } = await supabase
         .from('events')
         .select('*')
+        .eq('created_by', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -53,7 +60,7 @@ function AdminEventManager() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchEvents();
@@ -276,13 +283,6 @@ function AdminEventManager() {
     pdf.save(`${event.name}_QR.pdf`);
   };
 
-  const handleSignOut = () => {
-    // Don't wait on the network round-trip — local session state clears
-    // synchronously inside signOut(), so navigation can happen immediately.
-    signOut();
-    navigate('/');
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return '—';
     return new Date(dateString).toLocaleDateString();
@@ -350,9 +350,7 @@ function AdminEventManager() {
           <Link to="/" className={styles.headerBrand}>Capture</Link>
           <h1>Your Events</h1>
         </div>
-        <button className={styles.signOutBtn} onClick={handleSignOut} title="Sign Out">
-          <FaSignOutAlt /> Sign Out
-        </button>
+        <UserBadge />
       </div>
 
       <div className={styles.eventForm}>
@@ -485,9 +483,7 @@ function AdminEventManager() {
                     </button>
                     <button
                       className={styles.actionBtn}
-                      onClick={() =>
-                        window.open(`/gallery?event=${event.id}`, '_blank')
-                      }
+                      onClick={() => navigate(`/gallery?event=${event.id}`)}
                       title="View shared gallery"
                     >
                       <FaPhotoVideo /> Gallery
@@ -501,9 +497,7 @@ function AdminEventManager() {
                     </button>
                     <button
                       className={styles.actionBtn}
-                      onClick={() =>
-                        window.open(`/camera?event=${event.id}`, '_blank')
-                      }
+                      onClick={() => navigate(`/camera?event=${event.id}`)}
                       title="Preview guest camera"
                     >
                       <FaCamera /> Preview

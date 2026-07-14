@@ -10,6 +10,8 @@ import {
   FaHeart,
 } from 'react-icons/fa';
 import { TIERS, TIER_ORDER, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
+import { useAuth } from './context/AuthContext';
+import { UserBadge } from './components/UserBadge';
 import styles from './LandingPage.module.css';
 
 const POPULAR_TIER = 'growth';
@@ -60,6 +62,8 @@ const FAQ_JSON_LD = {
 
 function LandingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isLoggedIn = user && !user.is_anonymous;
 
   const handleJoinEvent = (e) => {
     e.preventDefault();
@@ -82,12 +86,18 @@ function LandingPage() {
           <a href="#faq">FAQ</a>
         </nav>
         <div className={styles.landingNavActions}>
-          <button className={styles.landingNavSignIn} onClick={() => navigate('/login?mode=signin')}>
-            Sign In
-          </button>
-          <button className={styles.landingNavCta} onClick={() => navigate('/login?mode=signup')}>
-            Create an Event
-          </button>
+          {isLoggedIn ? (
+            <UserBadge />
+          ) : (
+            <>
+              <button className={styles.landingNavSignIn} onClick={() => navigate('/login?mode=signin')}>
+                Sign In
+              </button>
+              <button className={styles.landingNavCta} onClick={() => navigate('/login?mode=signup')}>
+                Create an Event
+              </button>
+            </>
+          )}
         </div>
       </header>
 

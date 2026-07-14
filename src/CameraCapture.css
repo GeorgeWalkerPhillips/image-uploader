@@ -243,11 +243,24 @@
   background: rgba(0, 0, 0, 0.7);
 }
 
-.info-pill-thumb {
-  width: 22px;
-  height: 22px;
+.info-pill-stack {
+  position: relative;
+  width: 32px;
+  height: 24px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.info-pill-stack-photo {
+  position: absolute;
+  top: 1px;
+  left: 9px;
+  width: 20px;
+  height: 20px;
   border-radius: 5px;
   object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .preview-overlay {

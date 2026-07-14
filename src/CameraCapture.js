@@ -91,10 +91,12 @@ function CameraCapture() {
     if (!eventId || !user) return;
 
     const fetchPhotoCap = async () => {
+      // A guest may not have an event_access row yet at this point (join
+      // happens in a separate effect), so this reads through the
+      // SECURITY DEFINER get_public_event_info() rather than the events
+      // table directly — see fix-events-rls-leak.sql.
       const { data, error } = await supabase
-        .from('events')
-        .select('photo_cap_per_guest')
-        .eq('id', eventId)
+        .rpc('get_public_event_info', { p_event_id: eventId })
         .single();
       if (!error) setPhotoCap(data?.photo_cap_per_guest ?? null);
     };
@@ -108,10 +110,10 @@ function CameraCapture() {
       if (!eventId) return;
 
       try {
+        // Same reasoning as fetchPhotoCap above — reads through the
+        // public RPC since a brand-new guest has no event_access row yet.
         const { data, error } = await supabase
-          .from('events')
-          .select('name')
-          .eq('id', eventId)
+          .rpc('get_public_event_info', { p_event_id: eventId })
           .single();
 
         if (error) throw error;
@@ -320,7 +322,6 @@ function CameraCapture() {
       setCurrentIndex(next.length - 1);
       return next;
     });
-    toast.success('Photo captured');
     uploadItem(item);
   };
 
@@ -591,11 +592,26 @@ function CameraCapture() {
         >
           {pendingUploads.length > 0 ? (
             <>
-              <img
-                src={pendingUploads[pendingUploads.length - 1].previewUrl}
-                alt=""
-                className="info-pill-thumb"
-              />
+              <span className="info-pill-stack">
+                {pendingUploads.slice(-3).map((item, i, arr) => {
+                  // depth 0 = most recent (front, sharp); higher depth =
+                  // older photos peeking out from behind, fanned to the
+                  // upper-left like a stack of physical prints.
+                  const depth = arr.length - 1 - i;
+                  return (
+                    <img
+                      key={item.id}
+                      src={item.previewUrl}
+                      alt=""
+                      className="info-pill-stack-photo"
+                      style={{
+                        transform: `translate(${depth * -5}px, ${depth * -4}px) rotate(${depth * -7}deg)`,
+                        zIndex: arr.length - depth,
+                      }}
+                    />
+                  );
+                })}
+              </span>
               {failedCount > 0
                 ? `${failedCount} failed — tap to retry`
                 : `Uploading ${pendingUploads.length}…`}

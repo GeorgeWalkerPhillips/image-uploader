@@ -62,10 +62,14 @@ export const joinEventAsGuest = async (eventId, signInAsGuest) => {
     if (accessError) throw accessError;
 
     if (!existingAccess) {
+      // A first-time guest has no event_access row yet — that's exactly
+      // what we're deciding whether to grant — so this can't read the
+      // events table directly (RLS scopes it to the owner or an existing
+      // event_access holder). get_public_event_info() is a SECURITY
+      // DEFINER function that exposes just guest_cap for this pre-join
+      // check. See fix-events-rls-leak.sql.
       const { data: event, error: eventError } = await supabase
-        .from('events')
-        .select('guest_cap')
-        .eq('id', eventId)
+        .rpc('get_public_event_info', { p_event_id: eventId })
         .single();
 
       if (eventError) throw eventError;
