@@ -56,6 +56,11 @@ export function AuthProvider({ children }) {
         password,
         options: {
           data: { full_name: fullName },
+          // Explicit, rather than relying solely on the Supabase Dashboard's
+          // Site URL setting — if that's ever misconfigured (e.g. still the
+          // default localhost value), confirmation links would point at an
+          // unreachable address for every real user.
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
