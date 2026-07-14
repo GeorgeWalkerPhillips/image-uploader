@@ -17,6 +17,7 @@ import { PricingModal } from './components/PricingModal';
 import { UserBadge } from './components/UserBadge';
 import { TIERS, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
 import { initializePaystackTransaction } from './services/paystackService';
+import { logError } from './services/errorLogger';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import styles from './AdminEventManager.module.css';
@@ -207,6 +208,16 @@ function AdminEventManager() {
       // involved, matches how the previous Stripe redirect flow worked.
       window.location.href = authorizationUrl;
     } catch (error) {
+      // The event was created (pending payment) right before this was
+      // called — if we never even made it to Paystack's checkout page,
+      // don't leave that half-finished event sitting on the dashboard.
+      // (A payment that reaches Paystack but is then cancelled/abandoned
+      // there is a separate case — Paystack always redirects back to the
+      // same callback_url regardless of outcome, so that one still has to
+      // be cleaned up manually via the Delete button for now.)
+      await supabase.from('events').delete().eq('id', eventId);
+      fetchEvents();
+      logError('initiatePayment', error, { eventId, severity: 'error' });
       toast.error('Payment failed: ' + error.message);
       console.error('Payment error:', error);
     }
