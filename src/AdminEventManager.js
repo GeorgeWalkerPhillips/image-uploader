@@ -90,7 +90,7 @@ function AdminEventManager() {
       setTimeout(() => pollForPaymentConfirmation(eventId, attempt + 1), 2000);
     } else {
       toast.warning(
-        "Still confirming your payment with Paystack — refresh in a moment if your event doesn't update."
+        "Still confirming your payment with Paystack. Refresh in a moment if your event doesn't update."
       );
       fetchEvents();
     }
@@ -101,7 +101,7 @@ function AdminEventManager() {
     const paidEventId = searchParams.get('event');
 
     if (paymentStatus === 'success' && paidEventId) {
-      toast.info('Payment received — confirming with Paystack...');
+      toast.info('Payment received. Confirming with Paystack...');
       pollForPaymentConfirmation(paidEventId);
       setSearchParams({});
     } else if (paymentStatus === 'cancelled') {
@@ -182,7 +182,7 @@ function AdminEventManager() {
       }
     } catch (error) {
       if (error.message?.includes('free_tier_limit_reached')) {
-        toast.error("You've already used your one free event — choose a paid plan for this one.");
+        toast.error("You've already used your one free event. Choose a paid plan for this one.");
       } else {
         toast.error('Failed to create event: ' + error.message);
       }
@@ -295,7 +295,7 @@ function AdminEventManager() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '—';
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
 

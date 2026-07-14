@@ -548,6 +548,23 @@
   margin: 0;
 }
 
+.landingFooterLinks {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.landingFooterLinks a {
+  color: #999;
+  text-decoration: none;
+}
+
+.landingFooterLinks a:hover {
+  color: #111;
+  text-decoration: underline;
+}
+
 @media (min-width: 640px) {
   .heroActions {
     flex-direction: row;

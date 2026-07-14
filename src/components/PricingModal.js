@@ -37,7 +37,7 @@ export function PricingModal({ isOpen, onClose, onSelectPlan, freeTierUsed }) {
         </button>
 
         <h1>Create Your Event</h1>
-        <p className="subtitle">Priced by guest count — pay once, no subscription</p>
+        <p className="subtitle">Priced by guest count, pay once, no subscription</p>
 
         <div className="pricing-grid">
           {TIER_ORDER.map((tierKey) => {

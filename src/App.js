@@ -10,6 +10,8 @@ import AdminEventManager from './AdminEventManager';
 import Login from './Login';
 import ResetPassword from './ResetPassword';
 import Gallery from './Gallery';
+import PrivacyPolicy from './PrivacyPolicy';
+import Terms from './Terms';
 import './App.css';
 
 function App() {
@@ -29,6 +31,8 @@ function App() {
           }
         />
         <Route path="/gallery" element={<Gallery />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<Terms />} />
       </Routes>
       <ToastContainer
         position="bottom-right"

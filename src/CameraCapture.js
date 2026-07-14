@@ -370,7 +370,7 @@ function CameraCapture() {
         return;
       }
       if (files.length > remaining) {
-        toast.warning(`Only ${remaining} more photo(s) allowed — uploading the first ${remaining}.`);
+        toast.warning(`Only ${remaining} more photo(s) allowed. Uploading the first ${remaining}.`);
         files.length = remaining;
       }
     }
@@ -530,7 +530,7 @@ function CameraCapture() {
             {currentItem.status === 'pending' && <span>Waiting to upload…</span>}
             {currentItem.status === 'failed' && (
               <button className="retry-btn" onClick={() => retryItem(currentItem)}>
-                <FaRedo /> Upload failed — Retry
+                <FaRedo /> Upload failed. Retry
               </button>
             )}
           </div>
@@ -613,7 +613,7 @@ function CameraCapture() {
                 })}
               </span>
               {failedCount > 0
-                ? `${failedCount} failed — tap to retry`
+                ? `${failedCount} failed. Tap to retry`
                 : `Uploading ${pendingUploads.length}…`}
             </>
           ) : outOfShots ? (

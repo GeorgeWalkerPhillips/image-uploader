@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   FaQrcode,
   FaMobileAlt,
@@ -19,11 +19,11 @@ const POPULAR_TIER = 'growth';
 const FAQ_ITEMS = [
   {
     q: 'Do guests need to download an app?',
-    a: "No. Guests open your event link or scan the QR code in their phone's browser and start uploading straight away — nothing to install.",
+    a: "No. Guests open your event link or scan the QR code in their phone's browser and start uploading straight away. Nothing to install.",
   },
   {
     q: 'Do guests need to create an account?',
-    a: "No. As soon as a guest opens your event link they're ready to upload — no sign-up, no password, no email required.",
+    a: "No. As soon as a guest opens your event link they're ready to upload. No sign-up, no password, no email required.",
   },
   {
     q: 'How long do we have access to our photos?',
@@ -35,7 +35,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How does pricing work?',
-    a: `Your first event is free, for up to ${TIERS.free.guestCap} guests. Every event after that is priced by guest count — a flat one-time fee, no subscriptions, ever.`,
+    a: `Your first event is free, for up to ${TIERS.free.guestCap} guests. Every event after that is priced by guest count: a flat one-time fee, no subscriptions, ever.`,
   },
   {
     q: 'Is there a limit on how many photos each guest can upload?',
@@ -43,7 +43,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What photo formats can guests upload?',
-    a: 'JPEG, PNG, WebP and HEIC are all supported, straight off any phone camera — the same formats your guests already shoot in.',
+    a: 'JPEG, PNG, WebP and HEIC are all supported, straight off any phone camera. The same formats your guests already shoot in.',
   },
 ];
 
@@ -107,7 +107,7 @@ function LandingPage() {
           <p className={styles.heroSub}>
             Skip the disposable cameras. Guests scan a code, snap or upload
             photos straight from their phone, and everyone watches the
-            gallery fill up together — no app to download, no account
+            gallery fill up together. No app to download, no account
             required.
           </p>
 
@@ -196,7 +196,7 @@ function LandingPage() {
               <FaCamera className={styles.featureIcon} aria-hidden="true" />
               <h3>Built-in camera</h3>
               <p>
-                Filters, a timer, and front/back flip built right in — guests
+                Filters, a timer, and front/back flip built right in. Guests
                 don't even need to leave the page to take the shot.
               </p>
             </article>
@@ -213,7 +213,7 @@ function LandingPage() {
               <h3>Download everything</h3>
               <p>
                 Grab every photo from your event as one ZIP with a single
-                click — no hunting through a dozen phones.
+                click. No hunting through a dozen phones.
               </p>
             </article>
             <article className={styles.featureCard}>
@@ -231,9 +231,9 @@ function LandingPage() {
           <h2 id="use-cases-heading">Built First for Weddings</h2>
           <p className={styles.useCasesIntro}>
             The moment you say "I do," a hundred phones start filming.
-            Capture collects every single point of view — the ceremony from
+            Capture collects every single point of view: the ceremony from
             row three, the first dance from the bar, the candid shots your
-            photographer never sees — all in one gallery.
+            photographer never sees, all in one gallery.
           </p>
           <div className={styles.useCaseGrid}>
             <div className={`${styles.useCaseCard} ${styles.useCasePrimary}`}>
@@ -262,8 +262,8 @@ function LandingPage() {
         <section id="pricing" aria-labelledby="pricing-heading">
           <h2 id="pricing-heading">Priced by Guest Count, Not Subscriptions</h2>
           <p className={styles.useCasesIntro}>
-            Pay once per event, based on how many guests are contributing —
-            never a monthly fee.
+            Pay once per event, based on how many guests are contributing.
+            Never a monthly fee.
           </p>
           <div className={styles.pricingGrid}>
             {TIER_ORDER.map((tierKey) => {
@@ -321,6 +321,10 @@ function LandingPage() {
 
       <footer className={styles.landingFooter}>
         <p>&copy; {new Date().getFullYear()} Capture by Val. All rights reserved.</p>
+        <nav className={styles.landingFooterLinks}>
+          <Link to="/privacy">Privacy Policy</Link>
+          <Link to="/terms">Terms and Conditions</Link>
+        </nav>
       </footer>
     </div>
   );

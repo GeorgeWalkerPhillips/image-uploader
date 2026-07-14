@@ -37,7 +37,7 @@ function Login() {
     setLoading(true);
     try {
       await resendConfirmationEmail(unconfirmedEmail);
-      toast.success('Confirmation email resent — check your inbox.');
+      toast.success('Confirmation email resent. Check your inbox.');
     } catch (error) {
       toast.error(error.message || 'Could not resend confirmation email');
     } finally {

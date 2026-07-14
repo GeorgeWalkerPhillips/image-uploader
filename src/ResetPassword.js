@@ -34,7 +34,7 @@ function ResetPassword() {
       navigate('/admin');
     } catch (error) {
       toast.error(
-        error.message || 'Could not update password — the reset link may have expired. Request a new one.'
+        error.message || 'Could not update password. The reset link may have expired, so request a new one.'
       );
     } finally {
       setLoading(false);
