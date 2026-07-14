@@ -99,6 +99,40 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const resendConfirmationEmail = async (email) => {
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+    } catch (err) {
+      logError('resendConfirmationEmail', err, { email, severity: 'warning' });
+      throw err;
+    }
+  };
+
+  const resetPasswordForEmail = async (email) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+    } catch (err) {
+      logError('resetPasswordForEmail', err, { email, severity: 'warning' });
+      throw err;
+    }
+  };
+
+  // Only valid while the user holds a recovery session — the one created
+  // when they land back on /reset-password from the email link.
+  const updatePassword = async (newPassword) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    } catch (err) {
+      logError('updatePassword', err);
+      throw err;
+    }
+  };
+
   const signInAsGuest = async () => {
     try {
       setError(null);
@@ -159,6 +193,9 @@ export function AuthProvider({ children }) {
         signInAsGuest,
         signOut,
         logAuditEvent,
+        resendConfirmationEmail,
+        resetPasswordForEmail,
+        updatePassword,
       }}
     >
       {children}

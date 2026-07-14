@@ -8,6 +8,7 @@ import Home from './Home';
 import CameraCapture from './CameraCapture';
 import AdminEventManager from './AdminEventManager';
 import Login from './Login';
+import ResetPassword from './ResetPassword';
 import Gallery from './Gallery';
 import './App.css';
 
@@ -18,6 +19,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/camera" element={<CameraCapture />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/admin"
           element={

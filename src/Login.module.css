@@ -83,6 +83,23 @@
   cursor: not-allowed;
 }
 
+.forgotPasswordRow {
+  margin: -4px 0 0;
+  text-align: right;
+}
+
+.forgotPasswordRow .linkBtn {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.resendRow {
+  text-align: center;
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: #666;
+}
+
 .toggleAuth {
   text-align: center;
   margin-top: 22px;
