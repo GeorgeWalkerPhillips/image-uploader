@@ -65,12 +65,6 @@ function LandingPage() {
   const { user } = useAuth();
   const isLoggedIn = user && !user.is_anonymous;
 
-  const handleJoinEvent = (e) => {
-    e.preventDefault();
-    const code = e.target.elements.eventCode.value.trim();
-    if (code) navigate(`/?event=${code}`);
-  };
-
   return (
     <div className={styles.landing}>
       <script
@@ -115,17 +109,6 @@ function LandingPage() {
             <button className={styles.btnPrimary} onClick={() => navigate('/login?mode=signup')}>
               Create Your Free Event
             </button>
-            <form className={styles.heroJoin} onSubmit={handleJoinEvent}>
-              <input
-                type="text"
-                name="eventCode"
-                placeholder="Have an event code? Enter it here"
-                aria-label="Event code"
-              />
-              <button type="submit" className={styles.btnSecondary}>
-                Join
-              </button>
-            </form>
           </div>
 
           <ul className={styles.trustBar}>
@@ -304,18 +287,7 @@ function LandingPage() {
 
         <section className={styles.ctaSection} aria-labelledby="cta-heading">
           <h2 id="cta-heading">Ready to collect every photo from your day?</h2>
-          <p>Have an event link already? Paste your code below to jump in.</p>
-          <form className={styles.ctaJoin} onSubmit={handleJoinEvent}>
-            <input
-              type="text"
-              name="eventCode"
-              placeholder="Enter event code or link"
-              aria-label="Event code"
-            />
-            <button type="submit" className={styles.btnPrimary}>
-              Join Event
-            </button>
-          </form>
+          <p>Scan your event's QR code to jump right in.</p>
         </section>
       </main>
 

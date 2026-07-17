@@ -147,48 +147,6 @@
   background: #333;
 }
 
-.btnSecondary {
-  background: transparent;
-  color: #111;
-  border: 2px solid #111;
-  padding: 12px 20px;
-  border-radius: 30px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.btnSecondary:hover {
-  background: #111;
-  color: #fff;
-}
-
-.heroJoin {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  max-width: 420px;
-}
-
-.heroJoin input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 30px;
-  font-size: 15px;
-  font-family: inherit;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-}
-
-.heroJoin input:focus {
-  outline: none;
-  border-color: #111;
-}
-
 .trustBar {
   list-style: none;
   display: flex;
@@ -512,30 +470,6 @@
   margin: -20px 0 24px;
 }
 
-.ctaJoin {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 420px;
-  margin: 0 auto;
-}
-
-.ctaJoin input {
-  padding: 14px 18px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 30px;
-  font-size: 16px;
-  font-family: inherit;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-}
-
-.ctaJoin input:focus {
-  outline: none;
-  border-color: #111;
-}
-
 /* Footer */
 .landingFooter {
   text-align: center;
@@ -582,18 +516,10 @@
   .pricingGrid {
     grid-template-columns: repeat(2, 1fr);
   }
-
-  .ctaJoin {
-    flex-direction: row;
-  }
 }
 
 @media (min-width: 900px) {
   .pricingGrid {
     grid-template-columns: repeat(4, 1fr);
-  }
-
-  .ctaJoin input {
-    flex: 1;
   }
 }
