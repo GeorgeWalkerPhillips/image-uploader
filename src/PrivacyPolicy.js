@@ -5,20 +5,20 @@ import styles from './LegalPage.module.css';
 // TODO before launch: confirm the contact email and legal/trading name
 // below are correct for your business.
 const CONTACT_EMAIL = 'georgewalkerphillips5@gmail.com';
-const TRADING_NAME = 'Capture by Val.';
+const TRADING_NAME = 'Valere';
 
 function PrivacyPolicy() {
   return (
     <div className={styles.legalContainer}>
       <div className={styles.legalCard}>
         <Link to="/" className={styles.brand}>
-          Capture
+          Valere
         </Link>
         <h1>Privacy Policy</h1>
         <p className={styles.updatedAt}>Last updated: {new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
         <p>
-          {TRADING_NAME} ("Capture," "we," "us") provides a shared photo gallery
+          {TRADING_NAME} ("Valere," "we," "us") provides a shared photo gallery
           service for weddings, parties, and other events. This policy explains
           what personal information we collect, why, and what rights you have
           over it. We're based in South Africa and handle personal information

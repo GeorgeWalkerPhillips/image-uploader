@@ -1,8 +1,7 @@
-# TODO before launch: confirm https://your-domain.com below matches your real production domain.
 User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /login
 Disallow: /unauthorized
 
-Sitemap: https://your-domain.com/sitemap.xml
+Sitemap: https://www.valere.co.za/sitemap.xml

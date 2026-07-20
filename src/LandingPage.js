@@ -73,7 +73,7 @@ function LandingPage() {
       />
 
       <header className={styles.landingNav}>
-        <span className={styles.landingNavBrand}>Capture</span>
+        <span className={styles.landingNavBrand}>Valere</span>
         <nav className={styles.landingNavLinks}>
           <a href="#how-it-works">How it works</a>
           <a href="#pricing">Pricing</a>
@@ -214,7 +214,7 @@ function LandingPage() {
           <h2 id="use-cases-heading">Built First for Weddings</h2>
           <p className={styles.useCasesIntro}>
             The moment you say "I do," a hundred phones start filming.
-            Capture collects every single point of view: the ceremony from
+            Valere collects every single point of view: the ceremony from
             row three, the first dance from the bar, the candid shots your
             photographer never sees, all in one gallery.
           </p>
@@ -292,7 +292,7 @@ function LandingPage() {
       </main>
 
       <footer className={styles.landingFooter}>
-        <p>&copy; {new Date().getFullYear()} Capture by Val. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} Valere. All rights reserved.</p>
         <nav className={styles.landingFooterLinks}>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms and Conditions</Link>

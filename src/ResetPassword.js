@@ -45,7 +45,7 @@ function ResetPassword() {
     <div className={styles.loginContainer}>
       <div className={styles.loginCard}>
         <Link to="/" className={styles.brand}>
-          Capture
+          Valere
         </Link>
         <p className={styles.subtitle}>Choose a new password</p>
 

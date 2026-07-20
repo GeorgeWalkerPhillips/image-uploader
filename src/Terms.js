@@ -5,20 +5,20 @@ import styles from './LegalPage.module.css';
 // TODO before launch: confirm the contact email and legal/trading name
 // below are correct for your business.
 const CONTACT_EMAIL = 'georgewalkerphillips5@gmail.com';
-const TRADING_NAME = 'Capture by Val.';
+const TRADING_NAME = 'Valere';
 
 function Terms() {
   return (
     <div className={styles.legalContainer}>
       <div className={styles.legalCard}>
         <Link to="/" className={styles.brand}>
-          Capture
+          Valere
         </Link>
         <h1>Terms and Conditions</h1>
         <p className={styles.updatedAt}>Last updated: {new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
         <p>
-          These terms govern your use of {TRADING_NAME} ("Capture," "we,"
+          These terms govern your use of {TRADING_NAME} ("Valere," "we,"
           "us"). By creating an account, creating an event, or uploading a
           photo as a guest, you agree to them. If you don't agree, please
           don't use the service.
@@ -26,7 +26,7 @@ function Terms() {
 
         <h2>The service</h2>
         <p>
-          Capture lets an organizer create an event and share a link or QR
+          Valere lets an organizer create an event and share a link or QR
           code so guests can upload photos straight from their phone into a
           shared gallery, with no app download or guest account required.
         </p>
@@ -50,7 +50,7 @@ function Terms() {
         </p>
 
         <h2>Acceptable use</h2>
-        <p>You agree not to use Capture to:</p>
+        <p>You agree not to use Valere to:</p>
         <ul>
           <li>Upload content that is illegal, harassing, or infringes someone else's rights.</li>
           <li>Upload photos of other people without their knowledge or consent to being photographed at the event.</li>
@@ -65,7 +65,7 @@ function Terms() {
         <h2>Content ownership</h2>
         <p>
           Guests retain ownership of the photos they upload. By uploading, a
-          guest grants the event's organizer, and Capture as the platform
+          guest grants the event's organizer, and Valere as the platform
           hosting it, a license to store, display, and allow downloading of
           that photo as part of the event gallery. The event organizer is
           responsible for who they invite to their event and what happens to
@@ -74,15 +74,15 @@ function Terms() {
 
         <h2>Availability</h2>
         <p>
-          We aim to keep Capture available and your photos safe, but we don't
+          We aim to keep Valere available and your photos safe, but we don't
           guarantee uninterrupted access, and we recommend downloading a copy
-          of your event's photos rather than relying on Capture as permanent
+          of your event's photos rather than relying on Valere as permanent
           storage.
         </p>
 
         <h2>Limitation of liability</h2>
         <p>
-          To the extent permitted by law, Capture is provided "as is," and we
+          To the extent permitted by law, Valere is provided "as is," and we
           aren't liable for indirect or consequential losses arising from your
           use of the service, including lost photos, missed events, or
           disputes between an organizer and their guests.
@@ -92,7 +92,7 @@ function Terms() {
         <p>
           We may update these terms from time to time. Material changes will
           be reflected by updating the date at the top of this page.
-          Continuing to use Capture after a change means you accept the
+          Continuing to use Valere after a change means you accept the
           updated terms.
         </p>
 
