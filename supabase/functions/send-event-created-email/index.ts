@@ -12,6 +12,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/resend.ts";
 import { corsHeadersFor } from "../_shared/cors.ts";
+import { wrapEmail, emailHeading, emailButton, emailFootnote, qrCodeImage } from "../_shared/emailTemplate.ts";
 
 Deno.serve(async (req) => {
   const corsHeaders = corsHeadersFor(req);
@@ -64,17 +65,26 @@ Deno.serve(async (req) => {
     // www, custom domain vs. vercel.app) rather than a single hardcoded
     // value — same reasoning as corsHeadersFor.
     const dashboardOrigin = req.headers.get("origin") || "https://valere.co.za";
+    // Matches the QR value AdminEventManager.js renders in the dashboard
+    // (QRCodeCanvas value prop) — same URL, so scanning either one behaves
+    // identically for a guest.
+    const joinUrl = `${dashboardOrigin}/camera?event=${event.id}`;
 
     await sendEmail({
       to: user.email,
       subject: `Your event "${event.name}" is live`,
-      html: `
-        <h2>${event.name} is ready for guests</h2>
-        <p>Your event is live and guests can start uploading photos right away.</p>
+      html: wrapEmail(`
+        ${emailHeading(`${event.name} is ready for guests`)}
+        <p>Your event is live and guests can start uploading photos right away — no app or account needed on their end.</p>
         <p><strong>Dates:</strong> ${new Date(event.start_date).toLocaleDateString()} &ndash; ${new Date(event.end_date).toLocaleDateString()}</p>
-        <p>Share the QR code or event link from your <a href="${dashboardOrigin}/admin">event dashboard</a> to let guests start uploading.</p>
-        <p style="color:#888;font-size:12px;margin-top:24px;">Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and then remove the originals to free up storage.</p>
-      `,
+        <p style="margin-top:28px;">Scan or share this to let guests join:</p>
+        ${qrCodeImage(joinUrl)}
+        <p style="text-align:center;word-break:break-all;font-size:13px;color:#666666;">${joinUrl}</p>
+        ${emailButton(`${dashboardOrigin}/admin`, "Open event dashboard")}
+        ${emailFootnote(
+          "Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and then remove the originals to free up storage."
+        )}
+      `),
     });
 
     return new Response(JSON.stringify({ sent: true }), {

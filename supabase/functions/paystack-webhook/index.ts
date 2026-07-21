@@ -13,6 +13,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/resend.ts";
+import { wrapEmail, emailHeading, emailButton, emailFootnote, qrCodeImage } from "../_shared/emailTemplate.ts";
 
 const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY")!;
 
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
       try {
         const { data: eventRow } = await supabaseAdmin
           .from("events")
-          .select("name")
+          .select("id, name, start_date, end_date")
           .eq("id", eventId)
           .single();
 
@@ -125,24 +126,47 @@ Deno.serve(async (req) => {
           .single();
 
         if (profile?.email && eventRow) {
+          // No browser Origin header on a server-to-server webhook call, so
+          // fall back to the first configured domain (same value CORS uses).
+          const siteOrigin = (Deno.env.get("ALLOWED_ORIGIN") || "https://valere.co.za")
+            .split(",")[0]
+            .trim();
+          const joinUrl = `${siteOrigin}/camera?event=${eventRow.id}`;
+
           await sendEmail({
             to: profile.email,
             subject: `Payment confirmed for "${eventRow.name}"`,
-            html: `
-              <h2>Payment received</h2>
+            html: wrapEmail(`
+              ${emailHeading("Payment received")}
               <p>Hi ${profile.full_name || ""},</p>
-              <p>Your payment for <strong>${eventRow.name}</strong> (${tier} plan) was successful.</p>
-              <p><strong>Amount:</strong> ${((data.amount || 0) / 100).toFixed(2)} ${(data.currency || "ZAR").toUpperCase()}</p>
-              <p><strong>Reference:</strong> ${data.reference}</p>
-              <p>Your event is now live &mdash; guests can start uploading photos.</p>
-            `,
+              <p>Your payment for <strong>${eventRow.name}</strong> (${tier} plan) was successful, and your event is now live.</p>
+              <p><strong>Amount:</strong> ${((data.amount || 0) / 100).toFixed(2)} ${(data.currency || "ZAR").toUpperCase()}<br/>
+              <strong>Reference:</strong> ${data.reference}<br/>
+              <strong>Dates:</strong> ${new Date(eventRow.start_date).toLocaleDateString()} &ndash; ${new Date(eventRow.end_date).toLocaleDateString()}</p>
+              <p style="margin-top:28px;">Scan or share this to let guests join:</p>
+              ${qrCodeImage(joinUrl)}
+              <p style="text-align:center;word-break:break-all;font-size:13px;color:#666666;">${joinUrl}</p>
+              ${emailButton(`${siteOrigin}/admin`, "Open event dashboard")}
+              ${emailFootnote(
+                "Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and then remove the originals to free up storage."
+              )}
+            `),
           });
         }
       } catch (emailError) {
         // Never fail the webhook response over an email hiccup — the event
         // is already correctly marked paid at this point either way, and a
         // failed webhook response would make Paystack retry unnecessarily.
+        // Written to error_logs (not just console.error) since Edge
+        // Function runtime logs aren't otherwise visible without the
+        // dashboard — matches how every other failure in this app surfaces.
         console.error("Failed to send payment confirmation email:", emailError);
+        await supabaseAdmin.from("error_logs").insert({
+          event_id: eventId,
+          severity: "error",
+          source: "paystack-webhook:sendEmail",
+          message: String((emailError as Error).message || emailError).slice(0, 2000),
+        });
       }
     }
   }

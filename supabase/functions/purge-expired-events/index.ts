@@ -27,6 +27,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import JSZip from "https://esm.sh/jszip@3.10.1";
 import { sendEmail } from "../_shared/resend.ts";
+import { wrapEmail, emailHeading, emailButton, emailFootnote } from "../_shared/emailTemplate.ts";
 
 const PHOTOS_BUCKET = "event-photos";
 const ARCHIVES_BUCKET = "event-archives";
@@ -107,13 +108,16 @@ async function archiveAndPurgeEvent(event: { id: string; name: string; created_b
   await sendEmail({
     to: profile.email,
     subject: `Your photos from "${event.name}" are ready to download`,
-    html: `
-      <h2>${event.name} &mdash; archive ready</h2>
+    html: wrapEmail(`
+      ${emailHeading(`${event.name} &mdash; archive ready`)}
       <p>Hi ${profile.full_name || ""},</p>
-      <p>Your event ended a while ago, so we've packaged all ${photos.length} photo(s) into a zip file.</p>
-      <p><a href="${signedUrlData.signedUrl}">Download your photos</a> (link expires in 7 days)</p>
-      <p style="color:#888;font-size:12px;margin-top:24px;">To free up storage, the original photos have now been removed from Capture by Val. This zip is the only remaining copy &mdash; please save it somewhere safe.</p>
-    `,
+      <p>Your event ended a while ago, so we've packaged all ${photos.length} photo${photos.length === 1 ? "" : "s"} into a zip file.</p>
+      ${emailButton(signedUrlData.signedUrl, "Download your photos")}
+      <p style="font-size:13px;color:#666666;">This link expires in 7 days.</p>
+      ${emailFootnote(
+        "To free up storage, the original photos have now been removed from Valere. This zip is the only remaining copy — please save it somewhere safe."
+      )}
+    `),
   });
 
   const storagePaths = photos.map((p) => p.storage_path);

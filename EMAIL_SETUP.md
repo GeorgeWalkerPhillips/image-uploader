@@ -47,7 +47,7 @@ you deployed it before from `PAYMENT_SETUP.md`, redeploy it now.)
 by every function, same as `PAYSTACK_SECRET_KEY`):
 
 - `RESEND_API_KEY` — from step 1
-- `RESEND_FROM_EMAIL` — e.g. `Capture by Val <notifications@yourdomain.com>`,
+- `RESEND_FROM_EMAIL` — e.g. `Valere <notifications@yourdomain.com>`,
   must be on the domain you verified in step 1
 
 `ALLOWED_ORIGIN` should already be set from `PAYMENT_SETUP.md` — reused
