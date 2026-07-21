@@ -1,6 +1,6 @@
 # Email System Setup Guide
 
-This app sends three kinds of email, all via [Resend](https://resend.com)
+This app sends four kinds of email, all via [Resend](https://resend.com)
 (Supabase's own email sending only covers auth emails — signup
 confirmation, password reset — not arbitrary app emails):
 
@@ -14,6 +14,9 @@ confirmation, password reset — not arbitrary app emails):
    the zip to a private bucket, emails the organizer a signed download link
    valid for 7 days, then deletes the photos (storage + DB rows) to free up
    storage. The event record itself is kept.
+4. **Welcome** — sent the moment a new user's email gets confirmed, via a
+   DB trigger (not client code, so it fires regardless of which client
+   completed the confirmation).
 
 ## 1. Create a Resend Account
 
@@ -29,11 +32,12 @@ confirmation, password reset — not arbitrary app emails):
 
 ## 2. Deploy the Edge Functions
 
-Three functions are involved — two new, one existing function extended
+Four functions are involved — three new, one existing function extended
 with an email send:
 
 ```bash
 supabase functions deploy send-event-created-email --project-ref <ref>
+supabase functions deploy send-welcome-email --project-ref <ref>
 supabase functions deploy purge-expired-events --project-ref <ref>
 supabase functions deploy paystack-webhook --project-ref <ref>
 ```
@@ -49,11 +53,15 @@ by every function, same as `PAYSTACK_SECRET_KEY`):
 - `RESEND_API_KEY` — from step 1
 - `RESEND_FROM_EMAIL` — e.g. `Valere <notifications@yourdomain.com>`,
   must be on the domain you verified in step 1
+- `EMAIL_TRIGGER_SECRET` — only needed for `send-welcome-email`; a random
+  string of your choice (e.g. `openssl rand -hex 32`) that the welcome-email
+  DB trigger sends back to prove the call really came from Postgres, not an
+  arbitrary request — see step 4
 
 `ALLOWED_ORIGIN` should already be set from `PAYMENT_SETUP.md` — reused
-here for the event-created email's dashboard link.
+here for the event-created and welcome email dashboard links.
 
-## 4. Run the Database Migration
+## 4. Run the Database Migrations
 
 Run `event-archive-and-emails.sql` in the Supabase SQL Editor, in order
 after `security-hardening.sql` and `paystack-migration.sql`. It:
@@ -69,6 +77,13 @@ service role key, from **Settings → API**, and your real function URL) —
 the cron job reads them from Vault rather than having the key pasted in
 plaintext in a file that's likely committed to source control.
 
+Then run `welcome-email-trigger-migration.sql`, in order after
+`google-oauth-profile-trigger.sql`. Same pattern: fill in and run the two
+`vault.create_secret(...)` calls it documents inline (your real
+`send-welcome-email` function URL, and the same random secret you set as
+`EMAIL_TRIGGER_SECRET` in step 3) before the `CREATE TRIGGER` at the
+bottom.
+
 ## 5. Testing
 
 ### Event-created / payment-receipt emails
@@ -77,6 +92,17 @@ Just create a free event, or complete a test payment (see
 seconds. Check `error_logs` (see `SUPABASE_SETUP.md`'s query) if it
 doesn't; both sends are fire-and-forget and log failures there rather than
 blocking the user-facing flow.
+
+### Welcome email
+Sign up a new test account and confirm the email — the welcome email
+should arrive within a few seconds of clicking the confirmation link. If it
+doesn't:
+- `select id, email, email_confirmed_at from auth.users order by created_at desc limit 5;`
+  — confirms `email_confirmed_at` actually got set
+- Check the `send-welcome-email` function's logs in the Supabase dashboard
+  for a 401 (means the Vault `email_trigger_secret` doesn't match the
+  function's `EMAIL_TRIGGER_SECRET`) or 502 (Resend send failed — same
+  causes as below)
 
 ### Archive/purge job
 Don't wait for the real 30-day window — invoke the function directly with

@@ -54,14 +54,19 @@ file):
     zips and emails an organizer their photos ~30 days after an event
     expires, then deletes them to free up storage. Required for the email
     system — see `EMAIL_SETUP.md`.
+12. `welcome-email-trigger-migration.sql` — DB trigger that emails a new
+    user via `send-welcome-email` the moment their `email_confirmed_at`
+    first gets set. Additive alongside file 10's trigger (different
+    function/trigger names). Required for the email system — see
+    `EMAIL_SETUP.md`.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
 photo limits, and payment integrity all depend on policies added in files
 3 through 5, and 7 through 9. File 6 is diagnostic only (nothing breaks
 without it, but you'll fly blind on bugs). File 10 is only needed if you
-enable Google Sign-In (Step 6b). File 11 is only needed if you set up the
-email system (`EMAIL_SETUP.md`).
+enable Google Sign-In (Step 6b). Files 11-12 are only needed if you set up
+the email system (`EMAIL_SETUP.md`).
 
 ### Checking error logs
 Once file 6 is applied, run this in the SQL Editor any time something goes
