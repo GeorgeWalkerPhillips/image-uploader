@@ -73,9 +73,24 @@ from the tier key and returns a hosted checkout URL; the browser redirects
 there and back. Only the `paystack-webhook` Edge Function (HMAC-SHA512
 verified, using the service role key) is allowed to mark an event paid —
 enforced by a DB trigger (`security-hardening.sql`), not app logic, so it
-can't be bypassed by calling the REST API directly. See `PAYMENT_SETUP.md`
-for the full flow and the actual Edge Function source (kept there, not
-duplicated under `supabase/functions/`).
+can't be bypassed by calling the REST API directly. Edge Function source
+lives under `supabase/functions/` (deployed via `supabase functions deploy`,
+per the deploy comment at the top of each `index.ts`); `PAYMENT_SETUP.md`
+walks through the full flow and dashboard/secrets setup.
+
+**Email (Resend, sent only from Edge Functions)**: Supabase's own email
+sending covers auth emails only (signup confirmation, password reset) —
+anything else goes through Resend via a shared `supabase/functions/_shared/resend.ts`
+helper, never client-side (no email API key is ever exposed to the
+browser). Three flows: `send-event-created-email` (client-invoked, free-tier
+events only — paid-tier events get an equivalent email from
+`paystack-webhook` once payment confirms instead), the payment-receipt
+email added to `paystack-webhook` itself, and `purge-expired-events` (a
+daily `pg_cron` job, see `event-archive-and-emails.sql`) which ~30 days
+after an event's `expiry_date` zips that event's photos into a private
+`event-archives` bucket, emails the organizer a signed 7-day download link,
+and only then deletes the photos (storage + DB rows) — the event record
+itself is kept. See `EMAIL_SETUP.md` for the full setup.
 
 **Database migrations**: there's no migration framework — schema changes
 are plain `.sql` files at the repo root, applied by hand in the Supabase

@@ -4,13 +4,15 @@
 // frontend does or doesn't check.
 //
 // Deploy: supabase functions deploy paystack-webhook --project-ref <ref>
-// Secrets required: PAYSTACK_SECRET_KEY (SUPABASE_URL and
-// SUPABASE_SERVICE_ROLE_KEY are auto-injected by Supabase for Edge
-// Functions — no need to set them yourself).
+// Secrets required: PAYSTACK_SECRET_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL
+// (see _shared/resend.ts for the latter two — used for the payment receipt
+// email below). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-injected
+// by Supabase for Edge Functions — no need to set them yourself.
 // Register in Paystack Dashboard -> Settings -> API Keys & Webhooks:
 //   https://<project-ref>.supabase.co/functions/v1/paystack-webhook
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendEmail } from "../_shared/resend.ts";
 
 const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY")!;
 
@@ -103,6 +105,45 @@ Deno.serve(async (req) => {
       // 23505 = unique_violation (duplicate webhook delivery) — expected
       // and fine to ignore.
       console.error("Failed to record payment:", paymentError);
+    }
+
+    // Only send the receipt on the first delivery of this webhook — 23505
+    // above means we've already processed (and emailed) this exact
+    // payment, and Paystack retries deliveries.
+    if (!paymentError) {
+      try {
+        const { data: eventRow } = await supabaseAdmin
+          .from("events")
+          .select("name")
+          .eq("id", eventId)
+          .single();
+
+        const { data: profile } = await supabaseAdmin
+          .from("user_profiles")
+          .select("email, full_name")
+          .eq("id", userId)
+          .single();
+
+        if (profile?.email && eventRow) {
+          await sendEmail({
+            to: profile.email,
+            subject: `Payment confirmed for "${eventRow.name}"`,
+            html: `
+              <h2>Payment received</h2>
+              <p>Hi ${profile.full_name || ""},</p>
+              <p>Your payment for <strong>${eventRow.name}</strong> (${tier} plan) was successful.</p>
+              <p><strong>Amount:</strong> ${((data.amount || 0) / 100).toFixed(2)} ${(data.currency || "ZAR").toUpperCase()}</p>
+              <p><strong>Reference:</strong> ${data.reference}</p>
+              <p>Your event is now live &mdash; guests can start uploading photos.</p>
+            `,
+          });
+        }
+      } catch (emailError) {
+        // Never fail the webhook response over an email hiccup — the event
+        // is already correctly marked paid at this point either way, and a
+        // failed webhook response would make Paystack retry unnecessarily.
+        console.error("Failed to send payment confirmation email:", emailError);
+      }
     }
   }
 

@@ -66,17 +66,33 @@ export function AuthProvider({ children }) {
 
       if (error) throw error;
 
-      await supabase.from('user_profiles').insert({
-        id: data.user?.id,
-        email,
-        full_name: fullName,
-        is_admin: false,
-      });
-
+      // user_profiles row is created server-side by the on_auth_user_created
+      // DB trigger (see google-oauth-profile-trigger.sql) so this path stays
+      // in sync with Google sign-in, which never runs client code here.
       return data;
     } catch (err) {
       setError(err.message);
       logError('signUp', err, { email });
+      throw err;
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      setError(null);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/admin`,
+        },
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      setError(err.message);
+      logError('signInWithGoogle', err);
       throw err;
     }
   };
@@ -195,6 +211,7 @@ export function AuthProvider({ children }) {
         error,
         signUp,
         signIn,
+        signInWithGoogle,
         signInAsGuest,
         signOut,
         logAuditEvent,

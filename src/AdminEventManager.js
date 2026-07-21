@@ -17,6 +17,7 @@ import { PricingModal } from './components/PricingModal';
 import { UserBadge } from './components/UserBadge';
 import { TIERS, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
 import { initializePaystackTransaction } from './services/paystackService';
+import { sendEventCreatedEmail } from './services/emailService';
 import { logError } from './services/errorLogger';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
@@ -175,6 +176,10 @@ function AdminEventManager() {
 
       if (tier.key === 'free') {
         toast.success('Free event created!');
+        // Paid-tier events get an equivalent "event is live" email from
+        // paystack-webhook once payment is confirmed instead — don't send
+        // one here too for those.
+        sendEventCreatedEmail(data.id);
         fetchEvents();
       } else {
         toast.info('Redirecting to secure payment...');

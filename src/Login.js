@@ -18,7 +18,7 @@ function Login() {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState(null);
-  const { signIn, signUp, resendConfirmationEmail, resetPasswordForEmail } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resendConfirmationEmail, resetPasswordForEmail } = useAuth();
   const navigate = useNavigate();
 
   const resetFields = () => {
@@ -41,6 +41,19 @@ function Login() {
     } catch (error) {
       toast.error(error.message || 'Could not resend confirmation email');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      // On success this redirects the whole page to Google, so there's
+      // nothing to do after it resolves — only a config/network error
+      // returns here without navigating away.
+      await signInWithGoogle();
+    } catch (error) {
+      toast.error(error.message || 'Could not sign in with Google');
       setLoading(false);
     }
   };
@@ -195,6 +208,25 @@ function Login() {
               : 'Sign In'}
           </button>
         </form>
+
+        <div className={styles.divider}>
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className={styles.googleBtn}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+            <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 009 18z"/>
+            <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 013.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 000 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/>
+            <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 00.96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+          </svg>
+          Continue with Google
+        </button>
 
         {unconfirmedEmail && (
           <p className={styles.resendRow}>
