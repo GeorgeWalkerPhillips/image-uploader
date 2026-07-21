@@ -11,15 +11,11 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/resend.ts";
-
-const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "https://capture-by-val.vercel.app";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeadersFor } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -64,6 +60,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Reflects whichever domain the organizer is actually using (apex vs.
+    // www, custom domain vs. vercel.app) rather than a single hardcoded
+    // value — same reasoning as corsHeadersFor.
+    const dashboardOrigin = req.headers.get("origin") || "https://valere.co.za";
+
     await sendEmail({
       to: user.email,
       subject: `Your event "${event.name}" is live`,
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
         <h2>${event.name} is ready for guests</h2>
         <p>Your event is live and guests can start uploading photos right away.</p>
         <p><strong>Dates:</strong> ${new Date(event.start_date).toLocaleDateString()} &ndash; ${new Date(event.end_date).toLocaleDateString()}</p>
-        <p>Share the QR code or event link from your <a href="${ALLOWED_ORIGIN}/admin">event dashboard</a> to let guests start uploading.</p>
+        <p>Share the QR code or event link from your <a href="${dashboardOrigin}/admin">event dashboard</a> to let guests start uploading.</p>
         <p style="color:#888;font-size:12px;margin-top:24px;">Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and then remove the originals to free up storage.</p>
       `,
     });

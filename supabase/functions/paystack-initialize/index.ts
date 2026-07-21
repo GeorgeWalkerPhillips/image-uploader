@@ -8,6 +8,8 @@
 // Secrets required (Supabase Dashboard -> Edge Functions -> Secrets, or
 // `supabase secrets set`): PAYSTACK_SECRET_KEY, ALLOWED_ORIGIN
 
+import { corsHeadersFor } from "../_shared/cors.ts";
+
 // Mirror of src/services/pricingTiers.js — keep these two in sync.
 // Paystack amounts are in the smallest currency unit (cents for ZAR).
 const TIER_AMOUNTS_CENTS: Record<string, number> = {
@@ -16,15 +18,9 @@ const TIER_AMOUNTS_CENTS: Record<string, number> = {
   unlimited: 89900, // R899
 };
 
-const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "http://localhost:3000";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

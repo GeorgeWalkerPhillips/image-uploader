@@ -58,6 +58,14 @@ security model doesn't change, only the payment provider):
 
 ## 4. Create the Paystack-Initialize Edge Function (Server-side)
 
+**The code below is illustrative of the original dashboard copy-paste
+setup.** The actual, current source is `supabase/functions/paystack-initialize/index.ts`
+in this repo (deployed via `supabase functions deploy paystack-initialize`,
+per the comment at the top of that file) — it has since diverged from the
+snippet below (e.g. it now supports a comma-separated `ALLOWED_ORIGIN` list
+for apex+www domains via `_shared/cors.ts`). Treat the repo file as
+authoritative; this section is kept for historical setup context.
+
 In Supabase:
 
 1. Go to **Edge Functions** (in left sidebar)
@@ -158,8 +166,11 @@ client-supplied price for what you charge.
 5. Click **Deploy**
 6. Go to **Settings → Secrets** and add:
    - Key: `PAYSTACK_SECRET_KEY`, Value: your Paystack **Secret Key**
-   - Key: `ALLOWED_ORIGIN`, Value: your real production URL (e.g.
-     `https://capture-by-val.vercel.app`)
+   - Key: `ALLOWED_ORIGIN`, Value: your real production URL(s). CORS needs
+     an exact match, so if your site is reachable at more than one hostname
+     (e.g. both `valere.co.za` and `www.valere.co.za`), list all of them
+     comma-separated with no spaces:
+     `https://valere.co.za,https://www.valere.co.za`
 
 ## 5. Create the Paystack Webhook (required, not optional)
 
