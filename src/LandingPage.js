@@ -296,6 +296,7 @@ function LandingPage() {
         <nav className={styles.landingFooterLinks}>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms and Conditions</Link>
+          <Link to="/refund-policy">Refund Policy</Link>
         </nav>
       </footer>
     </div>
