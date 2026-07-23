@@ -8,6 +8,8 @@ import {
   FaDownload,
   FaShieldAlt,
   FaHeart,
+  FaCheck,
+  FaTimes,
 } from 'react-icons/fa';
 import { TIERS, TIER_ORDER, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
 import { useAuth } from './context/AuthContext';
@@ -44,6 +46,39 @@ const FAQ_ITEMS = [
   {
     q: 'What photo formats can guests upload?',
     a: 'JPEG, PNG, WebP and HEIC are all supported, straight off any phone camera. The same formats your guests already shoot in.',
+  },
+];
+
+const COMPARISON_ROWS = [
+  {
+    feature: 'Getting your guests’ photos',
+    before: 'Chase down photos from a dozen different phones after the event',
+    after: 'Every guest’s upload lands straight in one shared gallery',
+  },
+  {
+    feature: 'Setting up',
+    before: 'Buy, distribute, and collect physical disposable cameras',
+    after: 'One QR code, generated instantly the moment you create your event',
+  },
+  {
+    feature: 'What guests need',
+    before: 'Remember to bring, load, and use an actual camera',
+    after: 'Just the phone already in their hand — no app, no account',
+  },
+  {
+    feature: 'Seeing the photos',
+    before: 'Wait for film to be developed, sometimes weeks later',
+    after: 'Every photo is viewable in the gallery as soon as it’s uploaded',
+  },
+  {
+    feature: 'Collecting everything',
+    before: 'Request photos one by one, or dig through a dozen chat threads',
+    after: 'Download every photo from the event as one ZIP, in one click',
+  },
+  {
+    feature: 'Cost',
+    before: 'Pay per camera, per roll of film, per developing',
+    after: 'One flat fee per event — first event free, never a subscription',
   },
 ];
 
@@ -239,6 +274,36 @@ function LandingPage() {
               <h3>Corporate events</h3>
               <p>A shared gallery for conferences, launches, and parties.</p>
             </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="comparison-heading">
+          <h2 id="comparison-heading">Life Before and After Valere</h2>
+          <p className={styles.useCasesIntro}>
+            Every event still needs guest photos collected somehow. Here's
+            what changes.
+          </p>
+          <div className={styles.comparisonTable}>
+            <div className={styles.comparisonHeaderRow}>
+              <div className={styles.comparisonFeatureCol} />
+              <div className={styles.comparisonBeforeCol}>Without Valere</div>
+              <div className={styles.comparisonHeaderHighlight}>With Valere</div>
+            </div>
+            {COMPARISON_ROWS.map((row) => (
+              <div className={styles.comparisonRow} key={row.feature}>
+                <div className={styles.comparisonFeatureCol}>
+                  <span className={styles.comparisonFeatureLabel}>{row.feature}</span>
+                </div>
+                <div className={styles.comparisonBeforeCol}>
+                  <FaTimes className={styles.comparisonBeforeIcon} aria-hidden="true" />
+                  <span>{row.before}</span>
+                </div>
+                <div className={styles.comparisonAfterCol}>
+                  <FaCheck className={styles.comparisonAfterIcon} aria-hidden="true" />
+                  <span>{row.after}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
