@@ -46,10 +46,28 @@ function startServer(shellHtml) {
   });
 }
 
+// Vercel's build container is missing shared libs (libnspr4.so etc.) that
+// Puppeteer's own bundled Chrome needs, so plain puppeteer.launch() fails
+// there with "error while loading shared libraries". @sparticuz/chromium
+// ships a Chromium build made for that kind of minimal serverless/build
+// environment — use it when running on Vercel, and fall back to Puppeteer's
+// normal bundled browser for local dev (sparticuz's binary is Linux-only).
+async function launchBrowser() {
+  if (process.env.VERCEL) {
+    const chromium = require('@sparticuz/chromium');
+    return puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
+  }
+  return puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+}
+
 async function prerender() {
   const shellHtml = fs.readFileSync(path.join(BUILD_DIR, 'index.html'), 'utf8');
   const server = await startServer(shellHtml);
-  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  const browser = await launchBrowser();
 
   try {
     for (const route of ROUTES) {

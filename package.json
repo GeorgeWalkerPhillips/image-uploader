@@ -27,6 +27,7 @@
     "eject": "react-scripts eject"
   },
   "devDependencies": {
+    "@sparticuz/chromium": "^148.0.0",
     "puppeteer": "^24.15.0",
     "serve-handler": "^6.1.5"
   },
