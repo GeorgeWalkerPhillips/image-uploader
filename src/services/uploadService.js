@@ -30,14 +30,30 @@ export const uploadImage = async (
     // event's per-guest photo limit — the real enforcement is a DB trigger
     // (can't be bypassed), this just avoids wasting a storage upload on a
     // photo that would get rejected anyway.
-    stage = 'check_photo_cap';
+    stage = 'check_payment_and_photo_cap';
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('photo_cap_per_guest')
+      .select('photo_cap_per_guest, is_paid, payment_status, created_by')
       .eq('id', eventId)
       .single();
 
     if (eventError) throw eventError;
+
+    // Fail fast with a friendly message if the host hasn't finished paying
+    // for this event yet — the real enforcement is the
+    // enforce_event_paid_for_upload DB trigger (can't be bypassed), this
+    // just avoids wasting a storage upload on a photo that would get
+    // rejected anyway. The event's own creator is exempt.
+    if (
+      event &&
+      event.payment_status !== 'free' &&
+      event.payment_status !== 'completed' &&
+      event.created_by !== userId
+    ) {
+      throw new Error(
+        "This event isn't ready for uploads yet — the host still needs to complete payment."
+      );
+    }
 
     if (event?.photo_cap_per_guest != null) {
       const { count, error: countError } = await supabase

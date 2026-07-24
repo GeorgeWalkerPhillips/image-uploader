@@ -9,6 +9,7 @@ import {
   FaCamera,
   FaEdit,
   FaTrash,
+  FaCreditCard,
 } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
@@ -195,7 +196,7 @@ function AdminEventManager() {
     }
   };
 
-  const initiatePayment = async (eventId, name, tier) => {
+  const initiatePayment = async (eventId, name, tier, isNewEvent = true) => {
     try {
       const { authorization_url: authorizationUrl } = await initializePaystackTransaction(
         eventId,
@@ -213,19 +214,27 @@ function AdminEventManager() {
       // involved, matches how the previous Stripe redirect flow worked.
       window.location.href = authorizationUrl;
     } catch (error) {
-      // The event was created (pending payment) right before this was
-      // called — if we never even made it to Paystack's checkout page,
-      // don't leave that half-finished event sitting on the dashboard.
-      // (A payment that reaches Paystack but is then cancelled/abandoned
-      // there is a separate case — Paystack always redirects back to the
-      // same callback_url regardless of outcome, so that one still has to
-      // be cleaned up manually via the Delete button for now.)
-      await supabase.from('events').delete().eq('id', eventId);
+      // Only clean up by deleting the event on the brand-new-event path —
+      // if we never even made it to Paystack's checkout page right after
+      // creating it, don't leave that half-finished event sitting on the
+      // dashboard. A "Complete Payment" retry on an existing (possibly
+      // already-joined) event must never delete it just because this one
+      // attempt to reach Paystack failed.
+      if (isNewEvent) {
+        await supabase.from('events').delete().eq('id', eventId);
+      }
       fetchEvents();
       logError('initiatePayment', error, { eventId, severity: 'error' });
       toast.error('Payment failed: ' + error.message);
       console.error('Payment error:', error);
     }
+  };
+
+  const resumePayment = async (event) => {
+    const tier = TIERS[event.tier];
+    if (!tier) return;
+    toast.info('Redirecting to secure payment...');
+    await initiatePayment(event.id, event.name, tier, false);
   };
 
   const updateEvent = async (id) => {
@@ -420,6 +429,7 @@ function AdminEventManager() {
             {events.map((event) => {
               const expired = isExpired(event.expiry_date);
               const tier = TIERS[event.tier] || TIERS.free;
+              const pendingPayment = event.tier !== 'free' && event.payment_status === 'pending_payment';
               return (
                 <div
                   key={event.id}
@@ -464,8 +474,8 @@ function AdminEventManager() {
                         <div className={styles.eventMeta}>
                           <p>
                             <strong>Plan:</strong> {tier.name} ({formatGuestCap(event.guest_cap)}, {formatPhotoCap(event.photo_cap_per_guest)})
-                            {event.tier !== 'free' && event.payment_status === 'pending_payment' && (
-                              <span className={styles.paymentPendingBadge}> · payment pending</span>
+                            {pendingPayment && (
+                              <span className={styles.paymentPendingBadge}> · payment pending — guests can't join yet</span>
                             )}
                           </p>
                           <p>
@@ -483,6 +493,15 @@ function AdminEventManager() {
                   </div>
 
                   <div className={styles.eventActions}>
+                    {pendingPayment && (
+                      <button
+                        className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+                        onClick={() => resumePayment(event)}
+                        title="Complete payment to make this event usable"
+                      >
+                        <FaCreditCard /> Complete Payment
+                      </button>
+                    )}
                     <button
                       className={styles.actionBtn}
                       onClick={() => copyLink(event.id)}
