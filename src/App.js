@@ -12,6 +12,7 @@ import ResetPassword from './ResetPassword';
 import Gallery from './Gallery';
 import PrivacyPolicy from './PrivacyPolicy';
 import Terms from './Terms';
+import RefundPolicy from './RefundPolicy';
 import './App.css';
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
         <Route path="/gallery" element={<Gallery />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
       </Routes>
       <ToastContainer
         position="bottom-right"

@@ -1,0 +1,11 @@
+# Valere
+
+Valere is a shared photo gallery for weddings and events. Guests scan a QR
+code and upload photos straight from their phone — no app download, no
+account required. The organizer gets one shared gallery per event, viewable
+live and downloadable as a ZIP. Pricing is a one-time fee per event based on
+guest count, not a subscription.
+
+- [Homepage](https://www.valere.co.za/)
+- [Pricing](https://www.valere.co.za/#pricing)
+- [How it works](https://www.valere.co.za/#how-it-works)

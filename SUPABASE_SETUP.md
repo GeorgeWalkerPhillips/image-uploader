@@ -59,6 +59,15 @@ file):
     first gets set. Additive alongside file 10's trigger (different
     function/trigger names). Required for the email system — see
     `EMAIL_SETUP.md`.
+13. `payment-required-for-guest-access.sql` — **required before accepting
+    real payments**, alongside file 8. Closes the gap where a paid-tier
+    event was fully usable (guests could join and upload) the instant it
+    was created, even if payment was never completed — file 8's trigger
+    already assigns the tier's full guest/photo caps on INSERT regardless
+    of `is_paid`. This adds the missing check to the guest-join and
+    photo-upload triggers, and extends `get_public_event_info()` (from
+    `fix-events-rls-leak.sql`) to expose `is_paid`/`payment_status` so the
+    app can show a friendly message instead of a raw DB error.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
@@ -66,7 +75,8 @@ photo limits, and payment integrity all depend on policies added in files
 3 through 5, and 7 through 9. File 6 is diagnostic only (nothing breaks
 without it, but you'll fly blind on bugs). File 10 is only needed if you
 enable Google Sign-In (Step 6b). Files 11-12 are only needed if you set up
-the email system (`EMAIL_SETUP.md`).
+the email system (`EMAIL_SETUP.md`). File 13 must be applied before
+accepting real payments, same as file 8.
 
 ### Checking error logs
 Once file 6 is applied, run this in the SQL Editor any time something goes

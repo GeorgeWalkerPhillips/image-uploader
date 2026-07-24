@@ -348,6 +348,19 @@
   color: white;
 }
 
+.actionBtnPrimary {
+  flex-basis: 100%;
+  background: #b45309;
+  border-color: #b45309;
+  color: white;
+}
+
+.actionBtnPrimary:hover {
+  background: #92400e;
+  border-color: #92400e;
+  color: white;
+}
+
 @media (max-width: 640px) {
   .adminHeader {
     flex-direction: column;

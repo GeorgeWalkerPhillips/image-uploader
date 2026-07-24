@@ -74,6 +74,22 @@ export const joinEventAsGuest = async (eventId, signInAsGuest) => {
 
       if (eventError) throw eventError;
 
+      // Fail fast with a friendly message if the host hasn't finished
+      // paying for this event yet — the real enforcement is the
+      // enforce_guest_cap DB trigger (can't be bypassed), this just avoids
+      // a confusing raw error. The event's own creator (e.g. previewing
+      // via the dashboard) is exempt. See payment-required-for-guest-access.sql.
+      if (
+        event &&
+        event.payment_status !== 'free' &&
+        event.payment_status !== 'completed' &&
+        event.created_by !== user.id
+      ) {
+        throw new Error(
+          "This event isn't ready for guests yet — the host still needs to complete payment."
+        );
+      }
+
       if (event?.guest_cap != null) {
         const { data: guestCount, error: countError } = await supabase.rpc(
           'get_event_guest_count',
