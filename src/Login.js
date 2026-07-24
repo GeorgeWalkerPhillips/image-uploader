@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { toast } from 'react-toastify';
+import { Spinner } from './components/Spinner';
 import styles from './Login.module.css';
 
 // 'signin' | 'signup' | 'forgot'
@@ -130,7 +131,7 @@ function Login() {
               required
             />
             <button type="submit" disabled={loading} className={styles.submitBtn}>
-              {loading ? 'Sending...' : 'Send Reset Link'}
+              {loading ? <Spinner size="small" variant="light" /> : 'Send Reset Link'}
             </button>
           </form>
 
@@ -201,11 +202,13 @@ function Login() {
             </p>
           )}
           <button type="submit" disabled={loading} className={styles.submitBtn}>
-            {loading
-              ? 'Loading...'
-              : view === 'signup'
-              ? 'Create Account'
-              : 'Sign In'}
+            {loading ? (
+              <Spinner size="small" variant="light" />
+            ) : view === 'signup' ? (
+              'Create Account'
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 

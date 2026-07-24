@@ -8,6 +8,7 @@ import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { BottomNav } from './components/BottomNav';
 import { UserBadge } from './components/UserBadge';
 import { useAuth } from './context/AuthContext';
+import { PageSpinner } from './components/Spinner';
 import './Gallery.css';
 
 const UNNAMED_ALBUM = 'Guest';
@@ -302,7 +303,7 @@ function Gallery() {
 
       <div className="gallery-scroll">
         {loading && photos.length === 0 ? (
-          <p className="loading-text">Loading photos...</p>
+          <PageSpinner />
         ) : photos.length === 0 ? (
           <p className="empty-text">No photos uploaded yet.</p>
         ) : viewMode === 'albums' ? (

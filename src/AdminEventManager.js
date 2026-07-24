@@ -21,6 +21,7 @@ import { sendEventCreatedEmail } from './services/emailService';
 import { logError } from './services/errorLogger';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
+import { PageSpinner } from './components/Spinner';
 import styles from './AdminEventManager.module.css';
 
 function AdminEventManager() {
@@ -345,7 +346,7 @@ function AdminEventManager() {
   if (loading) {
     return (
       <div className={styles.adminContainer}>
-        <p>Loading...</p>
+        <PageSpinner />
       </div>
     );
   }

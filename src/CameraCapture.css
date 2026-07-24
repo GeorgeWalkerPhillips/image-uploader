@@ -368,6 +368,12 @@
   font-size: 13px;
 }
 
+.upload-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .retry-btn {
   display: flex;
   align-items: center;
