@@ -68,6 +68,16 @@ file):
     photo-upload triggers, and extends `get_public_event_info()` (from
     `fix-events-rls-leak.sql`) to expose `is_paid`/`payment_status` so the
     app can show a friendly message instead of a raw DB error.
+14. `pro-tier-cap-and-retention-limit.sql` — caps the "unlimited" tier
+    (displayed as "Pro" in the UI, DB key unchanged) at 500 guests / 50
+    photos each instead of no cap at all, and adds `archive_purged_at` so
+    `purge-expired-events` can permanently delete an event's archive zip
+    90 days after it's created instead of keeping it forever — both
+    changes needed so the one-time-per-event price can't be outrun by an
+    unbounded recurring storage cost. Requires redeploying
+    `paystack-initialize` and `paystack-webhook` (their tier
+    amount/cap tables mirror this file — see the comment at the top of
+    each) and `purge-expired-events` (new archive-deletion pass).
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
@@ -75,7 +85,7 @@ photo limits, and payment integrity all depend on policies added in files
 3 through 5, and 7 through 9. File 6 is diagnostic only (nothing breaks
 without it, but you'll fly blind on bugs). File 10 is only needed if you
 enable Google Sign-In (Step 6b). Files 11-12 are only needed if you set up
-the email system (`EMAIL_SETUP.md`). File 13 must be applied before
+the email system (`EMAIL_SETUP.md`). Files 13-14 must be applied before
 accepting real payments, same as file 8.
 
 ### Checking error logs

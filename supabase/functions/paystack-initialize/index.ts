@@ -15,7 +15,7 @@ import { corsHeadersFor } from "../_shared/cors.ts";
 const TIER_AMOUNTS_CENTS: Record<string, number> = {
   starter: 9900, // R99
   growth: 34900, // R349
-  unlimited: 89900, // R899
+  unlimited: 99900, // R999 ("Pro" in the UI — key stays `unlimited`)
 };
 
 Deno.serve(async (req) => {

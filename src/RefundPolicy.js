@@ -19,7 +19,7 @@ function RefundPolicy() {
 
         <p>
           {TRADING_NAME} charges a single, one-time fee per event based on
-          your guest-count tier (Free, Starter, Growth, or Unlimited) — never
+          your guest-count tier (Free, Starter, Growth, or Pro) — never
           a recurring subscription. This policy explains when that fee is
           refundable if your plans change or something goes wrong.
         </p>
@@ -70,7 +70,7 @@ function RefundPolicy() {
         <p>
           Free-tier events aren't charged, so there's nothing to refund. This
           policy applies only to paid events (Starter, Growth, and
-          Unlimited).
+          Pro).
         </p>
 
         <h2>How to request a cancellation or refund</h2>

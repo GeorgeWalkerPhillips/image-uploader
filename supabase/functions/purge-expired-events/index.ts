@@ -33,6 +33,15 @@ const PHOTOS_BUCKET = "event-photos";
 const ARCHIVES_BUCKET = "event-archives";
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const PURGE_AFTER_DAYS = 30;
+// Archives used to be kept forever (only the signed URL above expired) —
+// every event ever sold added a permanent slice to the monthly storage
+// bill against a one-time fee. This bounds it: 90 days after the archive
+// is created, delete it too.
+const ARCHIVE_PURGE_AFTER_DAYS = 90;
+// Only applies to archives created from this change shipping onward —
+// without this cutoff, every already-archived event older than 90 days
+// would be mass-deleted the first time this runs.
+const ARCHIVE_PURGE_CUTOFF = "2026-07-26T00:00:00Z";
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -115,7 +124,7 @@ async function archiveAndPurgeEvent(event: { id: string; name: string; created_b
       ${emailButton(signedUrlData.signedUrl, "Download your photos")}
       <p style="font-size:13px;color:#666666;">This link expires in 7 days.</p>
       ${emailFootnote(
-        "To free up storage, the original photos have now been removed from Valere. This zip is the only remaining copy — please save it somewhere safe."
+        `To free up storage, the original photos have now been removed from Valere. This zip is the only remaining copy — please save it somewhere safe, as it will be permanently deleted ${ARCHIVE_PURGE_AFTER_DAYS} days from now.`
       )}
     `),
   });
@@ -138,6 +147,29 @@ async function archiveAndPurgeEvent(event: { id: string; name: string; created_b
     .eq("id", event.id);
 
   return { eventId: event.id, status: "archived", photoCount: photos.length };
+}
+
+// Second pass: permanently delete an event's archive zip once it's old
+// enough (see ARCHIVE_PURGE_AFTER_DAYS above) — bounds total storage to a
+// roughly steady-state amount instead of one that grows forever with
+// all-time event volume, since archives used to be kept indefinitely.
+async function purgeArchive(event: { id: string; name: string }) {
+  const archivePath = `${event.id}/${sanitizeForPath(event.name)}-archive.zip`;
+
+  const { error: removeError } = await supabaseAdmin.storage
+    .from(ARCHIVES_BUCKET)
+    .remove([archivePath]);
+
+  if (removeError) {
+    console.error(`Failed to remove archive for event ${event.id}:`, removeError);
+  }
+
+  await supabaseAdmin
+    .from("events")
+    .update({ archive_purged_at: new Date().toISOString() })
+    .eq("id", event.id);
+
+  return { eventId: event.id, status: "archive_purged" };
 }
 
 Deno.serve(async (req) => {
@@ -179,6 +211,40 @@ Deno.serve(async (req) => {
         message: String((error as Error).message || error).slice(0, 2000),
       });
       results.push({ eventId: event.id, status: "failed" });
+    }
+  }
+
+  // Second pass: permanently delete archives old enough per
+  // ARCHIVE_PURGE_AFTER_DAYS. Cutoff-gated to archives created after
+  // ARCHIVE_PURGE_CUTOFF so this doesn't mass-delete every pre-existing
+  // archive the first time it runs.
+  const archiveCutoff = new Date();
+  archiveCutoff.setDate(archiveCutoff.getDate() - ARCHIVE_PURGE_AFTER_DAYS);
+
+  const { data: archivedEvents, error: archivedEventsError } = await supabaseAdmin
+    .from("events")
+    .select("id, name")
+    .not("photos_purged_at", "is", null)
+    .is("archive_purged_at", null)
+    .lt("photos_purged_at", archiveCutoff.toISOString())
+    .gt("photos_purged_at", ARCHIVE_PURGE_CUTOFF);
+
+  if (archivedEventsError) {
+    console.error("Failed to query archives due for deletion:", archivedEventsError);
+  }
+
+  for (const event of archivedEvents || []) {
+    try {
+      results.push(await purgeArchive(event));
+    } catch (error) {
+      console.error(`Failed to purge archive for event ${event.id}:`, error);
+      await supabaseAdmin.from("error_logs").insert({
+        event_id: event.id,
+        severity: "error",
+        source: "purge-expired-events:purgeArchive",
+        message: String((error as Error).message || error).slice(0, 2000),
+      });
+      results.push({ eventId: event.id, status: "archive_purge_failed" });
     }
   }
 

@@ -31,11 +31,17 @@ export const TIERS = {
   },
   unlimited: {
     key: 'unlimited',
-    name: 'Unlimited',
-    guestCap: null,
-    photosPerGuest: null,
-    amountCents: 89900, // R899
-    display: 'R899',
+    // Internal key stays "unlimited" (touches too many places to safely
+    // rename), but the tier is no longer actually uncapped — a single
+    // very large event on a truly unlimited plan could cost far more in
+    // ongoing storage than its one-time fee ever recovers. 500 guests /
+    // 50 photos each is generous enough to cover virtually every real
+    // event while bounding that risk.
+    name: 'Pro',
+    guestCap: 500,
+    photosPerGuest: 50,
+    amountCents: 99900, // R999
+    display: 'R999',
   },
 };
 

@@ -30,7 +30,7 @@ const supabaseAdmin = createClient(
 const TIER_CONFIG: Record<string, { guestCap: number | null; photoCap: number | null }> = {
   starter: { guestCap: 25, photoCap: 25 },
   growth: { guestCap: 100, photoCap: 40 },
-  unlimited: { guestCap: null, photoCap: null },
+  unlimited: { guestCap: 500, photoCap: 50 }, // "Pro" in the UI — key stays `unlimited`
 };
 
 // Paystack signs webhooks with HMAC-SHA512 of the raw request body using
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
               <p style="text-align:center;word-break:break-all;font-size:13px;color:#666666;">${joinUrl}</p>
               ${emailButton(`${siteOrigin}/admin`, "Open event dashboard")}
               ${emailFootnote(
-                "Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and then remove the originals to free up storage."
+                "Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and remove the originals to free up storage. That zip is then kept for a further 90 days before it's permanently deleted, so be sure to save it somewhere safe once you get it."
               )}
             `),
           });

@@ -142,7 +142,7 @@ async function ensureDemoEvent(user) {
     .select()
     .single();
   if (error) throw error;
-  console.log(`Created demo event ${data.id} on the Unlimited tier, marked paid.`);
+  console.log(`Created demo event ${data.id} on the Pro (unlimited-key) tier, marked paid.`);
   return data;
 }
 
@@ -219,7 +219,7 @@ async function main() {
   console.log('\nDone. Demo account ready:');
   console.log(`  Email:    ${DEMO_EMAIL}`);
   console.log(`  Password: ${DEMO_PASSWORD}`);
-  console.log(`  Event:    ${event.name} (${event.id}) — Unlimited tier, marked paid`);
+  console.log(`  Event:    ${event.name} (${event.id}) — Pro (unlimited-key) tier, marked paid`);
 }
 
 main().catch((err) => {

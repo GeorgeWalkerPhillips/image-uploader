@@ -13,7 +13,10 @@ confirmation, password reset — not arbitrary app emails):
    event actually ended). A daily cron job zips the event's photos, uploads
    the zip to a private bucket, emails the organizer a signed download link
    valid for 7 days, then deletes the photos (storage + DB rows) to free up
-   storage. The event record itself is kept.
+   storage. The event record itself is kept. The zip archive is then
+   permanently deleted 90 days later (see
+   `pro-tier-cap-and-retention-limit.sql`), so storage doesn't grow
+   forever with all-time event volume.
 4. **Welcome** — sent the moment a new user's email gets confirmed, via a
    DB trigger (not client code, so it fires regardless of which client
    completed the confirmation).

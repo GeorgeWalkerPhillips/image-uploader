@@ -41,7 +41,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Is there a limit on how many photos each guest can upload?',
-    a: `Like a disposable camera, each guest gets a set number of shots on the Free, Starter, and Growth plans (from ${TIERS.free.photosPerGuest} up to ${TIERS.growth.photosPerGuest}, depending on plan). The Unlimited plan removes the cap entirely.`,
+    a: `Like a disposable camera, each guest gets a set number of shots depending on plan — from ${TIERS.free.photosPerGuest} up to ${TIERS.growth.photosPerGuest} on Free, Starter, and Growth, and up to ${TIERS.unlimited.photosPerGuest} per guest on ${TIERS.unlimited.name} (with up to ${TIERS.unlimited.guestCap} guests) — more than enough for any real event.`,
   },
   {
     q: 'What photo formats can guests upload?',
