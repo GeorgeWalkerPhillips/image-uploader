@@ -20,6 +20,7 @@ import { applyVideoFilters, applyCanvasFilters, FILTER_ORDER } from './component
 import { TimerCountdownOverlay } from './components/CameraTimer';
 import { CameraSettingsSheet } from './components/CameraSettingsSheet';
 import { GuestNamePrompt } from './components/GuestNamePrompt';
+import { Spinner } from './components/Spinner';
 import './CameraCapture.css';
 
 const FILTER_LABELS = { normal: 'Normal', bw: 'B&W', sepia: 'Sepia' };
@@ -526,7 +527,11 @@ function CameraCapture() {
           />
 
           <div className="upload-status">
-            {currentItem.status === 'uploading' && <span>Uploading…</span>}
+            {currentItem.status === 'uploading' && (
+              <span className="upload-status-inline">
+                <Spinner size="small" variant="light" /> Uploading…
+              </span>
+            )}
             {currentItem.status === 'pending' && <span>Waiting to upload…</span>}
             {currentItem.status === 'failed' && (
               <button className="retry-btn" onClick={() => retryItem(currentItem)}>
