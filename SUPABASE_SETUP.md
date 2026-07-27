@@ -17,7 +17,7 @@
    - `anon public` key → `REACT_APP_SUPABASE_ANON_KEY`
 
 ## Step 3: Create Database Schema
-Run these seventeen SQL files, in this exact order, in the **SQL Editor**
+Run these eighteen SQL files, in this exact order, in the **SQL Editor**
 (New Query → paste → Run → wait for success message, then move to the next
 file):
 
@@ -79,7 +79,15 @@ file):
     first gets set. Additive alongside file 13's trigger (different
     function/trigger names). Required for the email system — see
     `EMAIL_SETUP.md`.
-16. `payment-required-for-guest-access.sql` — **required before accepting
+16. `fix-email-confirmation-trigger-rollback.sql` — **critical, required if
+    file 15 is applied.** File 15's trigger ran its welcome-email HTTP call
+    with no exception handling, inside the same transaction as the
+    `email_confirmed_at` write itself — a failure there (e.g. the Vault
+    secrets file 15 depends on never got created) silently rolled back the
+    confirmation too, even though the user's browser landed on the redirect
+    looking successful. This wraps that call so a welcome-email hiccup can
+    never again take a real confirmation down with it.
+17. `payment-required-for-guest-access.sql` — **required before accepting
     real payments**, alongside file 10. Closes the gap where a paid-tier
     event was fully usable (guests could join and upload) the instant it
     was created, even if payment was never completed — file 10's trigger
@@ -88,7 +96,7 @@ file):
     photo-upload triggers, and extends `get_public_event_info()` (from
     file 4) to expose `is_paid`/`payment_status` so the app can show a
     friendly message instead of a raw DB error.
-17. `pro-tier-cap-and-retention-limit.sql` — caps the "unlimited" tier
+18. `pro-tier-cap-and-retention-limit.sql` — caps the "unlimited" tier
     (displayed as "Pro" in the UI, DB key unchanged) at 500 guests / 50
     photos each instead of no cap at all, and adds `archive_purged_at` so
     `purge-expired-events` can permanently delete an event's archive zip
@@ -107,8 +115,11 @@ above) — apply them even on an already-running project, not just fresh
 setups. File 8 is diagnostic only (nothing breaks without it, but you'll
 fly blind on bugs). File 13 is only needed if you enable Google Sign-In
 (Step 6b). Files 14-15 are only needed if you set up the email system
-(`EMAIL_SETUP.md`). Files 10, 16, and 17 must be applied before accepting
-real payments.
+(`EMAIL_SETUP.md`) — and if you apply file 15, file 16 is **mandatory**
+right alongside it (see above): without it, an unrelated welcome-email
+failure can silently un-confirm a user's email on the exact transaction
+that was supposed to confirm it. Files 10, 17, and 18 must be applied
+before accepting real payments.
 
 ### Checking error logs
 Once file 8 is applied, run this in the SQL Editor any time something goes
