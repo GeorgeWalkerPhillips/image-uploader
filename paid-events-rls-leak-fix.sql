@@ -1,0 +1,25 @@
+-- payment-schema.sql's "Paid events are visible, free events to creator
+-- only" SELECT policy on `events`
+-- (USING (is_free = TRUE OR is_paid = TRUE OR created_by = auth.uid()))
+-- was never dropped by fix-events-rls-leak.sql — that file only dropped
+-- supabase-schema.sql's separate "Users can view public events"
+-- USING (TRUE) policy. Postgres OR's every permissive policy on a table
+-- together, so this leftover policy alone still exposes almost every event
+-- in the app to every authenticated *and* anonymous session, regardless of
+-- the correctly-scoped policy sitting right next to it:
+--
+--   - AdminEventManager.js sets is_free = TRUE on every free-tier event
+--   - paystack-webhook sets is_paid = TRUE on every completed paid-tier
+--     event
+--
+-- So in practice, any session can SELECT any event that isn't a
+-- still-unpaid paid-tier event — name, description, dates, tier,
+-- guest_cap, payment fields, created_by — just by knowing or guessing its
+-- id, the same class of bug fix-events-rls-leak.sql was meant to close.
+--
+-- fix-events-rls-leak.sql's "Users can view their own or joined events"
+-- policy (auth.uid() = created_by OR an event_access row already exists)
+-- is the correct scoping and is left in place untouched — this file only
+-- removes the older, competing, wide-open policy.
+
+DROP POLICY IF EXISTS "Paid events are visible, free events to creator only" ON events;

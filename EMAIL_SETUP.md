@@ -87,6 +87,18 @@ Then run `welcome-email-trigger-migration.sql`, in order after
 `EMAIL_TRIGGER_SECRET` in step 3) before the `CREATE TRIGGER` at the
 bottom.
 
+**Immediately after, run `fix-email-confirmation-trigger-rollback.sql` —
+this one is not optional.** The trigger above fires in the same
+transaction Supabase Auth uses to actually confirm a user's email; if its
+welcome-email HTTP call ever fails (wrong/missing Vault secret is the easy
+way to hit this), the whole transaction rolls back and silently
+un-confirms the user too, even though their browser lands on the
+"confirmed" redirect looking successful. This file wraps that call so a
+welcome-email hiccup can never take a real email confirmation down with
+it. If you already applied `welcome-email-trigger-migration.sql` on a live
+project before now, anyone who tried to confirm in that window may be
+stuck — see the recovery notes at the bottom of the fix file.
+
 ## 5. Testing
 
 ### Event-created / payment-receipt emails
