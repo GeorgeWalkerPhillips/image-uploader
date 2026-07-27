@@ -17,7 +17,7 @@
    - `anon public` key → `REACT_APP_SUPABASE_ANON_KEY`
 
 ## Step 3: Create Database Schema
-Run these nine SQL files, in this exact order, in the **SQL Editor**
+Run these seventeen SQL files, in this exact order, in the **SQL Editor**
 (New Query → paste → Run → wait for success message, then move to the next
 file):
 
@@ -25,50 +25,70 @@ file):
 2. `payment-schema.sql` — payment/billing tables and columns
 3. `pricing-tiers-migration.sql` — self-serve account policies + guest-count
    pricing tiers (free vs. paid plans)
-4. `event-owner-photos-fix.sql` — lets an event's creator view/manage its
+4. `fix-events-rls-leak.sql` — **critical, required.** `payment-schema.sql`'s
+   `events` policy layered on top of `supabase-schema.sql`'s left the whole
+   `events` table readable by anyone (`FOR SELECT USING (TRUE)`) — every
+   session, including anonymous guests, could read every organizer's event
+   names, dates, tier, and payment fields, not just their own. This scopes
+   `SELECT` to the event's creator or someone who already holds an
+   `event_access` row for it, and adds `get_public_event_info()` (a narrow
+   `SECURITY DEFINER` function) so a first-time guest can still see the
+   handful of fields they legitimately need before joining.
+5. `paid-events-rls-leak-fix.sql` — **critical, required, run right after
+   file 4.** `payment-schema.sql`'s own `events` SELECT policy
+   (`is_free = TRUE OR is_paid = TRUE OR created_by = auth.uid()`) was never
+   dropped by file 4 — Postgres ORs every permissive policy on a table
+   together, so that leftover policy alone kept exposing almost every event
+   in the app (every free-tier event has `is_free = TRUE`; every completed
+   paid-tier event has `is_paid = TRUE`) to any session, undoing file 4's
+   fix. This drops that policy, leaving only file 4's correctly-scoped one.
+6. `event-owner-photos-fix.sql` — lets an event's creator view/manage its
    photos directly, without needing to join their own event as a guest
-5. `photo-cap-per-guest.sql` — per-guest photo quota by tier (disposable
+7. `photo-cap-per-guest.sql` — per-guest photo quota by tier (disposable
    camera style "N shots" limit), enforced server-side via trigger
-6. `error-logging.sql` — critical error log table, written to automatically
+8. `error-logging.sql` — critical error log table, written to automatically
    by the app so bugs can be diagnosed without needing DevTools on the
    device that hit them
-7. `guest-display-names.sql` — lets guests name themselves on join, so the
+9. `guest-display-names.sql` — lets guests name themselves on join, so the
    gallery can group photos into per-guest albums
-8. `security-hardening.sql` — **required before accepting real payments.**
-   Locks `events.tier`/`guest_cap`/`photo_cap_per_guest`/`is_paid`/
-   `payment_status` so only the payment webhook (service role) can ever
-   mark an event paid — closes the gap where any signed-in user could
-   open DevTools and mark their own event paid for free. Also moves guest
-   cap and upload rate limiting from client-only checks to real DB
-   enforcement. Fully payment-provider-agnostic. See `PAYMENT_SETUP.md`
-   for the webhook this depends on.
-9. `paystack-migration.sql` — renames a Stripe-specific column now that
-   the app uses Paystack (Stripe doesn't support South African merchant
-   payouts — see `PAYMENT_SETUP.md`)
-10. `google-oauth-profile-trigger.sql` — DB trigger that auto-creates a
+10. `security-hardening.sql` — **required before accepting real payments.**
+    Locks `events.tier`/`guest_cap`/`photo_cap_per_guest`/`is_paid`/
+    `payment_status` so only the payment webhook (service role) can ever
+    mark an event paid — closes the gap where any signed-in user could
+    open DevTools and mark their own event paid for free. Also moves guest
+    cap and upload rate limiting from client-only checks to real DB
+    enforcement. Fully payment-provider-agnostic. See `PAYMENT_SETUP.md`
+    for the webhook this depends on.
+11. `free-tier-event-limit.sql` — backfills `guest_cap`/`photo_cap_per_guest`
+    on events created before file 7/10 existed, and adds a server-side
+    limit of one free-tier event per account, ever.
+12. `paystack-migration.sql` — renames a Stripe-specific column now that
+    the app uses Paystack (Stripe doesn't support South African merchant
+    payouts — see `PAYMENT_SETUP.md`)
+13. `google-oauth-profile-trigger.sql` — DB trigger that auto-creates a
     `user_profiles` row for every new `auth.users` row, covering Google
     sign-in (which never runs the client-side insert that email/password
     signup used to rely on). Required for Step 6b (Google Sign-In) below.
-11. `event-archive-and-emails.sql` — adds `events.photos_purged_at`, a
+14. `event-archive-and-emails.sql` — adds `events.photos_purged_at`, a
     private `event-archives` storage bucket, and a daily `pg_cron` job that
     zips and emails an organizer their photos ~30 days after an event
     expires, then deletes them to free up storage. Required for the email
     system — see `EMAIL_SETUP.md`.
-12. `welcome-email-trigger-migration.sql` — DB trigger that emails a new
+15. `welcome-email-trigger-migration.sql` — DB trigger that emails a new
     user via `send-welcome-email` the moment their `email_confirmed_at`
-    first gets set. Additive alongside file 10's trigger (different
+    first gets set. Additive alongside file 13's trigger (different
     function/trigger names). Required for the email system — see
     `EMAIL_SETUP.md`.
-13. `payment-required-for-guest-access.sql` — **required before accepting
-    real payments**, alongside file 8. Closes the gap where a paid-tier
+16. `payment-required-for-guest-access.sql` — **required before accepting
+    real payments**, alongside file 10. Closes the gap where a paid-tier
     event was fully usable (guests could join and upload) the instant it
-    was created, even if payment was never completed — file 8's trigger
+    was created, even if payment was never completed — file 10's trigger
     already assigns the tier's full guest/photo caps on INSERT regardless
     of `is_paid`. This adds the missing check to the guest-join and
     photo-upload triggers, and extends `get_public_event_info()` (from
-    `fix-events-rls-leak.sql`) to expose `is_paid`/`payment_status` so the
-    app can show a friendly message instead of a raw DB error.
-14. `pro-tier-cap-and-retention-limit.sql` — caps the "unlimited" tier
+    file 4) to expose `is_paid`/`payment_status` so the app can show a
+    friendly message instead of a raw DB error.
+17. `pro-tier-cap-and-retention-limit.sql` — caps the "unlimited" tier
     (displayed as "Pro" in the UI, DB key unchanged) at 500 guests / 50
     photos each instead of no cap at all, and adds `archive_purged_at` so
     `purge-expired-events` can permanently delete an event's archive zip
@@ -82,14 +102,16 @@ file):
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
 photo limits, and payment integrity all depend on policies added in files
-3 through 5, and 7 through 9. File 6 is diagnostic only (nothing breaks
-without it, but you'll fly blind on bugs). File 10 is only needed if you
-enable Google Sign-In (Step 6b). Files 11-12 are only needed if you set up
-the email system (`EMAIL_SETUP.md`). Files 13-14 must be applied before
-accepting real payments, same as file 8.
+3 through 7, and 9. Files 4-5 are also security-critical on their own (see
+above) — apply them even on an already-running project, not just fresh
+setups. File 8 is diagnostic only (nothing breaks without it, but you'll
+fly blind on bugs). File 13 is only needed if you enable Google Sign-In
+(Step 6b). Files 14-15 are only needed if you set up the email system
+(`EMAIL_SETUP.md`). Files 10, 16, and 17 must be applied before accepting
+real payments.
 
 ### Checking error logs
-Once file 6 is applied, run this in the SQL Editor any time something goes
+Once file 8 is applied, run this in the SQL Editor any time something goes
 wrong to see exactly what happened, on any device, without needing
 DevTools:
 ```sql
@@ -106,22 +128,24 @@ LIMIT 20;
 4. Click **Create bucket**
 
 ## Step 5: Set Storage RLS Policy
-1. Click the `event-photos` bucket
-2. Go to **Policies**
-3. Click **New policy → For authenticated users**
-4. Select **Upload (insert)**
-5. Paste this policy:
-```sql
-(bucket_id = 'event-photos') AND 
-(auth.role() = 'authenticated')
-```
-6. Click **Save**
+Run `storage-bucket-listing-lockdown.sql` in the SQL Editor. Do **not** use
+the dashboard's "New policy" wizard for this bucket — a
+`(bucket_id = 'event-photos')` **Download (select)** policy with no
+`auth.uid()` check (what earlier versions of this guide had you paste in
+by hand) also governs `.list()`, not just single-file fetches, so it lets
+any anon or authenticated session enumerate every event's uploaded photos,
+not just fetch a photo whose exact path they already know.
 
-7. Create another policy for **Download (select)**:
-```sql
-(bucket_id = 'event-photos')
-```
-8. Click **Save**
+If you already created that policy through the dashboard on an existing
+project: go to **Storage → event-photos → Policies** and delete the
+existing "Download"/select policy *before* running the SQL file — Postgres
+ORs every permissive policy on a table together, so leaving the old one in
+place means the leak persists no matter what the new one says.
+
+Photo display is unaffected either way: the bucket stays **Public**, and
+Supabase serves a public bucket's object bytes for a known path without
+consulting these policies at all — only `.list()` and authenticated
+`.download()` calls go through them.
 
 ## Step 6: Enable Anonymous Sign-Ins (required for guest uploads)
 
@@ -202,8 +226,10 @@ deleted.
 
 ## Security Checklist
 - [ ] Project URL and Anon Key copied to `.env.local`
-- [ ] SQL files 1-9 applied, in order (Step 3); file 10 too if using Google Sign-In
-- [ ] Storage bucket created with RLS
+- [ ] SQL files 1-9 applied, in order (Step 3), including the critical
+      RLS-leak fixes in files 4-5; file 13 too if using Google Sign-In
+- [ ] Storage bucket created and `storage-bucket-listing-lockdown.sql` run
+      (Step 5) — not the old dashboard-pasted open policy
 - [ ] Anonymous Sign-Ins enabled (guests can't upload without this)
 - [ ] Confirm email is toggled ON (Step 6a)
 - [ ] Google provider configured and Redirect URLs allowlisted (Step 6b), if using Google Sign-In
