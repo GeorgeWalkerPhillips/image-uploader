@@ -305,10 +305,10 @@ function CameraCapture() {
     let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     applyCanvasFilters(canvas, ctx, imageData, brightness, contrast, filter);
 
-    // JPEG, not PNG: at up to 4K, a lossless PNG of a busy scene can easily
-    // clear the 10MB upload cap before compression ever gets a chance to
-    // shrink it, so captures would fail validation outright.
-    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    // JPEG, not PNG: a lossless PNG of a busy 4K scene would be enormous
+    // for no visible benefit over JPEG at quality 1 (max — no re-encoding
+    // loss beyond what canvas's JPEG encoder inherently applies).
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 1);
     const blob = await fetch(imageDataUrl).then((res) => res.blob());
     const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
     const item = {

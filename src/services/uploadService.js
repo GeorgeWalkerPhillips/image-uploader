@@ -2,7 +2,7 @@ import { supabase } from '../supabaseClient';
 import {
   validateImage,
   getImageDimensions,
-  compressImage,
+  normalizeImage,
 } from '../utils/imageValidation';
 import { checkRateLimit } from '../utils/rateLimiter';
 import { logError } from './errorLogger';
@@ -71,15 +71,15 @@ export const uploadImage = async (
       }
     }
 
-    stage = 'compress';
-    const compressedFile = await compressImage(file);
+    stage = 'normalize';
+    const uploadFile = await normalizeImage(file);
 
-    const { width, height } = await getImageDimensions(compressedFile);
+    const { width, height } = await getImageDimensions(uploadFile);
 
     // The original filename comes straight from the client and can contain
     // anything (slashes, unicode, control characters) — never build a
     // storage path out of it unsanitized.
-    const safeName = compressedFile.name
+    const safeName = uploadFile.name
       .replace(/[^a-zA-Z0-9._-]/g, '_')
       .slice(-100) || 'photo.jpg';
     const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${safeName}`;
@@ -88,7 +88,7 @@ export const uploadImage = async (
     stage = 'storage_upload';
     const { data, error: uploadError } = await supabase.storage
       .from('event-photos')
-      .upload(storagePath, compressedFile, {
+      .upload(storagePath, uploadFile, {
         cacheControl: '3600',
         upsert: false,
       });
@@ -100,9 +100,9 @@ export const uploadImage = async (
       event_id: eventId,
       uploaded_by: userId,
       storage_path: storagePath,
-      file_name: compressedFile.name,
-      file_size: compressedFile.size,
-      mime_type: compressedFile.type,
+      file_name: uploadFile.name,
+      file_size: uploadFile.size,
+      mime_type: uploadFile.type,
       width,
       height,
       uploader_name: uploaderName,
