@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AuthCallbackRedirect } from './components/AuthCallbackRedirect';
 import Home from './Home';
 import CameraCapture from './CameraCapture';
 import AdminEventManager from './AdminEventManager';
@@ -18,6 +19,7 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
+      <AuthCallbackRedirect />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/camera" element={<CameraCapture />} />
