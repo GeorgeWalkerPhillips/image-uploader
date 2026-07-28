@@ -6,6 +6,7 @@ import {
   FaCog,
   FaSyncAlt,
   FaCamera,
+  FaCameraRetro,
   FaImages,
   FaPhotoVideo,
   FaChevronLeft,
@@ -35,6 +36,7 @@ function CameraCapture() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const nativeCameraInputRef = useRef(null);
 
   const [facingMode, setFacingMode] = useState('user');
   const [eventName, setEventName] = useState('');
@@ -474,6 +476,24 @@ function CameraCapture() {
         onChange={handleFileSelect}
       />
 
+      {/*
+        A plain file input with `capture` hands off to the phone's actual
+        native camera app instead of this page's WebRTC viewfinder — no
+        browser video/canvas re-encoding in the path, so it's the highest
+        quality a guest's phone can produce. Trade-off: no live filter
+        preview, grid, or timer, since that's a modal OS handoff rather
+        than something we can draw over. Points at whichever camera is
+        currently selected so it stays in sync with the flip button.
+      */}
+      <input
+        ref={nativeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture={facingMode === 'user' ? 'user' : 'environment'}
+        style={{ display: 'none' }}
+        onChange={handleFileSelect}
+      />
+
       <CameraSettingsSheet
         open={showSettings}
         onClose={() => setShowSettings(false)}
@@ -562,6 +582,15 @@ function CameraCapture() {
       )}
 
       <div className="shutter-row">
+        <button
+          className="native-camera-button"
+          onClick={() => nativeCameraInputRef.current?.click()}
+          title={outOfShots ? "You've used all your shots for this event" : "Use your phone's native camera (highest quality, no filters)"}
+          disabled={outOfShots}
+        >
+          <FaCameraRetro />
+        </button>
+
         <button className="filter-pill" onClick={cycleFilter} title="Cycle filter">
           {FILTER_LABELS[filter]}
         </button>
