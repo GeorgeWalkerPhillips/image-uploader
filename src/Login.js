@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { toast } from 'react-toastify';
@@ -19,8 +19,21 @@ function Login() {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState(null);
-  const { signIn, signUp, signInWithGoogle, resendConfirmationEmail, resetPasswordForEmail } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle, resendConfirmationEmail, resetPasswordForEmail } = useAuth();
   const navigate = useNavigate();
+
+  // Covers every path that lands an already-authenticated session back on
+  // this page: Google OAuth's redirect (auth-js processes the URL's token
+  // hash/code before this component ever renders, so by the time we're
+  // here `user` may already be set), and clicking an email-confirmation
+  // link, which Supabase also redirects back to /login with a session
+  // already established. Without this, the user sees the login form and
+  // assumes sign-in silently failed even though they're actually signed in.
+  useEffect(() => {
+    if (user && !user.is_anonymous) {
+      navigate('/admin', { replace: true });
+    }
+  }, [user, navigate]);
 
   const resetFields = () => {
     setPassword('');
@@ -90,11 +103,20 @@ function Login() {
           setLoading(false);
           return;
         }
-        await signUp(email, password, fullName);
-        toast.success('Account created! Check your email to confirm.');
-        setEmail('');
-        resetFields();
-        setView('signin');
+        const data = await signUp(email, password, fullName);
+        if (data.session) {
+          // Email confirmation is disabled for this project, so signUp()
+          // already returned a live session — the useEffect above will
+          // redirect once AuthContext's onAuthStateChange picks it up.
+          // Telling the user to "check your email" here would be wrong
+          // and they'd be stuck on this form looking logged-out.
+          toast.success('Account created!');
+        } else {
+          toast.success('Account created! Check your email to confirm.');
+          setEmail('');
+          resetFields();
+          setView('signin');
+        }
       } else {
         await signIn(email, password);
         toast.success('Logged in successfully!');
