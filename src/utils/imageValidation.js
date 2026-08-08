@@ -16,6 +16,17 @@ export const validateImage = (file) => {
     return errors;
   }
 
+  // Mobile browsers can occasionally hand back a File with real metadata
+  // (name/type) but no actual bytes — e.g. iOS Safari under memory
+  // pressure after the native camera app returns control. Uploading that
+  // straight to Supabase Storage fails with an opaque "No content
+  // provided" error, so catch it here with a message that tells the guest
+  // what to actually do about it.
+  if (file.size === 0) {
+    errors.push('This photo appears to be empty. Please retake it.');
+    return errors;
+  }
+
   if (file.size > MAX_FILE_SIZE) {
     errors.push(
       `File too large. Max size: ${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB`
@@ -90,6 +101,19 @@ export const compressImage = async (file) => {
 
         canvas.toBlob(
           (blob) => {
+            // toBlob's own docs call this out: blob can come back null (or,
+            // on some mobile WebKit versions, a non-null Blob with size 0)
+            // "if the image is too large or if there is not enough
+            // memory" — easy to hit when several full-resolution photos
+            // are being compressed at once on a phone. Reject explicitly
+            // instead of silently resolving a File wrapping no real image
+            // data — the caller falls back to uploading the uncompressed
+            // original rather than losing the photo.
+            if (!blob || blob.size === 0) {
+              reject(new Error('Image compression produced an empty file'));
+              return;
+            }
+
             resolve(
               new File([blob], file.name, {
                 type: 'image/jpeg',

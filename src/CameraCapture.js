@@ -385,8 +385,19 @@ function CameraCapture() {
 
     setPendingUploads((prev) => [...prev, ...newItems]);
     setShowGallery(true);
-    newItems.forEach((item) => uploadItem(item));
     e.target.value = '';
+
+    // One at a time, not all at once: compressing several full-resolution
+    // photos concurrently (imageValidation.js's compressImage draws each
+    // one to an up-to-3000px canvas) is what pushes mobile browsers into
+    // the memory pressure that makes canvas.toBlob() silently hand back
+    // an empty result — previously surfaced as a confusing "No content
+    // provided" error from Supabase Storage for every photo in the batch.
+    (async () => {
+      for (const item of newItems) {
+        await uploadItem(item);
+      }
+    })();
   };
 
   const retryItem = (item) => uploadItem(item);

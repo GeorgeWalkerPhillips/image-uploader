@@ -72,7 +72,29 @@ export const uploadImage = async (
     }
 
     stage = 'compress';
-    const compressedFile = await compressImage(file);
+    let compressedFile;
+    try {
+      compressedFile = await compressImage(file);
+    } catch (compressionError) {
+      // Compression can fail outright, or (see imageValidation.js) reject
+      // when the canvas encoder silently hands back an empty result under
+      // memory pressure — a real, observed failure mode on mobile when
+      // several photos compress at once. `file` already passed
+      // validateImage() above, so it's known-good; fall back to uploading
+      // it unmodified rather than losing the photo to a compression-only
+      // bug. Logged so a spike in this is visible without needing to
+      // reproduce it on a device.
+      logError('uploadImage:compressionFallback', compressionError, { eventId, userId });
+      compressedFile = file;
+    }
+
+    if (!compressedFile || compressedFile.size === 0) {
+      // Belt-and-braces: should be unreachable (validateImage already
+      // rejects an empty `file`, and the fallback above only ever uses
+      // `file`), but never let a zero-byte body reach Supabase Storage —
+      // its "No content provided" response is meaningless to a guest.
+      throw new Error("This photo couldn't be processed. Please retake it and try again.");
+    }
 
     const { width, height } = await getImageDimensions(compressedFile);
 
