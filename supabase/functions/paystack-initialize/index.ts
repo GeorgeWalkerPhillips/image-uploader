@@ -6,8 +6,11 @@
 //
 // Deploy: supabase functions deploy paystack-initialize --project-ref <ref>
 // Secrets required (Supabase Dashboard -> Edge Functions -> Secrets, or
-// `supabase secrets set`): PAYSTACK_SECRET_KEY, ALLOWED_ORIGIN
+// `supabase secrets set`): PAYSTACK_SECRET_KEY, ALLOWED_ORIGIN.
+// SUPABASE_URL and SUPABASE_ANON_KEY are auto-injected by Supabase for Edge
+// Functions — no need to set them yourself.
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeadersFor } from "../_shared/cors.ts";
 
 // Mirror of src/services/pricingTiers.js — keep these two in sync.
@@ -26,7 +29,38 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { eventId, eventName, userId, email, tier } = await req.json();
+    // Runs as the calling user (not service role) — forwarding their JWT
+    // means auth.uid() and RLS apply normally, so the ownership check below
+    // is real enforcement, not just a courtesy check. This also closes off
+    // an unauthenticated/anonymous caller from hitting Paystack's API at
+    // all: previously this endpoint accepted any eventId/userId the client
+    // sent with no verification that the caller actually owned that event,
+    // so anyone could trigger a Paystack transaction-initialize call
+    // (against arbitrary event/user ids) with nothing but the public anon
+    // key.
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
+    );
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { eventId, eventName, tier } = await req.json();
+    // userId and email always come from the verified session now, never
+    // from the client-supplied body.
+    const userId = user.id;
+    const email = user.email;
 
     const amount = TIER_AMOUNTS_CENTS[tier];
     if (!amount) {
@@ -34,6 +68,34 @@ Deno.serve(async (req) => {
     }
     if (!email) {
       throw new Error("Paystack requires an email to initialize a transaction");
+    }
+
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, created_by, is_paid, tier")
+      .eq("id", eventId)
+      .single();
+
+    // RLS already scopes this select to events the caller owns or has
+    // joined, but an explicit ownership check keeps this endpoint from ever
+    // initializing a charge tied to an event that isn't the caller's,
+    // regardless of what RLS policy exists today or later.
+    if (eventError || !event || event.created_by !== userId) {
+      return new Response(JSON.stringify({ error: "Event not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (event.is_paid) {
+      return new Response(JSON.stringify({ error: "This event is already paid for" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (event.tier !== tier) {
+      throw new Error("Tier does not match this event's tier");
     }
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {

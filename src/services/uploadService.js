@@ -72,7 +72,29 @@ export const uploadImage = async (
     }
 
     stage = 'normalize';
-    const uploadFile = await normalizeImage(file);
+    let uploadFile;
+    try {
+      uploadFile = await normalizeImage(file);
+    } catch (normalizeError) {
+      // normalizeImage only touches HEIC/HEIF files (see imageValidation.js)
+      // — but that canvas encode can still fail outright, or silently hand
+      // back an empty result under memory pressure, a real observed
+      // failure mode on mobile when several photos process at once. `file`
+      // already passed validateImage() above, so it's known-good; fall
+      // back to uploading it unmodified (as HEIC) rather than losing the
+      // photo to a conversion-only bug. Logged so a spike in this is
+      // visible without needing to reproduce it on a device.
+      logError('uploadImage:normalizeFallback', normalizeError, { eventId, userId });
+      uploadFile = file;
+    }
+
+    if (!uploadFile || uploadFile.size === 0) {
+      // Belt-and-braces: should be unreachable (validateImage already
+      // rejects an empty `file`, and the fallback above only ever uses
+      // `file`), but never let a zero-byte body reach Supabase Storage —
+      // its "No content provided" response is meaningless to a guest.
+      throw new Error("This photo couldn't be processed. Please retake it and try again.");
+    }
 
     const { width, height } = await getImageDimensions(uploadFile);
 

@@ -480,11 +480,22 @@ function CameraCapture() {
 
     setPendingUploads((prev) => [...prev, ...newItems]);
     setShowGallery(true);
-    newItems.forEach((item) => {
-      savePendingUpload({ id: item.id, eventId, file: item.file, createdAt: Date.now() });
-      uploadItem(item);
-    });
     e.target.value = '';
+
+    // One at a time, not all at once: normalizeImage's canvas re-encode
+    // (imageValidation.js — HEIC/HEIF only, but a multi-select batch can
+    // easily be several of those at once) is what pushes mobile browsers
+    // into the memory pressure that makes canvas.toBlob() silently hand
+    // back an empty result — previously surfaced as a confusing "No
+    // content provided" error from Supabase Storage for every photo in
+    // the batch. savePendingUpload runs first for each item regardless of
+    // upload order, so a closed/crashed tab can still recover all of them.
+    (async () => {
+      for (const item of newItems) {
+        savePendingUpload({ id: item.id, eventId, file: item.file, createdAt: Date.now() });
+        await uploadItem(item);
+      }
+    })();
   };
 
   const retryItem = (item) => uploadItem(item);
