@@ -26,15 +26,17 @@ const supabaseAdmin = createClient(
 );
 
 // Mirror of src/services/pricingTiers.js, paystack-initialize's
-// TIER_AMOUNTS_CENTS, and the enforce_event_billing_integrity() trigger —
-// keep all four in sync. amountCents is in the smallest ZAR unit (cents).
+// TIER_AMOUNTS_CENTS, and enforce_event_billing_integrity() (see
+// pricing-rework-2026-09.sql) — keep all four in sync. amountCents is in
+// the smallest ZAR unit (cents). "unlimited" is "The Whole Reel" in the
+// UI — key stays `unlimited`; it's capped at 500/50 to bound storage cost.
 const TIER_CONFIG: Record<
   string,
   { guestCap: number | null; photoCap: number | null; amountCents: number }
 > = {
   starter: { guestCap: 25, photoCap: 15, amountCents: 17900 }, // R179
   growth: { guestCap: 50, photoCap: 25, amountCents: 39900 }, // R399
-  unlimited: { guestCap: null, photoCap: null, amountCents: 99900 }, // R999
+  unlimited: { guestCap: 500, photoCap: 50, amountCents: 99900 }, // R999
 };
 
 // Paystack signs webhooks with HMAC-SHA512 of the raw request body using
@@ -165,7 +167,7 @@ Deno.serve(async (req) => {
               <p style="text-align:center;word-break:break-all;font-size:13px;color:#666666;">${joinUrl}</p>
               ${emailButton(`${siteOrigin}/admin`, "Open event dashboard")}
               ${emailFootnote(
-                "Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and then remove the originals to free up storage."
+                "Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and remove the originals to free up storage. That zip is then kept for a further 90 days before it's permanently deleted, so be sure to save it somewhere safe once you get it."
               )}
             `),
           });

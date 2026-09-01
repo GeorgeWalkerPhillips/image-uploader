@@ -1,7 +1,7 @@
 const MAX_FILE_SIZE = parseInt(
-  process.env.REACT_APP_MAX_FILE_SIZE || '10485760',
+  process.env.REACT_APP_MAX_FILE_SIZE || '31457280',
   10
-); // 10MB default
+); // 30MB default — enough headroom for an uncompressed phone photo
 
 const ALLOWED_MIME_TYPES = (
   process.env.REACT_APP_ALLOWED_MIME_TYPES ||
@@ -13,6 +13,17 @@ export const validateImage = (file) => {
 
   if (!file) {
     errors.push('No file provided');
+    return errors;
+  }
+
+  // Mobile browsers can occasionally hand back a File with real metadata
+  // (name/type) but no actual bytes — e.g. iOS Safari under memory
+  // pressure after the native camera app returns control. Uploading that
+  // straight to Supabase Storage fails with an opaque "No content
+  // provided" error, so catch it here with a message that tells the guest
+  // what to actually do about it.
+  if (file.size === 0) {
+    errors.push('This photo appears to be empty. Please retake it.');
     return errors;
   }
 
@@ -58,7 +69,24 @@ export const getImageDimensions = (file) => {
   });
 };
 
-export const compressImage = async (file) => {
+// Guests' phones already produce reasonably-sized JPEGs — resizing or
+// re-encoding those on top would only throw away detail they actually
+// captured, for no real benefit. The one format that genuinely needs
+// touching is HEIC/HEIF: every browser except Safari fails to render it at
+// all (in this camera roll picker, in the shared gallery's <img> tags,
+// everywhere), so those get converted to a maximum-quality JPEG purely for
+// compatibility — not compressed down.
+const NEEDS_JPEG_CONVERSION = new Set(['image/heic', 'image/heif']);
+
+// Not a real-world cap — actual phone photos never get near this. Purely a
+// backstop against a canvas blowing up on a pathological input dimension.
+const MAX_SAFE_DIMENSION = 8000;
+
+export const normalizeImage = async (file) => {
+  if (!NEEDS_JPEG_CONVERSION.has(file.type)) {
+    return file;
+  }
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -68,20 +96,11 @@ export const compressImage = async (file) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        const maxDimension = 3000;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > maxDimension) {
-            height *= maxDimension / width;
-            width = maxDimension;
-          }
-        } else {
-          if (height > maxDimension) {
-            width *= maxDimension / height;
-            height = maxDimension;
-          }
+        let { width, height } = img;
+        if (width > MAX_SAFE_DIMENSION || height > MAX_SAFE_DIMENSION) {
+          const scale = MAX_SAFE_DIMENSION / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
         }
 
         canvas.width = width;
@@ -90,15 +109,28 @@ export const compressImage = async (file) => {
 
         canvas.toBlob(
           (blob) => {
+            // toBlob's own docs call this out: blob can come back null (or,
+            // on some mobile WebKit versions, a non-null Blob with size 0)
+            // "if the image is too large or if there is not enough
+            // memory" — easy to hit when several full-resolution photos
+            // are being compressed at once on a phone. Reject explicitly
+            // instead of silently resolving a File wrapping no real image
+            // data — the caller falls back to uploading the uncompressed
+            // original rather than losing the photo.
+            if (!blob || blob.size === 0) {
+              reject(new Error('Image compression produced an empty file'));
+              return;
+            }
+
             resolve(
-              new File([blob], file.name, {
+              new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
                 type: 'image/jpeg',
                 lastModified: Date.now(),
               })
             );
           },
           'image/jpeg',
-          0.92
+          1
         );
       };
 

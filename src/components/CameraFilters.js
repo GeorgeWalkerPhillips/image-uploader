@@ -122,15 +122,20 @@ export function applyVideoFilters(video, brightness, contrast, filter) {
 }
 
 export function applyCanvasFilters(canvas, ctx, imageData, brightness, contrast, filter) {
-  // Apply brightness and contrast
+  // Mirrors the CSS brightness()/contrast() semantics applyVideoFilters uses
+  // for the live preview: brightness is a straight multiply, contrast
+  // pivots around the 127.5 midpoint. At the neutral 100%/100% defaults
+  // this must be a no-op. The previous formula added a flat +50 to every
+  // channel even at "Normal", washing out every photo compared to both the
+  // live viewfinder and the native camera.
   const data = imageData.data;
   const bMult = brightness / 100;
-  const cMult = (contrast - 50) / 50;
+  const cMult = contrast / 100;
 
   for (let i = 0; i < data.length; i += 4) {
-    data[i] = Math.min(255, data[i] * bMult + cMult * 50);
-    data[i + 1] = Math.min(255, data[i + 1] * bMult + cMult * 50);
-    data[i + 2] = Math.min(255, data[i + 2] * bMult + cMult * 50);
+    data[i] = (data[i] * bMult - 127.5) * cMult + 127.5;
+    data[i + 1] = (data[i + 1] * bMult - 127.5) * cMult + 127.5;
+    data[i + 2] = (data[i + 2] * bMult - 127.5) * cMult + 127.5;
   }
 
   // Apply filter

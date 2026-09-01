@@ -33,6 +33,12 @@
 -- If you ever rotate the secret, update both places:
 --   select vault.update_secret(id, '<new-secret>')
 --   from vault.secrets where name = 'email_trigger_secret';
+--
+-- If you already ran an earlier version of this file, re-run this whole
+-- file — CREATE OR REPLACE FUNCTION / DROP TRIGGER IF EXISTS make it safe
+-- to apply again, and it now wraps the email send in its own exception
+-- handler so a broken Vault/pg_net setup can never block sign-in with a
+-- generic "Database error updating user".
 
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
@@ -44,17 +50,29 @@ SET search_path = public
 AS $$
 BEGIN
   IF NEW.email_confirmed_at IS NOT NULL AND OLD.email_confirmed_at IS NULL THEN
-    PERFORM net.http_post(
-      url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'welcome_email_url'),
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'x-email-trigger-secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'email_trigger_secret')
-      ),
-      body := jsonb_build_object(
-        'email', NEW.email,
-        'full_name', NEW.raw_user_meta_data->>'full_name'
-      )
-    );
+    -- This fires inside the same UPDATE ... auth.users transaction GoTrue
+    -- runs on EVERY sign-in (to stamp last_sign_in_at), not just the
+    -- confirmation moment. An unhandled exception here — missing Vault
+    -- secrets, pg_net not enabled, the Edge Function being down — aborts
+    -- that UPDATE and GoTrue surfaces it to every user as a generic
+    -- "Database error updating user", locking everyone out of login. A
+    -- welcome email is a nice-to-have; it must never be able to take down
+    -- auth. Swallow anything that goes wrong and log it instead.
+    BEGIN
+      PERFORM net.http_post(
+        url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'welcome_email_url'),
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'x-email-trigger-secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'email_trigger_secret')
+        ),
+        body := jsonb_build_object(
+          'email', NEW.email,
+          'full_name', NEW.raw_user_meta_data->>'full_name'
+        )
+      );
+    EXCEPTION WHEN OTHERS THEN
+      RAISE WARNING 'handle_email_confirmed: failed to send welcome email for %: %', NEW.email, SQLERRM;
+    END;
   END IF;
   RETURN NEW;
 END;

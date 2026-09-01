@@ -9,14 +9,18 @@
 --   free       Taster           5           5              R0
 --   starter    Gathering        25          15             R179
 --   growth     Big Day          50          25             R399
---   unlimited  The Whole Reel   NULL (∞)    NULL (∞)       R999
+--   unlimited  The Whole Reel   500         50             R999
 --
--- Run this in the Supabase SQL Editor after all prior numbered files.
+-- The "unlimited" key is a historical name — the tier is capped at
+-- 500/50 (same intent as pro-tier-cap-and-retention-limit.sql, which this
+-- file supersedes for the caps). Run this LAST, after every other numbered
+-- file, so its enforce_event_billing_integrity() is the one that sticks.
 
 -- 1. Re-declare the billing-integrity trigger function with the new caps.
---    This is the same body as free-tier-event-limit.sql (including the
---    one-free-event-per-account rule) with only the CASE amounts changed.
---    The existing trigger picks up the new function body automatically.
+--    Same body as free-tier-event-limit.sql / pro-tier-cap-and-retention-
+--    limit.sql (including the one-free-event-per-account rule) with only
+--    the CASE values changed. The existing trigger picks up the new
+--    function body automatically.
 CREATE OR REPLACE FUNCTION enforce_event_billing_integrity()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -40,8 +44,8 @@ BEGIN
       expected_guest_cap := 50;
       expected_photo_cap := 25;
     WHEN 'unlimited' THEN
-      expected_guest_cap := NULL;
-      expected_photo_cap := NULL;
+      expected_guest_cap := 500;
+      expected_photo_cap := 50;
     ELSE
       RAISE EXCEPTION 'invalid tier: %', NEW.tier;
   END CASE;
@@ -80,12 +84,13 @@ $$;
 
 -- 2. Backfill existing events to the new caps (mirrors the straight
 --    UPDATEs in free-tier-event-limit.sql). NOTE: this retroactively
---    lowers the Growth guest cap (100 -> 50) and the Starter/Growth photo
---    caps for events created under the old pricing. That's intended here
---    because the app is pre-launch with no real paying customers; if that
---    changes, scope these to `WHERE created_at > '<cutoff>'` or skip the
---    guest-cap line so sold allowances are honoured.
-UPDATE events SET guest_cap = 5,  photo_cap_per_guest = 5  WHERE tier = 'free';
-UPDATE events SET guest_cap = 25, photo_cap_per_guest = 15 WHERE tier = 'starter';
-UPDATE events SET guest_cap = 50, photo_cap_per_guest = 25 WHERE tier = 'growth';
--- unlimited stays NULL / NULL — nothing to fix there.
+--    lowers the Growth guest cap (100 -> 50), the Starter/Growth photo
+--    caps, and pins any previously-uncapped "unlimited" event to 500/50.
+--    That's intended here because the app is pre-launch with no real
+--    paying customers; if that changes, scope these to
+--    `WHERE created_at > '<cutoff>'` or drop the lines that lower a
+--    sold allowance.
+UPDATE events SET guest_cap = 5,   photo_cap_per_guest = 5  WHERE tier = 'free';
+UPDATE events SET guest_cap = 25,  photo_cap_per_guest = 15 WHERE tier = 'starter';
+UPDATE events SET guest_cap = 50,  photo_cap_per_guest = 25 WHERE tier = 'growth';
+UPDATE events SET guest_cap = 500, photo_cap_per_guest = 50 WHERE tier = 'unlimited';

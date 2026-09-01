@@ -202,7 +202,7 @@ const supabaseAdmin = createClient(
 const TIER_CONFIG = {
   starter: { guestCap: 25, photoCap: 15, amountCents: 17900 }, // R179
   growth: { guestCap: 50, photoCap: 25, amountCents: 39900 }, // R399
-  unlimited: { guestCap: null, photoCap: null, amountCents: 99900 }, // R999
+  unlimited: { guestCap: 500, photoCap: 50, amountCents: 99900 }, // R999
 };
 
 // Paystack signs webhooks with HMAC-SHA512 of the raw request body, using
@@ -351,7 +351,7 @@ no subscriptions:
 - **Taster**: free, up to 5 guests, 5 photos/guest
 - **Gathering**: R179/event, up to 25 guests, 15 photos/guest
 - **Big Day**: R399/event, up to 50 guests, 25 photos/guest
-- **The Whole Reel**: R999/event, no guest or photo cap
+- **The Whole Reel**: R999/event, up to 500 guests, 50 photos/guest
 
 Edit pricing in `src/services/pricingTiers.js` — and keep the
 `TIER_AMOUNTS_CENTS` map in the Edge Function (step 4 above) in sync, since

@@ -2,7 +2,7 @@ import { supabase } from '../supabaseClient';
 import {
   validateImage,
   getImageDimensions,
-  compressImage,
+  normalizeImage,
 } from '../utils/imageValidation';
 import { checkRateLimit } from '../utils/rateLimiter';
 import { logError } from './errorLogger';
@@ -71,15 +71,37 @@ export const uploadImage = async (
       }
     }
 
-    stage = 'compress';
-    const compressedFile = await compressImage(file);
+    stage = 'normalize';
+    let uploadFile;
+    try {
+      uploadFile = await normalizeImage(file);
+    } catch (normalizeError) {
+      // normalizeImage only touches HEIC/HEIF files (see imageValidation.js)
+      // — but that canvas encode can still fail outright, or silently hand
+      // back an empty result under memory pressure, a real observed
+      // failure mode on mobile when several photos process at once. `file`
+      // already passed validateImage() above, so it's known-good; fall
+      // back to uploading it unmodified (as HEIC) rather than losing the
+      // photo to a conversion-only bug. Logged so a spike in this is
+      // visible without needing to reproduce it on a device.
+      logError('uploadImage:normalizeFallback', normalizeError, { eventId, userId });
+      uploadFile = file;
+    }
 
-    const { width, height } = await getImageDimensions(compressedFile);
+    if (!uploadFile || uploadFile.size === 0) {
+      // Belt-and-braces: should be unreachable (validateImage already
+      // rejects an empty `file`, and the fallback above only ever uses
+      // `file`), but never let a zero-byte body reach Supabase Storage —
+      // its "No content provided" response is meaningless to a guest.
+      throw new Error("This photo couldn't be processed. Please retake it and try again.");
+    }
+
+    const { width, height } = await getImageDimensions(uploadFile);
 
     // The original filename comes straight from the client and can contain
     // anything (slashes, unicode, control characters) — never build a
     // storage path out of it unsanitized.
-    const safeName = compressedFile.name
+    const safeName = uploadFile.name
       .replace(/[^a-zA-Z0-9._-]/g, '_')
       .slice(-100) || 'photo.jpg';
     const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${safeName}`;
@@ -88,7 +110,7 @@ export const uploadImage = async (
     stage = 'storage_upload';
     const { data, error: uploadError } = await supabase.storage
       .from('event-photos')
-      .upload(storagePath, compressedFile, {
+      .upload(storagePath, uploadFile, {
         cacheControl: '3600',
         upsert: false,
       });
@@ -100,9 +122,9 @@ export const uploadImage = async (
       event_id: eventId,
       uploaded_by: userId,
       storage_path: storagePath,
-      file_name: compressedFile.name,
-      file_size: compressedFile.size,
-      mime_type: compressedFile.type,
+      file_name: uploadFile.name,
+      file_size: uploadFile.size,
+      mime_type: uploadFile.type,
       width,
       height,
       uploader_name: uploaderName,

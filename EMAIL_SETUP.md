@@ -13,7 +13,10 @@ confirmation, password reset — not arbitrary app emails):
    event actually ended). A daily cron job zips the event's photos, uploads
    the zip to a private bucket, emails the organizer a signed download link
    valid for 7 days, then deletes the photos (storage + DB rows) to free up
-   storage. The event record itself is kept.
+   storage. The event record itself is kept. The zip archive is then
+   permanently deleted 90 days later (see
+   `pro-tier-cap-and-retention-limit.sql`), so storage doesn't grow
+   forever with all-time event volume.
 4. **Welcome** — sent the moment a new user's email gets confirmed, via a
    DB trigger (not client code, so it fires regardless of which client
    completed the confirmation).
@@ -83,6 +86,21 @@ Then run `welcome-email-trigger-migration.sql`, in order after
 `send-welcome-email` function URL, and the same random secret you set as
 `EMAIL_TRIGGER_SECRET` in step 3) before the `CREATE TRIGGER` at the
 bottom.
+
+The trigger fires in the same transaction Supabase Auth uses to actually
+confirm a user's email — and, on every later sign-in, to stamp
+`last_sign_in_at` — so its welcome-email HTTP call is wrapped in its own
+exception handler on purpose: an unguarded failure there (a missing Vault
+secret is the easy way to hit this) would otherwise silently roll back
+that confirmation, or block sign-in entirely, even though the page looks
+successful. If an earlier version of this file was applied on a live
+project without that handling, anyone who tried to confirm in that window
+may be stuck unconfirmed — either have them use "Resend confirmation" on
+the login page now that the trigger is fixed, or confirm them directly:
+```sql
+UPDATE auth.users SET email_confirmed_at = NOW()
+WHERE email = 'their-email@example.com' AND email_confirmed_at IS NULL;
+```
 
 ## 5. Testing
 

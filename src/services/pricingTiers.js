@@ -32,10 +32,17 @@ export const TIERS = {
     display: 'R399',
   },
   unlimited: {
+    // Internal key stays "unlimited" (it's stored on events.tier and
+    // referenced by every CASE statement in the billing triggers —
+    // renaming it would need a data migration). The tier itself is not
+    // actually uncapped: a single very large event could cost far more in
+    // ongoing storage than its one-time fee recovers, so it's bounded at
+    // 500 guests / 50 photos each — generous enough for virtually every
+    // real event.
     key: 'unlimited',
     name: 'The Whole Reel',
-    guestCap: null,
-    photosPerGuest: null,
+    guestCap: 500,
+    photosPerGuest: 50,
     amountCents: 99900, // R999
     display: 'R999',
   },

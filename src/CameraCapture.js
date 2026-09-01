@@ -6,6 +6,7 @@ import {
   FaCog,
   FaSyncAlt,
   FaCamera,
+  FaCameraRetro,
   FaImages,
   FaPhotoVideo,
   FaChevronLeft,
@@ -15,6 +16,11 @@ import {
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
 import { uploadImage } from './services/uploadService';
+import {
+  savePendingUpload,
+  deletePendingUpload,
+  getPendingUploadsForEvent,
+} from './services/pendingUploadStore';
 import { joinEventAsGuest, setGuestDisplayName } from './services/eventAccessService';
 import { applyVideoFilters, applyCanvasFilters, FILTER_ORDER } from './components/CameraFilters';
 import { TimerCountdownOverlay } from './components/CameraTimer';
@@ -25,6 +31,9 @@ import './CameraCapture.css';
 
 const FILTER_LABELS = { normal: 'Normal', bw: 'B&W', sepia: 'Sepia' };
 const GUEST_NAME_STORAGE_KEY = 'capture_guest_name';
+// Generous enough for a large photo over a genuinely slow-but-working
+// connection; a fully stalled request otherwise never rejects on its own.
+const UPLOAD_TIMEOUT_MS = 60000;
 
 function CameraCapture() {
   const [searchParams] = useSearchParams();
@@ -35,6 +44,7 @@ function CameraCapture() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const nativeCameraInputRef = useRef(null);
 
   const [facingMode, setFacingMode] = useState('user');
   const [eventName, setEventName] = useState('');
@@ -253,12 +263,25 @@ function CameraCapture() {
       );
 
       try {
-        const result = await uploadImage(item.file, eventId, user.id, null, displayName);
+        // A dropped/stalled connection doesn't necessarily reject — it can
+        // just hang, since fetch has no built-in timeout. Without this, a
+        // stalled upload would sit on "uploading" forever: not 'failed', so
+        // the auto-retry effect above would never pick it up either.
+        const result = await Promise.race([
+          uploadImage(item.file, eventId, user.id, null, displayName),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Upload timed out — check your connection')),
+              UPLOAD_TIMEOUT_MS
+            )
+          ),
+        ]);
 
         if (result.success) {
           setPendingUploads((prev) => prev.filter((p) => p.id !== item.id));
           setMyUploadCount((prev) => prev + 1);
           refreshGuestCount();
+          deletePendingUpload(item.id);
         } else {
           toast.error(`Upload failed: ${result.error}`);
           setPendingUploads((prev) =>
@@ -284,6 +307,77 @@ function CameraCapture() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joining, user]);
 
+  // Resumes anything that never finished uploading last time this event's
+  // camera was open on this device — the tab got closed, crashed, or lost
+  // network mid-upload. Runs once join settles (same gating as the flush
+  // effect above), independently of it, since these items don't exist in
+  // React state yet when that effect runs.
+  useEffect(() => {
+    if (!eventId || joining || !user) return;
+    let cancelled = false;
+
+    getPendingUploadsForEvent(eventId).then((stored) => {
+      if (cancelled || stored.length === 0) return;
+
+      const recovered = stored.map((s) => ({
+        id: s.id,
+        previewUrl: URL.createObjectURL(s.file),
+        file: s.file,
+        status: 'pending',
+      }));
+
+      setPendingUploads((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        return [...prev, ...recovered.filter((r) => !existingIds.has(r.id))];
+      });
+      toast.info(
+        `Resuming ${recovered.length} photo${recovered.length > 1 ? 's' : ''} that didn't finish uploading last time…`
+      );
+      recovered.forEach((item) => uploadItem(item));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, joining, user]);
+
+  // Retries anything still marked failed whenever the tab comes back to
+  // the foreground or the network comes back — covers backgrounding the
+  // app, switching to the native camera and back, walking through a dead
+  // spot, etc., without the guest having to notice and tap Retry manually.
+  useEffect(() => {
+    const failedItems = pendingUploads.filter((p) => p.status === 'failed');
+    if (failedItems.length === 0) return;
+
+    const retryAll = () => failedItems.forEach((item) => uploadItem(item));
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') retryAll();
+    };
+
+    window.addEventListener('online', retryAll);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('online', retryAll);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [pendingUploads, uploadItem]);
+
+  // Chrome/Firefox show a native "leave site?" confirmation on this;
+  // Safari on iOS ignores it, and no browser fires it for backgrounding
+  // (switching apps, locking the screen) — only an actual tab close/reload.
+  // Best-effort, not a guarantee, which is exactly why the recovery effect
+  // above exists as the real safety net.
+  useEffect(() => {
+    if (pendingUploads.length === 0) return;
+    const handler = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [pendingUploads.length]);
+
   const captureImage = async () => {
     if (photoCap != null && myUploadCount >= photoCap) {
       toast.error(`You've used all ${photoCap} of your photos for this event.`);
@@ -305,10 +399,10 @@ function CameraCapture() {
     let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     applyCanvasFilters(canvas, ctx, imageData, brightness, contrast, filter);
 
-    // JPEG, not PNG: at up to 4K, a lossless PNG of a busy scene can easily
-    // clear the 10MB upload cap before compression ever gets a chance to
-    // shrink it, so captures would fail validation outright.
-    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    // JPEG, not PNG: a lossless PNG of a busy 4K scene would be enormous
+    // for no visible benefit over JPEG at quality 1 (max — no re-encoding
+    // loss beyond what canvas's JPEG encoder inherently applies).
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 1);
     const blob = await fetch(imageDataUrl).then((res) => res.blob());
     const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
     const item = {
@@ -323,6 +417,7 @@ function CameraCapture() {
       setCurrentIndex(next.length - 1);
       return next;
     });
+    savePendingUpload({ id: item.id, eventId, file, createdAt: Date.now() });
     uploadItem(item);
   };
 
@@ -385,14 +480,32 @@ function CameraCapture() {
 
     setPendingUploads((prev) => [...prev, ...newItems]);
     setShowGallery(true);
-    newItems.forEach((item) => uploadItem(item));
     e.target.value = '';
+
+    // One at a time, not all at once: normalizeImage's canvas re-encode
+    // (imageValidation.js — HEIC/HEIF only, but a multi-select batch can
+    // easily be several of those at once) is what pushes mobile browsers
+    // into the memory pressure that makes canvas.toBlob() silently hand
+    // back an empty result — previously surfaced as a confusing "No
+    // content provided" error from Supabase Storage for every photo in
+    // the batch. savePendingUpload runs first for each item regardless of
+    // upload order, so a closed/crashed tab can still recover all of them.
+    (async () => {
+      for (const item of newItems) {
+        savePendingUpload({ id: item.id, eventId, file: item.file, createdAt: Date.now() });
+        await uploadItem(item);
+      }
+    })();
   };
 
   const retryItem = (item) => uploadItem(item);
 
   const discardItem = (index) => {
-    setPendingUploads((prev) => prev.filter((_, i) => i !== index));
+    setPendingUploads((prev) => {
+      const discarded = prev[index];
+      if (discarded) deletePendingUpload(discarded.id);
+      return prev.filter((_, i) => i !== index);
+    });
     if (currentIndex >= pendingUploads.length - 1) {
       setCurrentIndex(Math.max(0, currentIndex - 1));
     }
@@ -470,6 +583,24 @@ function CameraCapture() {
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic"
         multiple
+        style={{ display: 'none' }}
+        onChange={handleFileSelect}
+      />
+
+      {/*
+        A plain file input with `capture` hands off to the phone's actual
+        native camera app instead of this page's WebRTC viewfinder — no
+        browser video/canvas re-encoding in the path, so it's the highest
+        quality a guest's phone can produce. Trade-off: no live filter
+        preview, grid, or timer, since that's a modal OS handoff rather
+        than something we can draw over. Points at whichever camera is
+        currently selected so it stays in sync with the flip button.
+      */}
+      <input
+        ref={nativeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture={facingMode === 'user' ? 'user' : 'environment'}
         style={{ display: 'none' }}
         onChange={handleFileSelect}
       />
@@ -562,6 +693,15 @@ function CameraCapture() {
       )}
 
       <div className="shutter-row">
+        <button
+          className="native-camera-button"
+          onClick={() => nativeCameraInputRef.current?.click()}
+          title={outOfShots ? "You've used all your shots for this event" : "Use your phone's native camera (highest quality, no filters)"}
+          disabled={outOfShots}
+        >
+          <FaCameraRetro />
+        </button>
+
         <button className="filter-pill" onClick={cycleFilter} title="Cycle filter">
           {FILTER_LABELS[filter]}
         </button>

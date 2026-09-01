@@ -126,7 +126,7 @@
   background-position: 0 0;
 }
 
-/* Shutter row: filter pill (left) — shutter (center) — flip (right) */
+/* Shutter row: native camera (left) — filter pill — shutter (center) — flip (right) */
 .shutter-row {
   position: absolute;
   bottom: 108px;
@@ -135,7 +135,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 36px;
+  gap: 24px;
   z-index: 20;
 }
 
@@ -204,6 +204,33 @@
 
 .flip-button:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+.native-camera-button {
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.native-camera-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.native-camera-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Bottom info bar: camera roll / review pill (left) — gallery pill (right) */
