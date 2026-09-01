@@ -108,7 +108,13 @@ function LandingPage() {
       />
 
       <header className={styles.landingNav}>
-        <span className={styles.landingNavBrand}>Valere</span>
+        <img
+          className={styles.landingNavBrand}
+          src="/valere_logo.png"
+          alt="valere"
+          width="85"
+          height="28"
+        />
         <nav className={styles.landingNavLinks}>
           <a href="#how-it-works">How it works</a>
           <a href="#pricing">Pricing</a>

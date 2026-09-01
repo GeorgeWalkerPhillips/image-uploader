@@ -22,14 +22,15 @@
 
 .brand {
   display: inline-block;
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 32px;
-  font-style: italic;
-  font-weight: 600;
-  color: #111;
   text-decoration: none;
-  letter-spacing: 0.02em;
   margin-bottom: 8px;
+}
+
+.brand img {
+  display: block;
+  height: 34px;
+  width: auto;
+  margin: 0 auto;
 }
 
 .subtitle {

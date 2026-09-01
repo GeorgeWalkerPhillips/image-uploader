@@ -139,7 +139,7 @@ function Login() {
       <div className={styles.loginContainer}>
         <div className={styles.loginCard}>
           <Link to="/" className={styles.brand}>
-            Valere
+            <img src="/valere_logo.png" alt="valere" />
           </Link>
           <p className={styles.subtitle}>Enter your email and we'll send you a reset link</p>
 
@@ -171,7 +171,7 @@ function Login() {
     <div className={styles.loginContainer}>
       <div className={styles.loginCard}>
         <Link to="/" className={styles.brand}>
-          Valere
+          <img src="/valere_logo.png" alt="valere" />
         </Link>
         <p className={styles.subtitle}>
           {view === 'signup' ? 'Create an account to host events' : 'Sign in to manage your events'}

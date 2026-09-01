@@ -12,7 +12,7 @@ function Terms() {
     <div className={styles.legalContainer}>
       <div className={styles.legalCard}>
         <Link to="/" className={styles.brand}>
-          Valere
+          <img src="/valere_logo.png" alt="valere" />
         </Link>
         <h1>Terms and Conditions</h1>
         <p className={styles.updatedAt}>Last updated: {new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}</p>

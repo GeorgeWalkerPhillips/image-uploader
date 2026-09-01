@@ -27,18 +27,20 @@
 
 .headerBrand {
   display: block;
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 18px;
-  font-style: italic;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #999;
   text-decoration: none;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
-.headerBrand:hover {
-  color: #111;
+.headerBrandLogo {
+  display: block;
+  height: 20px;
+  width: auto;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.headerBrand:hover .headerBrandLogo {
+  opacity: 1;
 }
 
 .adminHeader h1 {

@@ -19,14 +19,14 @@
 
 .brand {
   display: inline-block;
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 28px;
-  font-style: italic;
-  font-weight: 600;
-  color: #111;
   text-decoration: none;
-  letter-spacing: 0.02em;
   margin-bottom: 24px;
+}
+
+.brand img {
+  display: block;
+  height: 30px;
+  width: auto;
 }
 
 .legalCard h1 {

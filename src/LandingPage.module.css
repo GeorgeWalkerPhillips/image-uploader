@@ -34,12 +34,10 @@
 }
 
 .landingNavBrand {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 26px;
-  font-style: italic;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+  display: block;
+  height: 28px;
+  width: auto;
+  flex-shrink: 0;
 }
 
 .landingNavLinks {

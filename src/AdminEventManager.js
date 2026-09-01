@@ -373,7 +373,9 @@ function AdminEventManager() {
 
       <div className={styles.adminHeader}>
         <div>
-          <Link to="/" className={styles.headerBrand}>Valere</Link>
+          <Link to="/" className={styles.headerBrand}>
+            <img src="/valere_logo.png" alt="valere" className={styles.headerBrandLogo} />
+          </Link>
           <h1>Your Events</h1>
         </div>
         <UserBadge />
