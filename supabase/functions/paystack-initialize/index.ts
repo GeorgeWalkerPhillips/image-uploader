@@ -13,9 +13,9 @@ import { corsHeadersFor } from "../_shared/cors.ts";
 // Mirror of src/services/pricingTiers.js — keep these two in sync.
 // Paystack amounts are in the smallest currency unit (cents for ZAR).
 const TIER_AMOUNTS_CENTS: Record<string, number> = {
-  starter: 9900, // R99
-  growth: 34900, // R349
-  unlimited: 89900, // R899
+  starter: 17900, // R179
+  growth: 39900, // R399
+  unlimited: 99900, // R999
 };
 
 Deno.serve(async (req) => {

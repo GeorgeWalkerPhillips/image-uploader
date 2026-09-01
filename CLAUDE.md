@@ -63,8 +63,10 @@ check can be bypassed via DevTools:
 - `src/services/pricingTiers.js` — pure pricing data (free/starter/growth/
   unlimited), imported by UI and mirrored (amounts, guest/photo caps) in
   two other places that must be kept in sync: the `paystack-initialize`
-  and `paystack-webhook` Supabase Edge Functions, and
-  `security-hardening.sql`'s billing-integrity trigger.
+  and `paystack-webhook` Supabase Edge Functions (both now also amount-
+  verify the charge against the tier price), and the billing-integrity
+  trigger `enforce_event_billing_integrity()` — last redefined in
+  `pricing-rework-2026-09.sql` (originally `security-hardening.sql`).
 
 **Payments (Paystack, hosted-checkout flow, not the Inline/client SDK
 flow)**: no public key or Paystack JS ever loads client-side. An Edge

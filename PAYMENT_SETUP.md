@@ -93,9 +93,9 @@ const corsHeaders = {
 // should. Paystack amounts are in the smallest currency unit (cents for
 // ZAR), same as Stripe.
 const TIER_AMOUNTS_CENTS = {
-  starter: 9900, // R99
-  growth: 34900, // R349
-  unlimited: 89900, // R899
+  starter: 17900, // R179
+  growth: 39900, // R399
+  unlimited: 99900, // R999
 };
 
 Deno.serve(async (req) => {
@@ -196,12 +196,13 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 );
 
-// Mirror of src/services/pricingTiers.js and security-hardening.sql's
-// enforce_event_billing_integrity() — keep all three in sync.
+// Mirror of src/services/pricingTiers.js, paystack-initialize's
+// TIER_AMOUNTS_CENTS, and enforce_event_billing_integrity() (see
+// pricing-rework-2026-09.sql) — keep all four in sync.
 const TIER_CONFIG = {
-  starter: { guestCap: 25, photoCap: 25 },
-  growth: { guestCap: 100, photoCap: 40 },
-  unlimited: { guestCap: null, photoCap: null },
+  starter: { guestCap: 25, photoCap: 15, amountCents: 17900 }, // R179
+  growth: { guestCap: 50, photoCap: 25, amountCents: 39900 }, // R399
+  unlimited: { guestCap: null, photoCap: null, amountCents: 99900 }, // R999
 };
 
 // Paystack signs webhooks with HMAC-SHA512 of the raw request body, using
@@ -243,6 +244,14 @@ Deno.serve(async (req) => {
     if (!eventId || !tierConfig) {
       console.error("Missing/unknown eventId or tier in transaction metadata:", data.metadata);
       return new Response("Invalid metadata", { status: 400 });
+    }
+
+    // The charged amount must match the tier price exactly, or don't
+    // unlock the event (stale checkout from before a price change, or a
+    // tampered transaction). 200 so Paystack stops retrying.
+    if (data.amount !== tierConfig.amountCents) {
+      console.error(`Amount mismatch for ${eventId} (${tier}): got ${data.amount}, expected ${tierConfig.amountCents}`);
+      return new Response("Amount mismatch", { status: 200 });
     }
 
     const { error: updateError } = await supabaseAdmin
@@ -306,7 +315,7 @@ Deno.serve(async (req) => {
 ### Test in Development:
 
 1. User creates event
-2. Selects a paid plan (Starter, Growth, or Unlimited)
+2. Selects a paid plan (Gathering, Big Day, or The Whole Reel)
 3. Redirected to Paystack's hosted test checkout page
 4. Use a [Paystack test card](https://paystack.com/docs/payments/test-payments/)
 5. On return, the app polls the event for a few seconds waiting for the
@@ -336,14 +345,13 @@ When ready for real payments:
 
 ## Pricing
 
-Priced by guest count, matching how competitors like POV Camera price
-(free under 10 guests, then flat one-time fees that scale with guest
-count — no subscriptions):
+Priced by guest count — flat one-time fees that scale with guest count,
+no subscriptions:
 
-- **Free**: up to 10 guests
-- **Starter**: R99/event, up to 25 guests
-- **Growth**: R349/event, up to 100 guests
-- **Unlimited**: R899/event, no guest cap
+- **Taster**: free, up to 5 guests, 5 photos/guest
+- **Gathering**: R179/event, up to 25 guests, 15 photos/guest
+- **Big Day**: R399/event, up to 50 guests, 25 photos/guest
+- **The Whole Reel**: R999/event, no guest or photo cap
 
 Edit pricing in `src/services/pricingTiers.js` — and keep the
 `TIER_AMOUNTS_CENTS` map in the Edge Function (step 4 above) in sync, since

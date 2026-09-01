@@ -1,41 +1,43 @@
 // Pure pricing data — safe to import anywhere (landing page, pricing modal,
 // admin dashboard) without pulling in Paystack or any other side effects.
 //
-// Guest-count-based tiers, priced to be directly competitive with POV
-// Camera (free under 10 guests; $4.99 / $19.99 / $49.99 paid tiers by
-// guest count, one-time per event, no subscription).
+// Guest-count-based tiers, one-time per event, no subscription. The object
+// keys (free/starter/growth/unlimited) are stable identifiers stored on
+// events.tier and referenced by the Edge Functions and DB triggers — only
+// the display `name`/`display` and the caps/amount change when pricing is
+// reworked, never the keys.
 export const TIERS = {
   free: {
     key: 'free',
-    name: 'Free',
-    guestCap: 10,
-    photosPerGuest: 15,
+    name: 'Taster',
+    guestCap: 5,
+    photosPerGuest: 5,
     amountCents: 0,
     display: 'Free',
   },
   starter: {
     key: 'starter',
-    name: 'Starter',
+    name: 'Gathering',
     guestCap: 25,
-    photosPerGuest: 25,
-    amountCents: 9900, // R99
-    display: 'R99',
+    photosPerGuest: 15,
+    amountCents: 17900, // R179
+    display: 'R179',
   },
   growth: {
     key: 'growth',
-    name: 'Growth',
-    guestCap: 100,
-    photosPerGuest: 40,
-    amountCents: 34900, // R349
-    display: 'R349',
+    name: 'Big Day',
+    guestCap: 50,
+    photosPerGuest: 25,
+    amountCents: 39900, // R399
+    display: 'R399',
   },
   unlimited: {
     key: 'unlimited',
-    name: 'Unlimited',
+    name: 'The Whole Reel',
     guestCap: null,
     photosPerGuest: null,
-    amountCents: 89900, // R899
-    display: 'R899',
+    amountCents: 99900, // R999
+    display: 'R999',
   },
 };
 

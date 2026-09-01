@@ -25,12 +25,16 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-// Mirror of src/services/pricingTiers.js and the enforce_event_billing_
-// integrity() trigger — keep all three in sync.
-const TIER_CONFIG: Record<string, { guestCap: number | null; photoCap: number | null }> = {
-  starter: { guestCap: 25, photoCap: 25 },
-  growth: { guestCap: 100, photoCap: 40 },
-  unlimited: { guestCap: null, photoCap: null },
+// Mirror of src/services/pricingTiers.js, paystack-initialize's
+// TIER_AMOUNTS_CENTS, and the enforce_event_billing_integrity() trigger —
+// keep all four in sync. amountCents is in the smallest ZAR unit (cents).
+const TIER_CONFIG: Record<
+  string,
+  { guestCap: number | null; photoCap: number | null; amountCents: number }
+> = {
+  starter: { guestCap: 25, photoCap: 15, amountCents: 17900 }, // R179
+  growth: { guestCap: 50, photoCap: 25, amountCents: 39900 }, // R399
+  unlimited: { guestCap: null, photoCap: null, amountCents: 99900 }, // R999
 };
 
 // Paystack signs webhooks with HMAC-SHA512 of the raw request body using
@@ -71,6 +75,19 @@ Deno.serve(async (req) => {
     if (!eventId || !tierConfig) {
       console.error("Missing/unknown eventId or tier in transaction metadata:", data.metadata);
       return new Response("Invalid metadata", { status: 400 });
+    }
+
+    // The charged amount must match this tier's price exactly. paystack-
+    // initialize is the only thing that sets the amount (server-side, from
+    // the same table), so a mismatch means a stale checkout from before a
+    // price change, or a tampered transaction — either way, don't unlock
+    // the event. Return 200 so Paystack stops retrying a delivery that
+    // will never succeed.
+    if (data.amount !== tierConfig.amountCents) {
+      console.error(
+        `Amount mismatch for event ${eventId} (${tier}): charged ${data.amount}, expected ${tierConfig.amountCents}`
+      );
+      return new Response("Amount mismatch", { status: 200 });
     }
 
     const { error: updateError } = await supabaseAdmin

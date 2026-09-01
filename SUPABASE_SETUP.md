@@ -68,6 +68,12 @@ file):
     photo-upload triggers, and extends `get_public_event_info()` (from
     `fix-events-rls-leak.sql`) to expose `is_paid`/`payment_status` so the
     app can show a friendly message instead of a raw DB error.
+14. `pricing-rework-2026-09.sql` — Sept 2026 pricing rework. Re-declares
+    `enforce_event_billing_integrity()` (from file 8 /
+    `free-tier-event-limit.sql`) with the current guest/photo caps
+    (Taster 5/5, Gathering 25/15, Big Day 50/25, The Whole Reel ∞/∞) and
+    backfills existing events. Must stay in sync with
+    `src/services/pricingTiers.js` and the two Paystack Edge Functions.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
