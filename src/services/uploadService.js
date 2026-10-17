@@ -7,6 +7,43 @@ import {
 import { checkRateLimit } from '../utils/rateLimiter';
 import { logError } from './errorLogger';
 
+// Mobile networks (and the proxy in front of Storage) occasionally drop an
+// upload with a 5xx — seen in production as a one-off "HTTP 520" that
+// succeeded seconds later when the guest retried by hand. Retrying here
+// saves the guest a failed photo. Only transient failures are retried:
+// 4xx responses (RLS/payment/cap rejections, bad file) fail immediately.
+const RETRY_DELAYS_MS = [800, 2000];
+
+const isTransientStorageError = (error) => {
+  const status = Number(error?.status ?? error?.statusCode ?? error?.originalError?.status);
+  if (Number.isFinite(status) && status >= 500) return true;
+  // No usable status = the request never completed (Safari: "Load failed",
+  // Chrome: "Failed to fetch"), or a non-JSON 5xx body surfaced as "HTTP 5xx".
+  return /failed to fetch|load failed|network|timed? ?out|HTTP 5\d\d/i.test(error?.message || '');
+};
+
+const isAlreadyExistsError = (error) =>
+  String(error?.statusCode ?? error?.status) === '409' ||
+  /already exists|duplicate/i.test(error?.message || '');
+
+// `upload` is the single storage call. Because the storage path is unique
+// per attempt-set (timestamp + random), a 409 on a retry means an earlier
+// attempt actually landed and only its response was lost — that's success.
+export const uploadWithRetry = async (upload, delays = RETRY_DELAYS_MS) => {
+  let result = await upload();
+
+  for (let attempt = 0; result.error && attempt < delays.length; attempt++) {
+    if (!isTransientStorageError(result.error)) break;
+    await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    result = await upload();
+    if (result.error && isAlreadyExistsError(result.error)) {
+      return { data: result.data, error: null };
+    }
+  }
+
+  return result;
+};
+
 export const uploadImage = async (
   file,
   eventId,
@@ -108,12 +145,12 @@ export const uploadImage = async (
     const storagePath = `${eventId}/${fileName}`;
 
     stage = 'storage_upload';
-    const { data, error: uploadError } = await supabase.storage
-      .from('event-photos')
-      .upload(storagePath, uploadFile, {
+    const { data, error: uploadError } = await uploadWithRetry(() =>
+      supabase.storage.from('event-photos').upload(storagePath, uploadFile, {
         cacheControl: '3600',
         upsert: false,
-      });
+      })
+    );
 
     if (uploadError) throw uploadError;
 
