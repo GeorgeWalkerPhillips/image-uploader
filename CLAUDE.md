@@ -124,3 +124,18 @@ Copy `.env.example` to `.env.local` (never commit `.env.local`):
 `REACT_APP_MAX_FILE_SIZE`, `REACT_APP_ALLOWED_MIME_TYPES`,
 `REACT_APP_RATE_LIMIT_UPLOADS_PER_MINUTE`. Paystack's secret key is never
 an app env var — it lives only in Supabase Edge Function secrets.
+
+## Agents (`.claude/agents/`)
+
+Project subagents, used in this order for non-trivial changes:
+
+| Stage | Agent | Does |
+|---|---|---|
+| Build | `dev-frontend` | React/CRA code in `src/` (UI, services, CSS), with tests |
+| Build | `dev-backend` | Edge Functions + root `.sql` migrations; never applies SQL or deploys |
+| Review | `reviewer-code` | Read-only correctness/conventions review of the diff |
+| Review | `reviewer-security` | Read-only RLS / payment / secrets review (required for payments, auth, RLS, storage, Edge Functions) |
+| Test | `tester-regression` | `npm test`, `npm run build`, Edge Function logic tests, pricing-sync check; writes a report |
+| Test | `tester-ui` | Headless Chromium on an iPhone profile; screenshots + console/network logs + `report.md` as proof |
+
+Rules for all agents: RLS and DB triggers are the enforcement layer; never deploy, apply SQL, push to `main` or open PRs without the user's explicit say-so; tests are never skipped or weakened to get green. Tester evidence goes in `test-evidence/` (git-ignored); testers never trigger real Paystack payments or touch production data. The generic engineering skills they lean on are in `.claude/skills/` (installed from `addyosmani/agent-skills`, pinned in `skills-lock.json`).
