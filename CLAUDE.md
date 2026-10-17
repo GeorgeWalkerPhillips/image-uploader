@@ -72,10 +72,14 @@ check can be bypassed via DevTools:
 flow)**: no public key or Paystack JS ever loads client-side. An Edge
 Function (`paystack-initialize`) recomputes the charge amount server-side
 from the tier key and returns a hosted checkout URL; the browser redirects
-there and back. Only the `paystack-webhook` Edge Function (HMAC-SHA512
-verified, using the service role key) is allowed to mark an event paid —
-enforced by a DB trigger (`security-hardening.sql`), not app logic, so it
-can't be bypassed by calling the REST API directly. Edge Function source
+there and back. Only the service role can mark an event paid — enforced by
+a DB trigger (`security-hardening.sql`), not app logic, so it can't be
+bypassed by calling the REST API directly. Two Edge Functions do it, both
+through `supabase/functions/_shared/paystackPayment.ts` (which also holds
+the server-side `TIER_CONFIG`): `paystack-webhook` (HMAC-SHA512 verified)
+and `paystack-verify`, a fallback the admin page calls on return from
+Paystack, which re-fetches the charge from Paystack and checks the caller
+owns the event. Edge Function source
 lives under `supabase/functions/` (deployed via `supabase functions deploy`,
 per the deploy comment at the top of each `index.ts`); `PAYMENT_SETUP.md`
 walks through the full flow and dashboard/secrets setup.

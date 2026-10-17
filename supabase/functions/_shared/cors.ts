@@ -5,7 +5,7 @@
 // single hardcoded value breaks the moment a site is reachable at more
 // than one hostname (apex vs. www, custom domain vs. the old vercel.app
 // one, etc.).
-const configuredOrigins = (Deno.env.get("ALLOWED_ORIGIN") || "https://capture-by-val.vercel.app")
+const configuredOrigins = (Deno.env.get("ALLOWED_ORIGIN") || "https://valere.co.za")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);

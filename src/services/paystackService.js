@@ -25,9 +25,34 @@ export const initializePaystackTransaction = async (eventId, eventName, userId, 
   }
 };
 
+// Fallback for a missed/unresolvable webhook: asks the paystack-verify Edge
+// Function to re-check the charge with Paystack and mark the event paid. The
+// function authenticates the caller, confirms they own the event and
+// re-verifies the amount server-side — the client only supplies identifiers.
+// Resolves to { status: 'paid' | 'already_paid', tier }; rejects otherwise.
+export const verifyPaystackPayment = async ({ eventId, reference }) => {
+  const { data, error } = await supabase.functions.invoke('paystack-verify', {
+    body: { eventId, reference },
+  });
+
+  if (error) {
+    // supabase-js wraps non-2xx in FunctionsHttpError; the real message is
+    // in the response body.
+    let message = error.message;
+    try {
+      const body = await error.context?.json();
+      if (body?.error) message = body.error;
+    } catch (_) {
+      // body wasn't JSON — keep the generic message
+    }
+    throw new Error(message);
+  }
+  return data;
+};
+
 // Deliberately no client-side "record payment" or "mark event paid" here —
-// only the Paystack webhook (server-side, signature verified, using the
-// service role) is allowed to write payment records or mark an event paid.
+// only the Paystack webhook and paystack-verify (server-side, using the
+// service role) are allowed to write payment records or mark an event paid.
 // A DB trigger rejects any other attempt. See security-hardening.sql and
 // the paystack-webhook Edge Function in PAYMENT_SETUP.md.
 

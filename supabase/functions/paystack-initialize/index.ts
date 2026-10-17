@@ -12,14 +12,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeadersFor } from "../_shared/cors.ts";
-
-// Mirror of src/services/pricingTiers.js — keep these two in sync.
-// Paystack amounts are in the smallest currency unit (cents for ZAR).
-const TIER_AMOUNTS_CENTS: Record<string, number> = {
-  starter: 17900, // R179
-  growth: 39900, // R399
-  unlimited: 99900, // R999 ("The Whole Reel" in the UI — key stays `unlimited`)
-};
+import { TIER_CONFIG, buildReference } from "../_shared/paystackPayment.ts";
 
 Deno.serve(async (req) => {
   const corsHeaders = corsHeadersFor(req);
@@ -62,7 +55,8 @@ Deno.serve(async (req) => {
     const userId = user.id;
     const email = user.email;
 
-    const amount = TIER_AMOUNTS_CENTS[tier];
+    // Paystack amounts are in the smallest currency unit (cents for ZAR).
+    const amount = TIER_CONFIG[tier]?.amountCents;
     if (!amount) {
       throw new Error(`Unknown or free tier: ${tier}`);
     }
@@ -108,6 +102,10 @@ Deno.serve(async (req) => {
         email,
         amount,
         currency: "ZAR",
+        // Our own reference embeds the event id, so a transaction can still
+        // be tied to its event if Paystack ever drops the metadata block.
+        reference: buildReference(eventId),
+        // Paystack appends ?reference=...&trxref=... to this on return.
         callback_url: `${req.headers.get("origin")}/admin?payment=success&event=${eventId}`,
         metadata: {
           eventId,

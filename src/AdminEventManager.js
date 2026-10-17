@@ -17,7 +17,7 @@ import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { PricingModal } from './components/PricingModal';
 import { UserBadge } from './components/UserBadge';
 import { TIERS, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
-import { initializePaystackTransaction } from './services/paystackService';
+import { initializePaystackTransaction, verifyPaystackPayment } from './services/paystackService';
 import { sendEventCreatedEmail } from './services/emailService';
 import { logError } from './services/errorLogger';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -40,6 +40,7 @@ function AdminEventManager() {
   const [newName, setNewName] = useState('');
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   const fetchEvents = React.useCallback(async () => {
     if (!user) return;
@@ -70,31 +71,52 @@ function AdminEventManager() {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Paystack redirects back here with ?payment=success&event=<id> once the
-  // hosted checkout page completes. The Paystack webhook (server-side,
-  // verified signature) is the only thing that can actually mark an event
-  // paid — a DB trigger rejects any client attempt to set is_paid directly.
-  // So on return, we just poll briefly for the webhook to have landed
-  // rather than writing the status ourselves.
-  const pollForPaymentConfirmation = React.useCallback(async (eventId, attempt = 0) => {
-    const { data } = await supabase
-      .from('events')
-      .select('is_paid')
-      .eq('id', eventId)
-      .single();
+  // Paystack redirects back here with ?payment=success&event=<id>&reference=
+  // <ref> (it appends reference/trxref itself) once the hosted checkout page
+  // completes. Normally the Paystack webhook has already marked the event
+  // paid by now. If it hasn't (webhook delayed, misconfigured, or unable to
+  // tell which event the charge was for), paystack-verify re-checks the
+  // charge with Paystack server-side and applies the same update. The client
+  // never writes the paid status itself — a DB trigger rejects that.
+  const confirmPayment = React.useCallback(async (eventId, reference) => {
+    setConfirmingPayment(true);
+    try {
+      const { data } = await supabase
+        .from('events')
+        .select('is_paid')
+        .eq('id', eventId)
+        .single();
 
-    if (data?.is_paid) {
+      if (!data?.is_paid) {
+        try {
+          await verifyPaystackPayment({ eventId, reference });
+        } catch (verifyError) {
+          console.error('Payment verification failed:', verifyError);
+          // The webhook may still be about to land — give it a few seconds
+          // before telling the user something is wrong.
+          let paid = false;
+          for (let attempt = 0; attempt < 3 && !paid; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            const { data: retry } = await supabase
+              .from('events')
+              .select('is_paid')
+              .eq('id', eventId)
+              .single();
+            paid = !!retry?.is_paid;
+          }
+          if (!paid) {
+            toast.error(
+              `We couldn't confirm your payment automatically${reference ? ` (ref ${reference})` : ''}. If you were charged, contact support and we'll sort it out.`,
+              { autoClose: false }
+            );
+            return;
+          }
+        }
+      }
+
       toast.success('Payment confirmed! Your event is live.');
-      fetchEvents();
-      return;
-    }
-
-    if (attempt < 6) {
-      setTimeout(() => pollForPaymentConfirmation(eventId, attempt + 1), 2000);
-    } else {
-      toast.warning(
-        "Still confirming your payment with Paystack. Refresh in a moment if your event doesn't update."
-      );
+    } finally {
+      setConfirmingPayment(false);
       fetchEvents();
     }
   }, [fetchEvents]);
@@ -102,10 +124,10 @@ function AdminEventManager() {
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     const paidEventId = searchParams.get('event');
+    const reference = searchParams.get('reference') || searchParams.get('trxref');
 
     if (paymentStatus === 'success' && paidEventId) {
-      toast.info('Payment received. Confirming with Paystack...');
-      pollForPaymentConfirmation(paidEventId);
+      confirmPayment(paidEventId, reference);
       setSearchParams({});
     } else if (paymentStatus === 'cancelled') {
       toast.info('Payment cancelled');
@@ -364,6 +386,11 @@ function AdminEventManager() {
 
   return (
     <div className={styles.adminContainer}>
+      {confirmingPayment && (
+        <div className={styles.paymentConfirming} role="status" aria-live="polite">
+          Confirming payment… this only takes a moment.
+        </div>
+      )}
       <PricingModal
         isOpen={showPricingModal}
         onClose={() => setShowPricingModal(false)}
