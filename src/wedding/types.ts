@@ -124,3 +124,36 @@ export interface Target {
   sort_order: number;
   archived: boolean;
 }
+
+// ---- Phase 2: quotes, vendors ------------------------------------------
+
+export type QuoteStatus = 'requested' | 'received' | 'shortlisted' | 'accepted' | 'declined';
+
+export interface Vendor {
+  id: string;
+  wedding_id: string;
+  name: string;
+  category_id: string | null;
+  phone: string | null;
+  email: string | null;
+  whatsapp: string | null;
+  website: string | null;
+  notes: string | null;
+}
+
+export interface Quote {
+  id: string;
+  wedding_id: string;
+  vendor_id: string | null;
+  vendor_name: string;
+  category_id: string | null;
+  budget_line_id: string | null;
+  amount_cents: number;
+  received_on: string | null;
+  valid_until: string | null;
+  status: QuoteStatus;
+  notes: string | null;
+  attachment_path: string | null;
+}
+
+export type PaymentMethod = 'eft' | 'card' | 'cash' | 'payshap';
