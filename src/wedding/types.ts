@@ -228,3 +228,32 @@ export interface TravelDoc {
   due_on: string | null;
   notes: string | null;
 }
+
+// ---- Extras: guests and activity ---------------------------------------
+
+export type GuestSide = Role | 'both';
+export type Rsvp = 'pending' | 'yes' | 'no' | 'maybe';
+
+export interface Guest {
+  id: string;
+  wedding_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  side: GuestSide;
+  rsvp_status: Rsvp;
+  party_size: number;
+  dietary_notes: string | null;
+  table_label: string | null;
+  notes: string | null;
+}
+
+export interface ActivityEntry {
+  id: string;
+  wedding_id: string;
+  actor_id: string;
+  actor_name: string;
+  action: string;
+  subject: string | null;
+  created_at: string;
+}

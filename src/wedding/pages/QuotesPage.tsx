@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useWedding } from '../WeddingContext';
 import { useBudgetData, useDeleteRow, useQuotes, useSaveRow } from '../hooks';
 import { notify } from '../notify';
+import { useLogActivity } from '../extrasHooks';
 import { supabaseAttachmentStore } from '../storage';
 import { MoneyTabs } from '../components/MoneyTabs';
 import { Skeleton } from '../components/Skeleton';
@@ -40,6 +41,7 @@ export function QuotesPage() {
   const acceptQuoteRow = useSaveRow<Quote>('wedding_quotes', wedding.id, [], { silent: true });
   const acceptLineRow = useSaveRow<BudgetLine>('wedding_budget_lines', wedding.id, [], { silent: true });
   const acceptInvoiceRow = useSaveRow<Invoice>('wedding_invoices', wedding.id, [], { silent: true });
+  const logActivity = useLogActivity();
 
   const [editing, setEditing] = useState<Editing>({ mode: 'closed' });
   const [query, setQuery] = useState('');
@@ -138,6 +140,7 @@ export function QuotesPage() {
         window.confirm(`Also create an invoice for ${formatZar(q.amount_cents)} from ${q.vendor_name}? You can set the due date after.`),
     });
     setAccepting(null);
+    if (outcome.quoteAccepted) logActivity('Accepted a quote', q.vendor_name);
     const message = acceptQuoteMessage(outcome);
     notify[message.kind](message.text);
   };

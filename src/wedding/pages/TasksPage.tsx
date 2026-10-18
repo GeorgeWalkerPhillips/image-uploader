@@ -5,6 +5,7 @@ import { useWedding } from '../WeddingContext';
 import { useDeleteRow, usePayerLabels, useSaveRow, useTasks } from '../hooks';
 import { useAuthUser } from '../useAuthUser';
 import { notify } from '../notify';
+import { useLogActivity } from '../extrasHooks';
 import { Skeleton } from '../components/Skeleton';
 import { ErrorRetry } from '../components/ErrorRetry';
 import { useNow } from '../components/useNow';
@@ -34,6 +35,7 @@ export function TasksPage() {
   // Both writes of a completion report through one toast, so the default error toast is off.
   const saveTask = useSaveRow<Task>('wedding_tasks', wedding.id, [], { silent: true });
   const deleteTask = useDeleteRow('wedding_tasks', wedding.id);
+  const logActivity = useLogActivity();
   const [params, setParams] = useSearchParams();
 
   const [view, setView] = useState<View>('list');
@@ -117,7 +119,8 @@ export function TasksPage() {
     if (task.status === to) return;
     const change = changeStatus(task, to, new Date(), user?.id ?? null);
     setBusyId(task.id);
-    await persist(task.id, change.patch, change.next, task.title, to === 'done' ? 'Task done.' : 'Task updated.');
+    const ok = await persist(task.id, change.patch, change.next, task.title, to === 'done' ? 'Task done.' : 'Task updated.');
+    if (ok && to === 'done') logActivity('Completed a task', task.title);
     setBusyId(null);
   };
   const toggleTask = (task: Task) => void moveTask(task, isDone(task) ? 'todo' : 'done');

@@ -71,6 +71,9 @@ test('accept quote writes quote, then budget line, then invoice, and refreshes t
   const card = await screen.findByRole('article', { name: 'Quote from Test Florist' });
   await waitFor(() => expect(within(card).getByText('Accepted')).toBeInTheDocument());
   expect(within(card).queryByRole('button', { name: /Accept quote/ })).not.toBeInTheDocument();
+  // Best-effort feed entry, titled by vendor.
+  await waitFor(() => expect(db.tables.wedding_activity).toHaveLength(1));
+  expect(db.tables.wedding_activity![0]).toMatchObject({ action: 'Accepted a quote', subject: 'Test Florist', actor_name: 'Ada' });
 });
 
 test('declining the confirmation writes nothing', async () => {

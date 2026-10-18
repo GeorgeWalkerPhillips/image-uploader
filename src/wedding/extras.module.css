@@ -1,0 +1,47 @@
+/* Wedding HQ extras (guests, vendors, activity, export). Uses the HQ tokens
+   defined on the wedding.module.css .root, so it must render inside it. */
+
+.summaryGrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 12px 0 0; }
+.summaryGrid > div {
+  background: var(--hq-inner); border: 1px solid var(--hq-input-border); border-radius: 14px; padding: 10px; min-width: 0;
+}
+.summaryGrid dt { font-size: 12px; font-weight: 600; color: var(--hq-muted); }
+.summaryGrid dd { margin: 2px 0 0; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.summaryGrid dd small { display: block; font-size: 11px; font-weight: 600; color: var(--hq-muted); }
+
+.headActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.rsvpRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+.rsvpChip {
+  min-height: 44px; padding: 0 4px; border-radius: 999px; border: 2px solid #111; background: transparent;
+  color: #111; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.rsvpChipOn { background: #111; color: #fff; }
+.rsvpChip:disabled { opacity: 0.55; cursor: default; }
+.rsvpChip:focus-visible { outline: 3px solid rgba(17, 17, 17, 0.35); outline-offset: 2px; }
+
+.contact { display: flex; flex-direction: column; gap: 2px; margin: 8px 0 0; font-size: 14px; overflow-wrap: anywhere; }
+.contactLinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.contactLink {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px;
+  border-radius: 999px; border: 2px solid #111; color: #111; text-decoration: none; font-size: 14px; font-weight: 700;
+}
+.contactLink:focus-visible { outline: 3px solid rgba(17, 17, 17, 0.35); outline-offset: 2px; }
+.textWrap { overflow-wrap: anywhere; }
+
+.csvBox { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; resize: vertical; }
+.preview { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.preview .list { max-height: 260px; overflow-y: auto; }
+.previewRow { flex-direction: column; gap: 2px; }
+
+.feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.feedItem {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 14px;
+  background: var(--hq-inner); border: 1px solid var(--hq-input-border); overflow-wrap: anywhere;
+}
+.feedTime { font-size: 12px; color: var(--hq-muted); }
+
+.exportRow { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-top: 1px solid var(--hq-input-border); }
+.exportRow:first-of-type { border-top: 0; }
+.exportRow .btn { width: 100%; }
+.badge { margin-left: 6px; }

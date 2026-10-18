@@ -16,6 +16,10 @@ const LINKS: ReadonlyArray<{ to: string; label: string }> = [
   { to: '/hq/settings', label: 'Settings' },
   { to: '/hq/honeymoon', label: 'Honeymoon' },
   { to: '/hq/purchases', label: 'Purchases' },
+  { to: '/hq/guests', label: 'Guest list' },
+  { to: '/hq/vendors', label: 'Vendors' },
+  { to: '/hq/activity', label: 'Recent activity' },
+  { to: '/hq/export', label: 'Export' },
 ];
 
 export function MorePage() {
