@@ -1,4 +1,4 @@
-import type { BudgetLine, Category, Invoice, Payer, Payment, Quote, Saving, Scope } from '../types';
+import type { BudgetLine, Category, Invoice, Payer, Payment, PurchaseItem, Quote, Saving, Scope } from '../types';
 import {
   invoiceBalanceCents,
   invoicePaidCents,
@@ -25,6 +25,40 @@ export function spendByPayer(items: readonly { paid_by: Payer; amount_cents: num
     totals.total += item.amount_cents;
   }
   return totals;
+}
+
+// ------------------------------------------------ bought purchase items
+
+export interface PurchaseSpend {
+  paid_by: Payer;
+  amount_cents: number;
+  paid_on: string | null;
+}
+
+// Bought items as money spent. Purchase items are their own records: they have
+// no link to an invoice or payment, so adding them to the invoice payments
+// cannot count anything twice (unless someone also logs the same buy as an
+// invoice payment, which the Money spent screen warns about). Items still to
+// buy are not spending. A bought item with no recorded buyer counts as joint.
+export function purchaseSpend(items: readonly PurchaseItem[]): PurchaseSpend[] {
+  return items
+    .filter((i) => i.bought)
+    .map((i) => ({ paid_by: i.bought_by ?? 'joint', amount_cents: i.price_cents, paid_on: i.bought_on }));
+}
+
+export interface PaidToDate {
+  paymentsCents: number;
+  purchasesCents: number;
+  totalCents: number;
+  byPayer: PayerTotals;
+}
+
+// Everything paid so far: invoice payments plus bought purchase items.
+export function paidToDate(payments: readonly Payment[], purchases: readonly PurchaseItem[]): PaidToDate {
+  const bought = purchaseSpend(purchases);
+  const byPayer = spendByPayer([...payments, ...bought]);
+  const purchasesCents = bought.reduce((t, b) => t + b.amount_cents, 0);
+  return { paymentsCents: byPayer.total - purchasesCents, purchasesCents, totalCents: byPayer.total, byPayer };
 }
 
 // ------------------------------------------------- budget line / category
@@ -232,9 +266,13 @@ export function monthlySpend(
   payments: readonly Payment[],
   invoices: readonly Invoice[],
   fromISO: string,
-  toISO: string
+  toISO: string,
+  // Other money already spent (bought purchase items): counted as paid in its
+  // month but never against an invoice's balance.
+  extraPaid: readonly { paid_on: string; amount_cents: number }[] = []
 ): MonthPoint[] {
-  const paidMonths = payments.map((p) => monthOf(p.paid_on));
+  const paidAll: readonly { paid_on: string; amount_cents: number }[] = [...payments, ...extraPaid];
+  const paidMonths = paidAll.map((p) => monthOf(p.paid_on));
   const start = [monthOf(fromISO), ...paidMonths].sort()[0] ?? monthOf(fromISO);
   if (start > monthOf(toISO)) return [];
   // Never drop or clamp anything: stretch the range to the latest payment and
@@ -250,7 +288,7 @@ export function monthlySpend(
     points.set(m, { month: m, paidCents: 0, dueCents: 0 });
   }
 
-  for (const payment of payments) {
+  for (const payment of paidAll) {
     const point = points.get(monthOf(payment.paid_on));
     if (point) point.paidCents += payment.amount_cents;
   }

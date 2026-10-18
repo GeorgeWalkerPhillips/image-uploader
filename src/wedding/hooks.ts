@@ -7,7 +7,10 @@ import { useWedding } from './WeddingContext';
 import { computeMetrics } from './lib/budget';
 import type { Metrics } from './lib/budget';
 import type { CalendarEventRow, ItineraryDayRow } from './lib/calendar';
-import type { BudgetLine, Category, Invoice, Payer, Payment, Quote, Saving, Task, Target, Vendor } from './types';
+import type {
+  Booking, BudgetLine, Category, Invoice, ItineraryDay, PackingItem, Payer, Payment, PurchaseItem, Quote, Saving,
+  Task, Target, TravelDoc, Vendor,
+} from './types';
 
 const rowsKey = (table: WeddingTable, weddingId: string) => [table, weddingId] as const;
 
@@ -135,6 +138,17 @@ export const useEvents = (weddingId: string) =>
   useRows<CalendarEventRow>('wedding_events', weddingId, { column: 'starts_at' });
 export const useItinerary = (weddingId: string) =>
   useRows<ItineraryDayRow>('wedding_itinerary_days', weddingId, { column: 'day_number' });
+// The editable itinerary (every column), as opposed to the calendar's slimmer view.
+export const useItineraryDays = (weddingId: string) =>
+  useRows<ItineraryDay>('wedding_itinerary_days', weddingId, { column: 'day_number' });
+export const useBookings = (weddingId: string) =>
+  useRows<Booking>('wedding_bookings', weddingId, { column: 'starts_on' });
+export const usePackingItems = (weddingId: string) =>
+  useRows<PackingItem>('wedding_packing_items', weddingId, { column: 'created_at' });
+export const useTravelDocs = (weddingId: string) =>
+  useRows<TravelDoc>('wedding_travel_docs', weddingId, { column: 'created_at' });
+export const usePurchaseItems = (weddingId: string) =>
+  useRows<PurchaseItem>('wedding_purchase_items', weddingId, { column: 'created_at' });
 export const useQuotes = (weddingId: string) =>
   useRows<Quote>('wedding_quotes', weddingId, { column: 'created_at', ascending: false });
 export const useVendors = (weddingId: string) =>

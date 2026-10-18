@@ -1,7 +1,7 @@
-import type { BudgetLine, Category, Invoice, Payment, Quote, Saving } from '../types';
+import type { BudgetLine, Category, Invoice, Payment, PurchaseItem, Quote, Saving } from '../types';
 import {
   acceptQuoteChanges, budgetTotals, categorySummaries, compareQuotes, invoiceDraftFromQuote,
-  lineSummary, monthlySavings, monthlySpend, savingsProgress, spendByPayer, upcomingPayments,
+  lineSummary, monthlySavings, monthlySpend, paidToDate, purchaseSpend, savingsProgress, spendByPayer, upcomingPayments,
 } from './spending';
 
 const W = 'w';
@@ -156,5 +156,61 @@ describe('savings', () => {
   });
   it('totals contributions by month in order', () => {
     expect(monthlySavings(savings)).toEqual([{ month: '2026-09', cents: 200000 }, { month: '2026-10', cents: 400000 }]);
+  });
+});
+
+const buy = (id: string, price: number, bought: boolean, by: PurchaseItem['bought_by'] = null, on: string | null = null): PurchaseItem => ({
+  id, wedding_id: W, name: id, category: null, quantity: 1, needed_by: null, price_cents: price, bought, bought_by: by,
+  bought_at_store: null, bought_on: on, receipt_path: null, notes: null,
+});
+
+describe('bought purchase items as money spent', () => {
+  const items = [
+    buy('b1', 12000, true, 'groom', '2026-10-10'),
+    buy('b2', 8050, true, null, '2026-11-02'),
+    buy('todo', 99900, false),
+  ];
+
+  test('only bought items count, and an unknown buyer is joint', () => {
+    expect(purchaseSpend(items)).toEqual([
+      { paid_by: 'groom', amount_cents: 12000, paid_on: '2026-10-10' },
+      { paid_by: 'joint', amount_cents: 8050, paid_on: '2026-11-02' },
+    ]);
+  });
+
+  test('paidToDate adds purchases to invoice payments once', () => {
+    const r = paidToDate(payments, items);
+    expect(r.paymentsCents).toBe(1050000);
+    expect(r.purchasesCents).toBe(20050);
+    expect(r.totalCents).toBe(1070050);
+    expect(r.paymentsCents + r.purchasesCents).toBe(r.totalCents);
+    expect(r.byPayer).toMatchObject({ groom: 312000, bride: 200000, joint: 558050, total: 1070050 });
+  });
+
+  test('with no purchases the numbers equal the invoice payments exactly', () => {
+    expect(paidToDate(payments, [])).toMatchObject({ paymentsCents: 1050000, purchasesCents: 0, totalCents: 1050000 });
+    expect(paidToDate([], [])).toMatchObject({ totalCents: 0 });
+  });
+
+  test('unbuying an item removes it from the total', () => {
+    const undone = items.map((i) => (i.id === 'b1' ? { ...i, bought: false, bought_by: null, bought_on: null } : i));
+    expect(paidToDate([], undone).totalCents).toBe(8050);
+  });
+
+  test('monthlySpend shows purchases in their month without touching invoice balances', () => {
+    const base = monthlySpend(payments, invoices, '2026-10-18', '2027-03-27');
+    const withBuys = monthlySpend(payments, invoices, '2026-10-18', '2027-03-27', [
+      { paid_on: '2026-10-10', amount_cents: 12000 },
+      { paid_on: '2026-11-02', amount_cents: 8050 },
+    ]);
+    const get = (pts: typeof base, m: string) => pts.find((p) => p.month === m)!;
+    expect(get(withBuys, '2026-10').paidCents).toBe(get(base, '2026-10').paidCents + 12000);
+    expect(get(withBuys, '2026-11').paidCents).toBe(get(base, '2026-11').paidCents + 8050);
+    expect(withBuys.map((p) => p.dueCents)).toEqual(base.map((p) => p.dueCents));
+  });
+
+  test('a purchase before the range stretches the graph back instead of being dropped', () => {
+    const pts = monthlySpend([], [], '2026-10-18', '2026-12-01', [{ paid_on: '2026-08-05', amount_cents: 500 }]);
+    expect(pts[0]).toMatchObject({ month: '2026-08', paidCents: 500 });
   });
 });

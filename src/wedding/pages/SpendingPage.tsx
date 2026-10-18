@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useWedding } from '../WeddingContext';
-import { useBudgetData, useDeleteRow, usePayerLabels, useSaveRow, useTargets } from '../hooks';
+import { useBudgetData, useDeleteRow, usePayerLabels, usePurchaseItems, useSaveRow, useTargets } from '../hooks';
 import { notify } from '../notify';
 import { MoneyTabs } from '../components/MoneyTabs';
 import { Skeleton } from '../components/Skeleton';
@@ -14,7 +14,7 @@ import { categoryColor } from '../lib/categoryForm';
 import { formatZar, formatZarShort } from '../lib/money';
 import { emptySavingForm, PAYERS, validateSaving } from '../lib/moneyForms';
 import type { SavingFormValues } from '../lib/moneyForms';
-import { categorySummaries, monthlySavings, monthlySpend, savingsProgress, spendByPayer } from '../lib/spending';
+import { categorySummaries, monthlySavings, monthlySpend, paidToDate, purchaseSpend, savingsProgress } from '../lib/spending';
 import { isDeadlinePassed } from '../lib/targets';
 import { formatDateJhb, todayJhbISO, toJhbDateISO } from '../lib/time';
 import type { FieldErrors } from '../lib/validators';
@@ -42,6 +42,7 @@ export function SpendingPage() {
   const { wedding } = useWedding();
   const budget = useBudgetData(wedding.id);
   const targetsQuery = useTargets(wedding.id);
+  const purchasesQuery = usePurchaseItems(wedding.id);
   const labels = usePayerLabels();
   const saveSaving = useSaveRow<Saving>('wedding_savings', wedding.id);
   const deleteSaving = useDeleteRow('wedding_savings', wedding.id);
@@ -55,13 +56,17 @@ export function SpendingPage() {
 
   const { categories, lines, invoices, payments, savings } = budget;
 
+  const purchases = useMemo(() => purchasesQuery.data ?? [], [purchasesQuery.data]);
+  // Invoice payments (`paid`) drive the budget maths exactly as before; bought
+  // purchase items are added on top for the "Paid to date" figures only.
   const paid = useMemo(() => payments.reduce((t, p) => t + p.amount_cents, 0), [payments]);
+  const spent = useMemo(() => paidToDate(payments, purchases), [payments, purchases]);
   const totalBudget = wedding.budget_cents + wedding.honeymoon_budget_cents;
   const committed = budget.metrics.committed + budget.metrics.honeymoonCommitted;
   const stillToPay = Math.max(0, committed - paid);
   const budgetLeft = totalBudget - committed;
 
-  const byPayer = useMemo(() => spendByPayer(payments), [payments]);
+  const byPayer = spent.byPayer;
   const perCategory = useMemo(() => {
     const ordered = [...categories].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
     const colors = new Map(ordered.map((c, i) => [c.id, categoryColor(c.color, i)]));
@@ -71,13 +76,18 @@ export function SpendingPage() {
       .sort((a, b) => b.paid - a.paid);
     const linked = rows.reduce((t, r) => t + r.paid, 0);
     if (paid - linked > 0) rows.push({ id: 'unlinked', name: 'Not linked to a budget line', paid: paid - linked, color: '#b9b9c4' });
+    if (spent.purchasesCents > 0) rows.push({ id: 'purchases', name: 'Bought items (Purchases)', paid: spent.purchasesCents, color: '#8b7fd6' });
     return rows;
-  }, [categories, lines, invoices, payments, paid]);
+  }, [categories, lines, invoices, payments, paid, spent.purchasesCents]);
 
   const weddingDay = toJhbDateISO(new Date(wedding.wedding_date));
   const monthly = useMemo(
-    () => monthlySpend(payments, invoices, today, weddingDay < today ? today : weddingDay),
-    [payments, invoices, today, weddingDay]
+    () =>
+      monthlySpend(
+        payments, invoices, today, weddingDay < today ? today : weddingDay,
+        purchaseSpend(purchases).map((p) => ({ paid_on: p.paid_on ?? today, amount_cents: p.amount_cents }))
+      ),
+    [payments, invoices, today, weddingDay, purchases]
   );
 
   // Savings goals are the couple's own "savings" amount targets.
@@ -123,12 +133,22 @@ export function SpendingPage() {
     deleteSaving.mutate(s.id, { onSuccess: () => notify.success('Contribution deleted') });
   };
 
-  if (budget.loading) return <><MoneyTabs /><Skeleton height={200} /><Skeleton height={140} /></>;
-  if (budget.isError) {
+  // A failed purchases load must not quietly drop bought items from the total.
+  const purchasesFailed = purchasesQuery.isError && purchasesQuery.data === undefined;
+  if (budget.loading || purchasesQuery.isLoading) return <><MoneyTabs /><Skeleton height={200} /><Skeleton height={140} /></>;
+  if (budget.isError || purchasesFailed) {
     return (
       <>
         <MoneyTabs />
-        <div className={styles.card}><ErrorRetry message="Could not load your spending." onRetry={budget.refetch} /></div>
+        <div className={styles.card}>
+          <ErrorRetry
+            message="Could not load your spending."
+            onRetry={() => {
+              budget.refetch();
+              if (purchasesFailed) void purchasesQuery.refetch();
+            }}
+          />
+        </div>
       </>
     );
   }
@@ -139,8 +159,10 @@ export function SpendingPage() {
       <MoneyTabs />
       <section className={styles.card} aria-label="Money spent so far">
         <h2 className={styles.h2}>Paid to date</h2>
-        <p className={styles.heroNumber}>{formatZar(paid)}</p>
+        <p className={styles.heroNumber}>{formatZar(spent.totalCents)}</p>
         <dl className={styles.statGrid}>
+          <div className={styles.stat}><dt>Invoice payments</dt><dd>{formatZar(spent.paymentsCents)}</dd></div>
+          <div className={styles.stat}><dt>Bought items</dt><dd>{formatZar(spent.purchasesCents)}</dd></div>
           <div className={styles.stat}><dt>Still to pay</dt><dd>{formatZar(stillToPay)}</dd></div>
           <div className={styles.stat}>
             <dt>{budgetLeft < 0 ? 'Over budget by' : 'Budget left'}</dt>
@@ -148,12 +170,16 @@ export function SpendingPage() {
           </div>
         </dl>
         <p className={styles.muted}>Wedding and honeymoon together, against what you have committed.</p>
+        <p className={styles.muted}>
+          Items marked bought in Purchases count here. Do not also add them as an invoice payment, or they will be counted twice.
+        </p>
+        <Link to="/hq/purchases" className={styles.btn}>Open Purchases</Link>
       </section>
 
       <section className={styles.card} aria-label="Who paid">
         <h2 className={styles.h2}>Who paid</h2>
-        {payments.length === 0 ? (
-          <p className={styles.muted}>No payments yet. Add them from an invoice.</p>
+        {spent.totalCents === 0 ? (
+          <p className={styles.muted}>No payments yet. Add them from an invoice, or mark a purchase as bought.</p>
         ) : (
           <ul className={styles.hbars}>
             {PAYERS.map((p) => (
@@ -177,7 +203,7 @@ export function SpendingPage() {
       <section className={styles.card} aria-label="Month by month">
         <h2 className={styles.h2}>Month by month</h2>
         <p className={styles.muted}>What you paid each month, and what falls due, up to the wedding.</p>
-        {monthly.length === 0 || (paid === 0 && invoices.length === 0) ? (
+        {monthly.length === 0 || (spent.totalCents === 0 && invoices.length === 0) ? (
           <p className={styles.muted}>The graph appears once you add invoices or payments.</p>
         ) : (
           <MonthlyBars points={monthly} currentMonth={today.slice(0, 7)} />

@@ -42,7 +42,13 @@ function VarianceChip({ s }: { s: CategorySummary }) {
   return <span className={styles.chip}>On budget</span>;
 }
 
-export function BudgetPage() {
+interface BudgetPageProps {
+  // Show only one budget (the Honeymoon page embeds the honeymoon one): the
+  // money tabs and the Wedding/Honeymoon switch are hidden.
+  fixedScope?: Scope;
+}
+
+export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
   const { wedding } = useWedding();
   const budget = useBudgetData(wedding.id);
   const vendorsQuery = useVendors(wedding.id);
@@ -54,7 +60,8 @@ export function BudgetPage() {
   const deleteLine = useDeleteRow('wedding_budget_lines', wedding.id, ['wedding_invoices', 'wedding_quotes']);
   const saveVendor = useSaveRow<Vendor>('wedding_vendors', wedding.id);
 
-  const [scope, setScope] = useState<Scope>('wedding');
+  const [pickedScope, setScope] = useState<Scope>('wedding');
+  const scope: Scope = fixedScope ?? pickedScope;
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<LineSort>('default');
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -124,7 +131,7 @@ export function BudgetPage() {
         onSuccess: () => {
           notify.success('Category saved');
           setEditor({ kind: 'none' });
-          if (payload.scope !== scope) setScope(payload.scope);
+          if (!fixedScope && payload.scope !== scope) setScope(payload.scope);
         },
       }
     );
@@ -213,7 +220,7 @@ export function BudgetPage() {
         </section>
 
         {editor.kind === 'category' && !editor.category && (
-          <CategoryForm existing={categories} defaultScope={scope} saving={saveCategory.isPending}
+          <CategoryForm existing={categories} defaultScope={scope} lockScope={!!fixedScope} saving={saveCategory.isPending}
             onSubmit={submitCategory} onCancel={() => setEditor({ kind: 'none' })} />
         )}
 
@@ -273,7 +280,7 @@ export function BudgetPage() {
               return (
                 <div key={s.categoryId} className={styles.card}>
                   {editingCategory && category ? (
-                    <CategoryForm existing={categories} initial={category} defaultScope={scope}
+                    <CategoryForm existing={categories} initial={category} defaultScope={scope} lockScope={!!fixedScope}
                       saving={saveCategory.isPending} onSubmit={submitCategory}
                       onCancel={() => setEditor({ kind: 'none' })} />
                   ) : (
@@ -355,7 +362,7 @@ export function BudgetPage() {
               );
             })
           )}
-          {scopeCategories.length === 0 && categories.length > 0 && !needle && (
+          {!fixedScope && scopeCategories.length === 0 && categories.length > 0 && !needle && (
             <p className={styles.muted}>You have categories for the other budget. Switch above to see them.</p>
           )}
         </section>
@@ -365,16 +372,20 @@ export function BudgetPage() {
 
   return (
     <>
-      <MoneyTabs />
-      <div className={styles.segmented} role="group" aria-label="Budget scope">
-        {SCOPES.map((s) => (
-          <button key={s.value} type="button" aria-pressed={scope === s.value}
-            className={`${styles.segment} ${scope === s.value ? styles.segmentActive : ''}`}
-            onClick={() => setScope(s.value)}>
-            {s.label}
-          </button>
-        ))}
-      </div>
+      {!fixedScope && (
+        <>
+          <MoneyTabs />
+          <div className={styles.segmented} role="group" aria-label="Budget scope">
+            {SCOPES.map((s) => (
+              <button key={s.value} type="button" aria-pressed={scope === s.value}
+                className={`${styles.segment} ${scope === s.value ? styles.segmentActive : ''}`}
+                onClick={() => setScope(s.value)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       {body()}
     </>
   );

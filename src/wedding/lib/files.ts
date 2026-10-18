@@ -1,9 +1,9 @@
 // Pure helpers for Wedding HQ file uploads (quotes, invoices, proofs of
-// payment). These are UX niceties: the private `wedding-files` bucket and its
+// payment, bookings, receipts). These are UX niceties: the private `wedding-files` bucket and its
 // RLS policies (first path segment must be the member's wedding id) plus the
 // bucket's own size and MIME limits are the real enforcement.
 
-export type FileKind = 'quotes' | 'invoices' | 'proofs';
+export type FileKind = 'quotes' | 'invoices' | 'proofs' | 'bookings' | 'receipts';
 
 export const ALLOWED_FILE_TYPES: readonly string[] = [
   'application/pdf',

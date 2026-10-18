@@ -5,7 +5,7 @@ import { useWedding } from '../WeddingContext';
 import { useAuthUser } from '../useAuthUser';
 import styles from '../wedding.module.css';
 
-const LINKS: ReadonlyArray<{ to: string; label: string; soon?: boolean }> = [
+const LINKS: ReadonlyArray<{ to: string; label: string }> = [
   { to: '/hq/tasks', label: 'Tasks' },
   { to: '/hq/calendar', label: 'Calendar' },
   { to: '/hq/budget', label: 'Budget' },
@@ -14,8 +14,8 @@ const LINKS: ReadonlyArray<{ to: string; label: string; soon?: boolean }> = [
   { to: '/hq/spending', label: 'Money spent so far' },
   { to: '/hq/targets', label: 'Targets' },
   { to: '/hq/settings', label: 'Settings' },
-  { to: '/hq/honeymoon', label: 'Honeymoon', soon: true },
-  { to: '/hq/purchases', label: 'Purchases', soon: true },
+  { to: '/hq/honeymoon', label: 'Honeymoon' },
+  { to: '/hq/purchases', label: 'Purchases' },
 ];
 
 export function MorePage() {
@@ -49,7 +49,6 @@ export function MorePage() {
           <li key={l.to}>
             <Link to={l.to} className={styles.menuLink}>
               <span>{l.label}</span>
-              {l.soon && <span className={styles.muted}>Coming soon</span>}
             </Link>
           </li>
         ))}

@@ -16,6 +16,8 @@ export interface Wedding {
   fx_thb_per_zar: number | null;
   currency: string;
   timezone: string;
+  // Set by the database on every edit of the wedding row (not just the rate).
+  updated_at?: string;
 }
 
 export interface Member {
@@ -158,3 +160,71 @@ export interface Quote {
 }
 
 export type PaymentMethod = 'eft' | 'card' | 'cash' | 'payshap';
+
+// ---- Phase 4: honeymoon and purchases ----------------------------------
+
+export interface PurchaseItem {
+  id: string;
+  wedding_id: string;
+  name: string;
+  category: string | null;
+  quantity: number;
+  needed_by: string | null;
+  // Total price for the line (all units), in cents.
+  price_cents: number;
+  bought: boolean;
+  bought_by: Payer | null;
+  bought_at_store: string | null;
+  bought_on: string | null;
+  receipt_path: string | null;
+  notes: string | null;
+}
+
+export interface ItineraryDay {
+  id: string;
+  wedding_id: string;
+  day_number: number;
+  on_date: string | null;
+  city: string | null;
+  accommodation: string | null;
+  activities: string | null;
+  transport: string | null;
+  booking_reference: string | null;
+  cost_cents: number;
+  notes: string | null;
+}
+
+export type BookingKind = 'flight' | 'accommodation' | 'transport' | 'activity' | 'insurance' | 'other';
+
+export interface Booking {
+  id: string;
+  wedding_id: string;
+  kind: BookingKind;
+  name: string;
+  confirmation_number: string | null;
+  starts_on: string | null;
+  ends_on: string | null;
+  cost_cents: number;
+  attachment_path: string | null;
+  notes: string | null;
+}
+
+export interface PackingItem {
+  id: string;
+  wedding_id: string;
+  name: string;
+  category: string | null;
+  packed: boolean;
+}
+
+export type TravelDocStatus = 'not_started' | 'applied' | 'collected';
+
+export interface TravelDoc {
+  id: string;
+  wedding_id: string;
+  title: string;
+  person: Assignee;
+  status: TravelDocStatus;
+  due_on: string | null;
+  notes: string | null;
+}

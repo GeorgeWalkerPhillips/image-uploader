@@ -11,12 +11,14 @@ interface Props {
   existing: readonly Category[];
   initial?: Category;
   defaultScope: Scope;
+  // Hide the scope picker (used on the honeymoon page, where every category is a honeymoon one).
+  lockScope?: boolean;
   saving?: boolean;
   onSubmit: (payload: CategoryPayload) => void;
   onCancel: () => void;
 }
 
-export function CategoryForm({ existing, initial, defaultScope, saving = false, onSubmit, onCancel }: Props) {
+export function CategoryForm({ existing, initial, defaultScope, lockScope = false, saving = false, onSubmit, onCancel }: Props) {
   const [v, setV] = useState<CategoryFormValues>(() =>
     initial ? { name: initial.name, scope: initial.scope, color: initial.color ?? '' } : emptyCategoryForm(defaultScope)
   );
@@ -38,11 +40,13 @@ export function CategoryForm({ existing, initial, defaultScope, saving = false, 
       <h2 className={styles.h2}>{initial ? 'Edit category' : 'New category'}</h2>
       <TextField label="Category name" value={v.name} maxLength={60} error={errors.name}
         onChange={(name) => setV((p) => ({ ...p, name }))} />
-      <SelectField label="Belongs to" value={v.scope} error={errors.scope}
-        onChange={(scope) => setV((p) => ({ ...p, scope: scope as Scope }))}>
-        <option value="wedding">Wedding</option>
-        <option value="honeymoon">Honeymoon</option>
-      </SelectField>
+      {!lockScope && (
+        <SelectField label="Belongs to" value={v.scope} error={errors.scope}
+          onChange={(scope) => setV((p) => ({ ...p, scope: scope as Scope }))}>
+          <option value="wedding">Wedding</option>
+          <option value="honeymoon">Honeymoon</option>
+        </SelectField>
+      )}
       <div className={styles.fieldWrap}>
         <span className={styles.fieldLabel} id="cat-colour-label">Colour (optional)</span>
         <div className={styles.swatches} role="group" aria-labelledby="cat-colour-label">

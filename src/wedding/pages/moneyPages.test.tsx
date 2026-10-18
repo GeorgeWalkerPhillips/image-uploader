@@ -38,6 +38,7 @@ const seed = () => ({
   ],
   wedding_savings: [],
   wedding_targets: [],
+  wedding_purchase_items: [],
 });
 
 beforeEach(() => {
@@ -64,6 +65,17 @@ describe('BudgetPage', () => {
     expect(totals.textContent).toContain(`Over budget by${formatZar(2000000)}`);
     expect(screen.getByRole('button', { name: /Flights/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Venue/ })).not.toBeInTheDocument();
+  });
+
+  test('fixedScope="honeymoon" shows only the honeymoon budget, with no money tabs or scope switch', async () => {
+    renderPage(<BudgetPage fixedScope="honeymoon" />);
+    const totals = await screen.findByRole('region', { name: 'Budget totals' });
+    expect(screen.getByRole('heading', { name: 'Honeymoon budget' })).toBeInTheDocument();
+    expect(totals.textContent).toContain(`Committed${formatZar(2000000)}`);
+    expect(screen.getByRole('button', { name: /Flights/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Venue/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Budget scope' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Money' })).not.toBeInTheDocument();
   });
 
   test('a failed query shows a retry and no R 0 totals', async () => {
@@ -224,5 +236,45 @@ describe('SpendingPage', () => {
     renderPage(<SpendingPage />);
     expect(await screen.findByText('Could not load your spending.')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Money spent so far' })).not.toBeInTheDocument();
+  });
+  test('bought purchase items are added to Paid to date once, and to who paid; unbought items are not', async () => {
+    resetDb({
+      ...seed(),
+      wedding_purchase_items: [
+        { ...base, id: 'b1', name: 'Table runners', category: null, quantity: 1, needed_by: null, price_cents: 45000, bought: true, bought_by: 'bride', bought_at_store: null, bought_on: addDaysISO(today, -2), receipt_path: null, notes: null },
+        { ...base, id: 'b2', name: 'Cake knife', category: null, quantity: 1, needed_by: null, price_cents: 99900, bought: false, bought_by: null, bought_at_store: null, bought_on: null, receipt_path: null, notes: null },
+      ],
+    });
+    renderPage(<SpendingPage />);
+    const hero = await screen.findByRole('region', { name: 'Money spent so far' });
+    // R 3 000 invoice payment + R 450 bought item = R 3 450; the R 999 unbought item is ignored.
+    await waitFor(() => expect(hero.textContent).toContain(formatZar(345000)));
+    expect(hero.textContent).toContain(`Invoice payments${formatZar(300000)}`);
+    expect(hero.textContent).toContain(`Bought items${formatZar(45000)}`);
+    expect(hero.textContent).not.toContain(formatZar(99900));
+    // "Still to pay" is about invoices and is not reduced by purchases.
+    expect(hero.textContent).toContain(`Still to pay${formatZar(2900000)}`);
+
+    const who = screen.getByRole('region', { name: 'Who paid' });
+    expect(who.textContent).toContain(formatZar(45000));
+    const byCategory = screen.getByRole('region', { name: 'Paid by category' });
+    expect(byCategory.textContent).toContain('Bought items (Purchases)');
+  });
+
+  test('with no purchases the figures are exactly the invoice payments', async () => {
+    renderPage(<SpendingPage />);
+    const hero = await screen.findByRole('region', { name: 'Money spent so far' });
+    expect(hero.textContent).toContain(`Invoice payments${formatZar(300000)}`);
+    expect(hero.textContent).toContain(`Bought items${formatZar(0)}`);
+  });
+
+  test('a failed purchases query shows a retry instead of a total that silently leaves bought items out', async () => {
+    db.failFetch.add('wedding_purchase_items');
+    renderPage(<SpendingPage />);
+    expect(await screen.findByText('Could not load your spending.')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Money spent so far' })).not.toBeInTheDocument();
+    db.failFetch.clear();
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('region', { name: 'Money spent so far' })).toBeInTheDocument();
   });
 });

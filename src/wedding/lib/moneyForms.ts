@@ -4,7 +4,8 @@ import type { Payer, PaymentMethod, QuoteStatus } from '../types';
 
 // Validators for the phase 2 money forms. They mirror the table CHECK
 // constraints so people see a friendly message instead of a database error;
-// the database remains the real guard.
+// the database remains the real guard. The small field helpers are exported
+// for the other form modules (honeymoon, purchases).
 
 export function isISODate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -12,12 +13,12 @@ export function isISODate(value: string): boolean {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
 
-const trimOrNull = (s: string): string | null => {
+export const trimOrNull = (s: string): string | null => {
   const t = s.trim();
   return t === '' ? null : t;
 };
 
-function requiredMoney(text: string, key: string, errors: FieldErrors, opts: { positive?: boolean } = {}): number | null {
+export function requiredMoney(text: string, key: string, errors: FieldErrors, opts: { positive?: boolean } = {}): number | null {
   if (text.trim() === '') {
     errors[key] = 'Enter an amount.';
     return null;
@@ -34,7 +35,7 @@ function requiredMoney(text: string, key: string, errors: FieldErrors, opts: { p
   return cents;
 }
 
-function optionalMoney(text: string, key: string, errors: FieldErrors): number | null {
+export function optionalMoney(text: string, key: string, errors: FieldErrors): number | null {
   if (text.trim() === '') return null;
   const cents = parseRandsToCents(text);
   if (cents === null || cents < 0) {
@@ -44,7 +45,7 @@ function optionalMoney(text: string, key: string, errors: FieldErrors): number |
   return cents;
 }
 
-function optionalDate(text: string, key: string, errors: FieldErrors): string | null {
+export function optionalDate(text: string, key: string, errors: FieldErrors): string | null {
   if (text.trim() === '') return null;
   if (!isISODate(text.trim())) {
     errors[key] = 'Choose a valid date.';
@@ -53,7 +54,7 @@ function optionalDate(text: string, key: string, errors: FieldErrors): string | 
   return text.trim();
 }
 
-function requiredDate(text: string, key: string, errors: FieldErrors): string | null {
+export function requiredDate(text: string, key: string, errors: FieldErrors): string | null {
   if (text.trim() === '') {
     errors[key] = 'Choose a date.';
     return null;
@@ -61,7 +62,7 @@ function requiredDate(text: string, key: string, errors: FieldErrors): string | 
   return optionalDate(text, key, errors);
 }
 
-function requiredText(text: string, key: string, label: string, errors: FieldErrors, max = 120): string {
+export function requiredText(text: string, key: string, label: string, errors: FieldErrors, max = 120): string {
   const t = text.trim();
   if (!t) errors[key] = `Enter ${label}.`;
   else if (t.length > max) errors[key] = `Keep it under ${max} characters.`;
