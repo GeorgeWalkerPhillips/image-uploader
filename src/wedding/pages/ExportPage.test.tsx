@@ -95,3 +95,24 @@ test('a failed fetch downloads nothing, says so, and can be retried', async () =
   await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
+
+test('warns when a table comes back at the 1000-row fetch cap', async () => {
+  resetDb({
+    wedding_guests: Array.from({ length: 1000 }, (_, i) => ({
+      wedding_id: WID, id: `g${i}`, name: `Guest ${i}`, email: null, phone: null, side: 'both', rsvp_status: 'pending',
+      party_size: 1, dietary_notes: null, table_label: null, notes: null,
+    })),
+  });
+  renderPage(<ExportPage />);
+  await userEvent.click(screen.getByRole('button', { name: 'Download Guests CSV' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(/may be incomplete/);
+  expect(notify.warning).toHaveBeenCalledWith(expect.stringContaining('guests'));
+});
+
+test('no warning below the cap', async () => {
+  renderPage(<ExportPage />);
+  await userEvent.click(screen.getByRole('button', { name: 'Download Guests CSV' }));
+  await waitFor(() => expect(download).toHaveBeenCalled());
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(notify.warning).not.toHaveBeenCalled();
+});

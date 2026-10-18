@@ -119,3 +119,17 @@ test('load failure shows retry that recovers', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(await screen.findByRole('article', { name: 'Vendor Riverside Hall' })).toBeInTheDocument();
 });
+
+test('the edit form stays visible when search excludes the vendor being edited, and Cancel is the way back', async () => {
+  renderPage(<VendorsPage />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit Riverside Hall' }));
+  await userEvent.type(screen.getByLabelText('Search vendors'), 'zzz');
+  const form = screen.getByRole('form', { name: 'Edit vendor' });
+  expect(form).toBeInTheDocument();
+  expect(screen.getByText('No vendors match.')).toBeInTheDocument();
+  await userEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('form', { name: 'Edit vendor' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add vendor' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+  expect(screen.getAllByRole('article')).toHaveLength(2);
+});

@@ -82,6 +82,10 @@ export function VendorsPage() {
         <p className={styles.muted}>Everyone you are working with, with one-tap call, WhatsApp, email and website.</p>
       </section>
 
+      {mode.kind === 'edit' && (
+        <VendorForm key={mode.vendor.id} initial={mode.vendor} categories={categories} saving={save.isPending}
+          onSubmit={submit} onCancel={() => setMode({ kind: 'closed' })} />
+      )}
       {mode.kind === 'new' && (
         <VendorForm categories={categories} saving={save.isPending} onSubmit={submit} onCancel={() => setMode({ kind: 'closed' })} />
       )}
@@ -100,14 +104,14 @@ export function VendorsPage() {
       {vendors.length === 0 && mode.kind !== 'new' ? (
         <div className={styles.card}><p className={styles.muted}>No vendors yet. Add the florist, venue, photographer and anyone else you are booking.</p></div>
       ) : shown.length === 0 && vendors.length > 0 ? (
-        <div className={styles.card}><p className={styles.muted}>No vendors match.</p></div>
+        <div className={styles.card}>
+          <p className={styles.muted}>No vendors match.</p>
+          <button type="button" className={styles.btn} onClick={() => { setSearch(''); setCategoryId('all'); }}>Clear filters</button>
+        </div>
       ) : (
         <section className={styles.stack} aria-label="Vendors">
-          {shown.map((v) =>
-            mode.kind === 'edit' && mode.vendor.id === v.id ? (
-              <VendorForm key={v.id} initial={v} categories={categories} saving={save.isPending}
-                onSubmit={submit} onCancel={() => setMode({ kind: 'closed' })} />
-            ) : (
+          {shown.filter((v) => !(mode.kind === 'edit' && mode.vendor.id === v.id)).map((v) =>
+            (
               <article key={v.id} className={styles.card} aria-label={`Vendor ${v.name}`}>
                 <div className={styles.rowBetween}>
                   <h3 className={`${styles.h3} ${x.textWrap}`}>{v.name}</h3>

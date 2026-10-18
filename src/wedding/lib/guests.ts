@@ -7,6 +7,7 @@ export const SIDES: readonly GuestSide[] = ['groom', 'bride', 'both'];
 export const RSVPS: readonly Rsvp[] = ['pending', 'yes', 'no', 'maybe'];
 export const RSVP_LABEL: Record<Rsvp, string> = { pending: 'Waiting', yes: 'Coming', maybe: 'Maybe', no: 'Not coming' };
 export const MAX_IMPORT_ROWS = 500;
+export const MAX_IMPORT_CHARS = 1024 * 1024; // same cap as the file picker
 
 export const LIMITS = { name: 200, email: 254, phone: 40, dietary: 2000, table: 100, notes: 2000, partyMax: 20 } as const;
 
@@ -178,7 +179,7 @@ export interface ImportPreview {
   warnings: string[];
 }
 
-const HEADER_ALIASES: Record<string, string> = {
+const HEADER_ALIASES: Readonly<Record<string, string>> = Object.assign(Object.create(null) as Record<string, string>, {
   name: 'name', 'full name': 'name', fullname: 'name', guest: 'name', 'guest name': 'name',
   email: 'email', 'e-mail': 'email', 'email address': 'email',
   phone: 'phone', mobile: 'phone', cell: 'phone', cellphone: 'phone', tel: 'phone', telephone: 'phone', 'phone number': 'phone',
@@ -188,18 +189,46 @@ const HEADER_ALIASES: Record<string, string> = {
   dietary_notes: 'dietary', dietary: 'dietary', 'dietary notes': 'dietary', diet: 'dietary',
   table: 'table', table_label: 'table', 'table label': 'table',
   notes: 'notes', note: 'notes',
-};
+});
 
-const SIDE_WORDS: Record<string, GuestSide> = { groom: 'groom', bride: 'bride', both: 'both' };
-const RSVP_WORDS: Record<string, Rsvp> = {
+// Null-prototype maps, so a header or value like "constructor" or "__proto__" is never a hit.
+const SIDE_WORDS: Readonly<Record<string, GuestSide>> = Object.assign(
+  Object.create(null) as Record<string, GuestSide>,
+  { groom: 'groom', bride: 'bride', both: 'both' }
+);
+const RSVP_WORDS: Readonly<Record<string, Rsvp>> = Object.assign(Object.create(null) as Record<string, Rsvp>, {
   pending: 'pending', waiting: 'pending', yes: 'yes', y: 'yes', coming: 'yes', no: 'no', n: 'no', maybe: 'maybe',
-};
+});
+
+// The safe export puts an apostrophe before values starting with = + - @ so a
+// spreadsheet shows them as text. Undo exactly that on the way back in.
+const EXPORT_APOSTROPHE = /^'(?=[=+\-@])/;
+const UNESCAPED_KEYS = new Set(['name', 'email', 'phone', 'notes']);
+
+const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
+
+// True when the guest looks like one already on the list: same name (ignoring case)
+// and the same email or phone, or just the same name when the import row has no contact.
+export function isDuplicateGuest(p: GuestPayload, existing: readonly Pick<Guest, 'name' | 'email' | 'phone'>[]): boolean {
+  const name = norm(p.name);
+  const email = norm(p.email);
+  const phone = norm(p.phone).replace(/[\s-]/g, '');
+  return existing.some((g) => {
+    if (norm(g.name) !== name) return false;
+    if (!email && !phone) return true;
+    return (email !== '' && norm(g.email) === email) || (phone !== '' && norm(g.phone).replace(/[\s-]/g, '') === phone);
+  });
+}
 
 export function parseGuestImport(text: string): ImportPreview {
   const empty: ImportPreview = { rows: [], valid: [], invalid: [], skippedOverCap: 0, fatal: null, warnings: [] };
-  if (text.trim() === '') return { ...empty, fatal: 'Paste some CSV text or choose a .csv file first.' };
+  if (text.length > MAX_IMPORT_CHARS) return { ...empty, fatal: 'That text is over 1 MB. Split it into smaller files.' };
+  // Postgres text columns cannot hold NUL, so one stray character would reject the whole batch.
+  const hadNul = text.includes('\u0000');
+  const clean = hadNul ? text.split('\u0000').join('') : text;
+  if (clean.trim() === '') return { ...empty, fatal: 'Paste some CSV text or choose a .csv file first.' };
 
-  const parsed = parseCsv(text);
+  const parsed = parseCsv(clean);
   const [header, ...data] = parsed.rows;
   if (!header) return { ...empty, fatal: 'Paste some CSV text or choose a .csv file first.' };
 
@@ -214,6 +243,7 @@ export function parseGuestImport(text: string): ImportPreview {
   if (data.length === 0) return { ...empty, fatal: 'There are no guests below the header row.' };
 
   const warnings: string[] = [];
+  if (hadNul) warnings.push('Removed invisible NUL characters from the data.');
   if (parsed.unterminatedQuote) warnings.push('A quoted value was never closed, so the last row may be wrong.');
   const unknown = header.map((h) => h.trim()).filter((h, i) => h && ![...columns.values()].includes(i));
   if (unknown.length > 0) warnings.push(`Ignored unknown columns: ${unknown.join(', ')}.`);
@@ -221,7 +251,8 @@ export function parseGuestImport(text: string): ImportPreview {
   const used = data.slice(0, MAX_IMPORT_ROWS);
   const cell = (r: string[], key: string): string => {
     const i = columns.get(key);
-    return i === undefined ? '' : (r[i] ?? '').trim();
+    const v = i === undefined ? '' : (r[i] ?? '').trim();
+    return UNESCAPED_KEYS.has(key) ? v.replace(EXPORT_APOSTROPHE, '') : v;
   };
 
   const rows: ImportRow[] = used.map((r, idx) => {

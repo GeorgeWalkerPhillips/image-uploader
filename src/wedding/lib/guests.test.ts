@@ -1,4 +1,8 @@
-import { emptyGuestForm, filterGuests, guestTotals, MAX_IMPORT_ROWS, parseGuestImport, validateGuest } from './guests';
+import {
+  emptyGuestForm, filterGuests, guestTotals, isDuplicateGuest, MAX_IMPORT_CHARS, MAX_IMPORT_ROWS, parseGuestImport, validateGuest,
+} from './guests';
+import type { GuestPayload } from './guests';
+import { toCsv } from './csv';
 import type { Guest } from '../types';
 
 const guest = (o: Partial<Guest> & { id: string; name: string }): Guest => ({
@@ -133,5 +137,53 @@ describe('parseGuestImport', () => {
   it('reads semicolon-separated exports', () => {
     const p = parseGuestImport('name;rsvp\nAda;yes');
     expect(p.valid[0].payload).toMatchObject({ name: 'Ada', rsvp_status: 'yes' });
+  });
+});
+
+describe('import hardening', () => {
+  it('strips NUL characters and says so', () => {
+    const p = parseGuestImport('name,notes\nAda\u0000 Test,hi\u0000there');
+    expect(p.valid[0].payload).toMatchObject({ name: 'Ada Test', notes: 'hithere' });
+    expect(JSON.stringify(p.valid[0].payload)).not.toContain('\\u0000');
+    expect(p.warnings.join(' ')).toMatch(/NUL/);
+  });
+  it('refuses pasted text over 1 MB', () => {
+    const p = parseGuestImport(`name\n${'a'.repeat(MAX_IMPORT_CHARS)}`);
+    expect(p.fatal).toMatch(/1 MB/);
+    expect(p.rows).toHaveLength(0);
+  });
+  it('does not match inherited object keys as headers or words', () => {
+    expect(parseGuestImport('name,constructor,__proto__\nAda,x,y').valid).toHaveLength(1);
+    const p = parseGuestImport('name,side,rsvp\nAda,constructor,toString');
+    expect(p.valid).toHaveLength(0);
+    expect(p.invalid[0].errors.join(' ')).toMatch(/Side.*RSVP/);
+    expect(parseGuestImport('constructor,name\nx,Ada').valid[0].payload?.name).toBe('Ada');
+  });
+  it('removes the export apostrophe from name, email, phone and notes only', () => {
+    const p = parseGuestImport("name,phone,notes,table\n'=Ada,'+27 82 123 4567,'-note,'=T1");
+    expect(p.valid[0].payload).toMatchObject({ name: '=Ada', phone: '+27 82 123 4567', notes: '-note', table_label: "'=T1" });
+    const q = parseGuestImport("name\n'Neil\n''=x");
+    expect(q.valid.map((r) => r.payload?.name)).toEqual(["'Neil", "''=x"]);
+  });
+  it('round-trips a guest through the safe export', () => {
+    const csv = toCsv(['name', 'phone'], [['=Ada', '+27 82 123 4567']]);
+    expect(parseGuestImport(csv).valid[0].payload).toMatchObject({ name: '=Ada', phone: '+27 82 123 4567' });
+  });
+});
+
+describe('isDuplicateGuest', () => {
+  const existing = [{ name: 'Ada Test', email: 'ada@example.com', phone: '082 123 4567' }, { name: 'Bob', email: null, phone: null }];
+  const p = (o: Partial<GuestPayload>): GuestPayload => ({
+    name: 'x', email: null, phone: null, side: 'both', rsvp_status: 'pending', party_size: 1, dietary_notes: null, table_label: null, notes: null, ...o,
+  });
+  it('matches name plus email or phone, ignoring case and spacing', () => {
+    expect(isDuplicateGuest(p({ name: 'ada TEST', email: 'ADA@example.com' }), existing)).toBe(true);
+    expect(isDuplicateGuest(p({ name: 'Ada Test', phone: '0821234567' }), existing)).toBe(true);
+    expect(isDuplicateGuest(p({ name: 'Ada Test', email: 'other@example.com' }), existing)).toBe(false);
+  });
+  it('matches on name alone only when the row has no contact details', () => {
+    expect(isDuplicateGuest(p({ name: 'Bob' }), existing)).toBe(true);
+    expect(isDuplicateGuest(p({ name: 'Bob', email: 'b@example.com' }), existing)).toBe(false);
+    expect(isDuplicateGuest(p({ name: 'Zed' }), existing)).toBe(false);
   });
 });

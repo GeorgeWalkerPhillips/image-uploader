@@ -83,3 +83,13 @@ describe('csv writing', () => {
     expect(parseCsv(toCsv(['a', 'b'], rows)).rows.slice(1)).toEqual(rows);
   });
 });
+
+describe('parseCsv whitespace before an opening quote', () => {
+  it('keeps a quoted cell with a comma when spaces precede the quote', () => {
+    expect(parseCsv('Ada, "Smith, Jr",x').rows).toEqual([['Ada', 'Smith, Jr', 'x']]);
+    expect(parseCsv('a;\t"b;c";d').rows[0]).toEqual(['a', 'b;c', 'd']);
+  });
+  it('does not treat a quote after other text as an opening quote', () => {
+    expect(parseCsv('a, x"y,z').rows).toEqual([['a', ' x"y', 'z']]);
+  });
+});

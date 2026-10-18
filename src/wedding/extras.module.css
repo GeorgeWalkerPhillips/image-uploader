@@ -31,7 +31,7 @@
 
 .csvBox { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; resize: vertical; }
 .preview { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-.preview .list { max-height: 260px; overflow-y: auto; }
+.previewList { max-height: 260px; overflow-y: auto; }
 .previewRow { flex-direction: column; gap: 2px; }
 
 .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -43,5 +43,5 @@
 
 .exportRow { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-top: 1px solid var(--hq-input-border); }
 .exportRow:first-of-type { border-top: 0; }
-.exportRow .btn { width: 100%; }
+.exportBtn { width: 100%; }
 .badge { margin-left: 6px; }

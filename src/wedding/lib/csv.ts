@@ -68,7 +68,9 @@ export function parseCsv(input: string): CsvParseResult {
       }
       continue;
     }
-    if (ch === '"' && cell === '' && !cellStarted) {
+    if (ch === '"' && !cellStarted && cell.trim() === '') {
+      // Whitespace before the opening quote is allowed (`Ada, "Smith, Jr"`) and dropped.
+      cell = '';
       inQuotes = true;
       cellStarted = true;
     } else if (ch === delimiter) {

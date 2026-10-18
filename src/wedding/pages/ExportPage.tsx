@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useWedding } from '../WeddingContext';
 import { usePayerLabels } from '../hooks';
 import { fetchRows } from '../api';
@@ -14,6 +14,9 @@ import styles from '../wedding.module.css';
 import x from '../extras.module.css';
 
 const CSV = 'text/csv;charset=utf-8';
+// PostgREST returns at most this many rows per request by default, so a table that
+// comes back this full may have been cut off.
+export const ROW_CAP = 1000;
 
 // Every table in the full backup, under the key used in the JSON file.
 const EVERYTHING: ReadonlyArray<[string, WeddingTable]> = [
@@ -32,12 +35,21 @@ export function ExportPage() {
   const payers = usePayerLabels();
   const [busy, setBusy] = useState<Key | null>(null);
   const [error, setError] = useState<{ key: Key; message: string } | null>(null);
+  const [mayBeTruncated, setMayBeTruncated] = useState<string[]>([]);
+  const seenFull = useRef<Set<string>>(new Set());
 
   const run = async (key: Key, filename: string, build: () => Promise<string>, mime: string) => {
     setBusy(key);
     setError(null);
+    seenFull.current = new Set();
+    setMayBeTruncated([]);
     try {
       const content = await build();
+      if (seenFull.current.size > 0) {
+        const names = [...seenFull.current].map((t) => t.replace(/^wedding_/, '').replace(/_/g, ' '));
+        setMayBeTruncated(names);
+        notify.warning(`This export may be incomplete: ${names.join(', ')} returned ${ROW_CAP} rows, the most that can be fetched at once.`);
+      }
       downloadTextFile(`${filename}-${todayJhbISO()}.${mime.startsWith('text/csv') ? 'csv' : 'json'}`, content, mime);
       notify.success('Export ready. Check your downloads.');
     } catch (e) {
@@ -49,7 +61,11 @@ export function ExportPage() {
     }
   };
 
-  const rows = <T,>(table: WeddingTable) => fetchRows<T>(table, wedding.id);
+  const rows = async <T,>(table: WeddingTable): Promise<T[]> => {
+    const data = await fetchRows<T>(table, wedding.id);
+    if (data.length >= ROW_CAP) seenFull.current.add(table);
+    return data;
+  };
 
   const items: ReadonlyArray<{ key: Key; title: string; hint: string; action: () => void }> = [
     {
@@ -94,6 +110,12 @@ export function ExportPage() {
 
   return (
     <>
+      {mayBeTruncated.length > 0 && (
+        <p className={styles.error} role="alert">
+          Warning: the last export may be incomplete. {mayBeTruncated.join(', ')} returned {ROW_CAP} rows, which is the most that
+          can be fetched at once, so some rows may be missing. Do not rely on that file as a full backup.
+        </p>
+      )}
       <section className={styles.card} aria-label="Spreadsheet exports">
         <h2 className={styles.h2}>Export to a spreadsheet</h2>
         <p className={styles.muted}>
@@ -105,7 +127,7 @@ export function ExportPage() {
               <h3 className={styles.h3}>{it.title}</h3>
               <p className={styles.muted}>{it.hint}</p>
             </div>
-            <button type="button" className={styles.btn} disabled={busy !== null} onClick={it.action}
+            <button type="button" className={`${styles.btn} ${x.exportBtn}`} disabled={busy !== null} onClick={it.action}
               aria-label={`Download ${it.title} CSV`}>
               {busy === it.key ? 'Preparing...' : 'Download CSV'}
             </button>

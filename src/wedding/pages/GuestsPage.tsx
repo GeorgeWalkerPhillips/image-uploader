@@ -71,7 +71,7 @@ export function GuestsPage() {
         log('Imported guests', `${saved.length} guests`);
         setMode({ kind: 'closed' });
       },
-      onError: (e) => notify.error(`Nothing was imported. ${e instanceof Error ? e.message : ''}`.trim()),
+      onError: (e) => notify.error(`The import may not have completed. Check the guest list before trying again. ${e instanceof Error ? e.message : ''}`.trim()),
     });
   };
 
@@ -99,9 +99,12 @@ export function GuestsPage() {
         )}
       </section>
 
+      {mode.kind === 'edit' && (
+        <GuestForm key={mode.guest.id} initial={mode.guest} saving={save.isPending} onSubmit={submit} onCancel={() => setMode({ kind: 'closed' })} />
+      )}
       {mode.kind === 'new' && <GuestForm saving={save.isPending} onSubmit={submit} onCancel={() => setMode({ kind: 'closed' })} />}
       {mode.kind === 'import' && (
-        <GuestImport importing={importer.isPending} onImport={runImport} onCancel={() => setMode({ kind: 'closed' })} />
+        <GuestImport existing={guests} importing={importer.isPending} onImport={runImport} onCancel={() => setMode({ kind: 'closed' })} />
       )}
 
       {guests.length > 0 && (
@@ -136,10 +139,8 @@ export function GuestsPage() {
         </div>
       ) : (
         <section className={styles.stack} aria-label="Guests">
-          {shown.map((g) =>
-            mode.kind === 'edit' && mode.guest.id === g.id ? (
-              <GuestForm key={g.id} initial={g} saving={save.isPending} onSubmit={submit} onCancel={() => setMode({ kind: 'closed' })} />
-            ) : (
+          {shown.filter((g) => !(mode.kind === 'edit' && mode.guest.id === g.id)).map((g) =>
+            (
               <article key={g.id} className={styles.card} aria-label={`Guest ${g.name}`}>
                 <div className={styles.rowBetween}>
                   <h3 className={`${styles.h3} ${x.textWrap}`}>{g.name}{g.party_size > 1 ? ` +${g.party_size - 1}` : ''}</h3>

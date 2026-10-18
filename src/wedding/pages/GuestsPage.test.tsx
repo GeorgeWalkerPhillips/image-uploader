@@ -127,6 +127,16 @@ test('edits and deletes a guest', async () => {
   expect(notify.success).toHaveBeenCalledWith('Guest deleted');
 });
 
+test('the edit form stays visible when a filter excludes the guest being edited', async () => {
+  renderPage(<GuestsPage />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit Ben Test' }));
+  await userEvent.type(screen.getByLabelText('Search guests'), 'zzz');
+  expect(screen.getByRole('form', { name: 'Edit guest' })).toBeInTheDocument();
+  await userEvent.click(within(screen.getByRole('form', { name: 'Edit guest' })).getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('form', { name: 'Edit guest' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add guest' })).toBeInTheDocument();
+});
+
 test('empty state', async () => {
   resetDb({});
   renderPage(<GuestsPage />);
@@ -207,11 +217,36 @@ describe('CSV import', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Check the data' }));
     db.failSave.add('wedding_guests');
     await userEvent.click(within(panel).getByRole('button', { name: 'Import 2 guests' }));
-    await waitFor(() => expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('Nothing was imported')));
+    await waitFor(() => expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('may not have completed')));
     expect(db.tables.wedding_guests).toHaveLength(3);
     expect(screen.getByRole('region', { name: 'Import guests' })).toBeInTheDocument();
     db.failSave.clear();
     await userEvent.click(within(panel).getByRole('button', { name: 'Import 2 guests' }));
     await waitFor(() => expect(db.tables.wedding_guests).toHaveLength(5));
+  });
+
+  test('flags rows already in the list and leaves them out unless ticked', async () => {
+    const panel = await open();
+    const dupCsv = 'name,email\nada test,ADA@example.com\nNew Person,new@example.com';
+    fireEvent.change(within(panel).getByLabelText('Or paste CSV text'), { target: { value: dupCsv } });
+    await userEvent.click(within(panel).getByRole('button', { name: 'Check the data' }));
+    const dup = within(panel).getByRole('list', { name: 'Rows already in your list' });
+    expect(within(panel).getByText('Already in your list')).toBeInTheDocument();
+    expect(dup.textContent).toContain('ada test');
+    expect(within(panel).getByRole('list', { name: 'Rows ready to import' }).textContent).not.toContain('ada test');
+    expect(within(panel).getByRole('button', { name: 'Import 1 guest' })).toBeEnabled();
+    await userEvent.click(within(dup).getByRole('checkbox'));
+    await userEvent.click(within(panel).getByRole('button', { name: 'Import 2 guests' }));
+    await waitFor(() => expect(db.tables.wedding_guests).toHaveLength(5));
+  });
+
+  test('by default only the new row is sent', async () => {
+    const panel = await open();
+    fireEvent.change(within(panel).getByLabelText('Or paste CSV text'), { target: { value: 'name\nBen Test\nNew Person' } });
+    await userEvent.click(within(panel).getByRole('button', { name: 'Check the data' }));
+    await userEvent.click(within(panel).getByRole('button', { name: 'Import 1 guest' }));
+    await waitFor(() => expect(insertRows).toHaveBeenCalledTimes(1));
+    expect(insertRows.mock.calls[0][2]).toHaveLength(1);
+    expect(insertRows.mock.calls[0][2][0]).toMatchObject({ name: 'New Person' });
   });
 });
