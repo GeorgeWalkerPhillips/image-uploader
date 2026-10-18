@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { FaHome, FaWallet, FaTasks, FaCalendarAlt, FaEllipsisH } from 'react-icons/fa';
 import type { IconType } from 'react-icons';
+import { useWedding } from './WeddingContext';
 import styles from './wedding.module.css';
 
 // react-icons 5 returns ReactNode, which TS 4.9 rejects as a JSX element type;
@@ -24,15 +25,42 @@ const TABS: readonly Tab[] = [
   { to: '/hq/calendar', label: 'Calendar', Icon: FaCalendarAlt },
 ];
 
+const TITLES: Record<string, string> = {
+  '/hq/budget': 'Budget',
+  '/hq/tasks': 'Tasks',
+  '/hq/calendar': 'Calendar',
+  '/hq/more': 'More',
+  '/hq/targets': 'Targets',
+  '/hq/settings': 'Settings',
+  '/hq/honeymoon': 'Honeymoon',
+  '/hq/purchases': 'Purchases',
+  '/hq/quotes': 'Quotes',
+  '/hq/invoices': 'Invoices',
+  '/hq/spending': 'Spending',
+};
+
 const NON_MORE = ['/hq', '/hq/budget', '/hq/tasks', '/hq/calendar'];
 
 export function Layout({ children }: { children: ReactNode }) {
   const path = useLocation().pathname.replace(/\/+$/, '') || '/';
   const moreActive = !NON_MORE.some((p) => path === p || (p !== '/hq' && path.startsWith(`${p}/`)));
 
+  const { wedding, member } = useWedding();
+  const isHome = path === '/hq';
+  const title = isHome ? wedding.name : (TITLES[path] ?? 'Wedding HQ');
+
   return (
     <div className={styles.root}>
-      <main className={styles.container}>{children}</main>
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <Link to="/hq" className={styles.headerBrand} aria-label="Wedding HQ home">
+            <img src="/valere_logo.png" alt="Valere" className={styles.headerBrandLogo} />
+          </Link>
+          <h1 className={styles.h1}>{title}</h1>
+          {isHome && <p className={styles.headerSub}>Hi {member.display_name}</p>}
+        </header>
+        <main className={styles.main}>{children}</main>
+      </div>
       <nav className={styles.tabs} aria-label="Wedding HQ">
         {TABS.map(({ to, label, Icon, end }) => (
           <NavLink

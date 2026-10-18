@@ -14,7 +14,7 @@ import { formatDateJhb, jhbInstant, todayJhbISO } from '../lib/time';
 import styles from '../wedding.module.css';
 
 export function HomePage() {
-  const { wedding, member } = useWedding();
+  const { wedding } = useWedding();
   const budget = useBudgetData(wedding.id);
   const tasks = useTasks(wedding.id);
   const targets = useTargets(wedding.id);
@@ -30,11 +30,6 @@ export function HomePage() {
 
   return (
     <>
-      <header>
-        <h1 className={styles.h1}>{wedding.name}</h1>
-        <p className={styles.muted}>Hi {member.display_name}</p>
-      </header>
-
       <Countdown label="Until the wedding" target={new Date(wedding.wedding_date)} />
       {wedding.honeymoon_start && (
         <Countdown label="Until the honeymoon" target={jhbInstant(wedding.honeymoon_start)} compact
@@ -95,7 +90,7 @@ export function HomePage() {
         )}
       </section>
 
-      <section aria-label="Targets">
+      <section aria-label="Targets" className={styles.stack}>
         <div className={styles.rowBetween}>
           <h2 className={styles.h2}>Our targets</h2>
           <Link to="/hq/targets" className={styles.link}>Manage</Link>

@@ -68,14 +68,11 @@ export function TargetsPage() {
 
   return (
     <>
-      <div className={styles.rowBetween}>
-        <h1 className={styles.h1}>Targets</h1>
-        {editing.mode === 'closed' && (
-          <button type="button" className={styles.btnPrimary} onClick={() => setEditing({ mode: 'new' })}>
-            Add target
-          </button>
-        )}
-      </div>
+      {editing.mode === 'closed' && (
+        <button type="button" className={styles.btnPrimary} onClick={() => setEditing({ mode: 'new' })}>
+          Add target
+        </button>
+      )}
 
       {editing.mode !== 'closed' && (
         <TargetForm

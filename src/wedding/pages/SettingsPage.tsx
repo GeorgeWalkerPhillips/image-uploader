@@ -57,7 +57,6 @@ export function SettingsPage() {
 
   return (
     <>
-      <h1 className={styles.h1}>Settings</h1>
       <form className={styles.card} onSubmit={submit} noValidate>
         {field('name', 'Name')}
         <div className={styles.twoCol}>

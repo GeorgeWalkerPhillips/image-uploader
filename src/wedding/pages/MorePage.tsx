@@ -33,7 +33,6 @@ export function MorePage() {
 
   return (
     <>
-      <h1 className={styles.h1}>More</h1>
       <section className={styles.card}>
         <p>
           Signed in as <strong>{member.display_name}</strong> ({member.role})
