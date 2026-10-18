@@ -94,6 +94,63 @@ describe('BudgetPage', () => {
     expect(db.tables.wedding_budget_lines!.find((l) => l.name === 'Three tiers')).toMatchObject({ estimated_cents: 250000 });
   });
 
+  describe('vendor on a line', () => {
+    const withVendor = () => {
+      const data = seed();
+      const lines: Record<string, unknown>[] = data.wedding_budget_lines;
+      lines[0] = { ...lines[0], vendor_id: 'v1' };
+      return { ...data, wedding_budget_lines: lines as typeof data.wedding_budget_lines, wedding_vendors: [{ ...base, id: 'v1', name: 'Acme Hall', category_id: null, phone: null, email: null, whatsapp: null, website: null }] };
+    };
+    const openEditor = async () => {
+      await userEvent.click(await screen.findByRole('button', { name: /Venue/ }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    };
+    const line = () => db.tables.wedding_budget_lines!.find((l) => l.id === 'l1')!;
+
+    test('editing while the vendors query failed keeps the vendor link and locks the field', async () => {
+      resetDb(withVendor());
+      db.failFetch.add('wedding_vendors');
+      renderPage(<BudgetPage />);
+      await openEditor();
+      expect(screen.getByLabelText('Vendor (optional)')).toBeDisabled();
+      await userEvent.clear(screen.getByLabelText('What is it for?'));
+      await userEvent.type(screen.getByLabelText('What is it for?'), 'Hall hire v2');
+      await userEvent.click(screen.getByRole('button', { name: 'Save line' }));
+      await waitFor(() => expect(line().name).toBe('Hall hire v2'));
+      expect(line().vendor_id).toBe('v1');
+      expect(db.tables.wedding_vendors).toHaveLength(1);
+    });
+
+    test('an untouched vendor field keeps the vendor when vendors load fine', async () => {
+      resetDb(withVendor());
+      renderPage(<BudgetPage />);
+      await openEditor();
+      await waitFor(() => expect(screen.getByLabelText('Vendor (optional)')).toHaveValue('Acme Hall'));
+      await userEvent.click(screen.getByRole('button', { name: 'Save line' }));
+      await waitFor(() => expect(screen.queryByRole('form', { name: 'Edit budget line' })).not.toBeInTheDocument());
+      expect(line().vendor_id).toBe('v1');
+    });
+
+    test('typing an existing vendor in different case reuses it; clearing unlinks it', async () => {
+      resetDb(withVendor());
+      renderPage(<BudgetPage />);
+      await openEditor();
+      const field = await screen.findByLabelText('Vendor (optional)');
+      await waitFor(() => expect(field).toBeEnabled());
+      await userEvent.clear(field);
+      await userEvent.type(field, '  ACME hall ');
+      await userEvent.click(screen.getByRole('button', { name: 'Save line' }));
+      await waitFor(() => expect(screen.queryByRole('form', { name: 'Edit budget line' })).not.toBeInTheDocument());
+      expect(line().vendor_id).toBe('v1');
+      expect(db.tables.wedding_vendors).toHaveLength(1);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+      await userEvent.clear(await screen.findByLabelText('Vendor (optional)'));
+      await userEvent.click(screen.getByRole('button', { name: 'Save line' }));
+      await waitFor(() => expect(line().vendor_id).toBeNull());
+    });
+  });
+
   test('search finds a line by its notes and expands its category', async () => {
     renderPage(<BudgetPage />);
     await userEvent.type(await screen.findByLabelText('Search budget lines'), 'deposit');
@@ -146,6 +203,20 @@ describe('SpendingPage', () => {
 
     await userEvent.click(within(tracker).getByRole('button', { name: `Delete ${formatZar(200000)} contribution` }));
     await waitFor(() => expect(db.tables.wedding_savings).toHaveLength(1));
+  });
+
+  test('a passed savings deadline says so instead of a monthly amount', async () => {
+    resetDb({
+      ...seed(),
+      wedding_targets: [
+        { ...base, id: 't1', title: 'House deposit fund', kind: 'amount', scope: 'savings', metric: 'manual', category_id: null, target_cents: 1000000, current_cents: 0, target_at: '2020-01-01T00:00:00Z', notes: null, sort_order: 1, archived: false },
+      ],
+      wedding_savings: [{ ...base, id: 's1', contributed_on: addDaysISO(today, -5), amount_cents: 200000, paid_by: 'joint', note: null }],
+    });
+    renderPage(<SpendingPage />);
+    const tracker = await screen.findByRole('region', { name: 'Savings tracker' });
+    await waitFor(() => expect(tracker.textContent).toContain(`Deadline passed — ${formatZar(800000)} still to save.`));
+    expect(tracker.textContent).not.toContain('to finish on time');
   });
 
   test('a failed query shows a retry and no zero totals', async () => {

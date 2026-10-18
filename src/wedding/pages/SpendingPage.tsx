@@ -15,6 +15,7 @@ import { formatZar, formatZarShort } from '../lib/money';
 import { emptySavingForm, PAYERS, validateSaving } from '../lib/moneyForms';
 import type { SavingFormValues } from '../lib/moneyForms';
 import { categorySummaries, monthlySavings, monthlySpend, savingsProgress, spendByPayer } from '../lib/spending';
+import { isDeadlinePassed } from '../lib/targets';
 import { formatDateJhb, todayJhbISO, toJhbDateISO } from '../lib/time';
 import type { FieldErrors } from '../lib/validators';
 import type { Payer, Saving, Target } from '../types';
@@ -216,7 +217,11 @@ export function SpendingPage() {
               {goal.target_at ? ` · by ${formatDateJhb(goal.target_at)}` : ''}
             </p>
             {progress.monthlyNeededCents !== null && progress.remainingCents > 0 && (
-              <p className={styles.hint}>You need {formatZar(progress.monthlyNeededCents)} per month to finish on time.</p>
+              <p className={styles.hint}>
+                {isDeadlinePassed(new Date(goal.target_at ?? ''), now)
+                  ? `Deadline passed — ${formatZar(progress.remainingCents)} still to save.`
+                  : `You need ${formatZar(progress.monthlyNeededCents)} per month to finish on time.`}
+              </p>
             )}
             {progress.monthlyNeededCents === null && (
               <p className={styles.hint}>

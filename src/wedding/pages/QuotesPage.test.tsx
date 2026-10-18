@@ -31,8 +31,8 @@ const seed = () => ({
     { ...base, id: 'l1', category_id: 'c1', name: 'Bouquets', vendor_id: null, estimated_cents: 500000, quoted_cents: null, final_cents: null, notes: null, sort_order: 1 },
   ],
   wedding_quotes: [
-    { ...base, id: 'q1', vendor_id: null, vendor_name: 'Test Florist', category_id: 'c1', budget_line_id: 'l1', amount_cents: 650000, received_on: '2099-01-01', valid_until: null, status: 'shortlisted', notes: null, attachment_path: null },
-    { ...base, id: 'q2', vendor_id: null, vendor_name: 'Other Blooms', category_id: 'c1', budget_line_id: null, amount_cents: 800000, received_on: '2099-01-02', valid_until: null, status: 'received', notes: null, attachment_path: null },
+    { ...base, id: 'q1', vendor_id: null, vendor_name: 'Test Florist', category_id: 'c1', budget_line_id: 'l1', amount_cents: 650000, received_on: '2099-01-01', valid_until: null, status: 'shortlisted', notes: null, attachment_path: null, created_at: '2099-01-01T08:00:00Z' },
+    { ...base, id: 'q2', vendor_id: null, vendor_name: 'Other Blooms', category_id: 'c1', budget_line_id: null, amount_cents: 800000, received_on: '2099-01-02', valid_until: null, status: 'received', notes: null, attachment_path: null, created_at: '2099-01-01T09:00:00Z' },
   ],
 });
 
@@ -89,8 +89,19 @@ test('if the budget line write fails the user is told honestly and no invoice is
     /Quote accepted, but the budget line price was NOT updated/
   );
   expect(tables()).toEqual(['wedding_quotes', 'wedding_budget_lines']);
+  expect(notify.error).not.toHaveBeenCalled();
   expect(db.tables.wedding_invoices ?? []).toHaveLength(0);
   expect(window.confirm).toHaveBeenCalledTimes(1);
+});
+
+test('if accepting the quote itself fails exactly one toast is shown', async () => {
+  db.failSave.add('wedding_quotes');
+  renderPage(<QuotesPage />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Accept quote from Test Florist' }));
+  await waitFor(() => expect(notify.error).toHaveBeenCalled());
+  expect(notify.error).toHaveBeenCalledTimes(1);
+  expect(String((notify.error as jest.Mock).mock.calls[0]![0])).toMatch(/Could not accept the quote/);
+  expect(notify.warning).not.toHaveBeenCalled();
 });
 
 test('adding a quote with a PDF uploads under <weddingId>/quotes/ and stores that path', async () => {
@@ -179,4 +190,19 @@ test('search and status filter narrow the list', async () => {
   expect(screen.getByRole('article', { name: 'Quote from Other Blooms' })).toBeInTheDocument();
   await userEvent.selectOptions(screen.getByLabelText('Filter by status'), 'accepted');
   expect(screen.getByText('No quotes match those filters.')).toBeInTheDocument();
+});
+
+test('newest first breaks received_on ties by created_at, not id', async () => {
+  resetDb({
+    wedding_categories: seed().wedding_categories,
+    wedding_budget_lines: seed().wedding_budget_lines,
+    wedding_quotes: [
+      { ...base, id: 'zzz', vendor_id: null, vendor_name: 'Older Entry', category_id: 'c1', budget_line_id: null, amount_cents: 100000, received_on: '2099-02-01', valid_until: null, status: 'received', notes: null, attachment_path: null, created_at: '2099-02-01T08:00:00Z' },
+      { ...base, id: 'aaa', vendor_id: null, vendor_name: 'Newer Entry', category_id: 'c1', budget_line_id: null, amount_cents: 100000, received_on: '2099-02-01', valid_until: null, status: 'received', notes: null, attachment_path: null, created_at: '2099-02-01T10:00:00Z' },
+    ],
+  });
+  renderPage(<QuotesPage />);
+  const first = await screen.findByRole('button', { name: 'Accept quote from Newer Entry' });
+  const second = screen.getByRole('button', { name: 'Accept quote from Older Entry' });
+  expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });

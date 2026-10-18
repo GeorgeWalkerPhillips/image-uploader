@@ -85,6 +85,10 @@ export function monthsUntil(target: Date, now: Date): number {
   return Math.max(1, Math.ceil(days / DAYS_PER_MONTH));
 }
 
+export function isDeadlinePassed(deadline: Date | null, now: Date): boolean {
+  return deadline !== null && deadline.getTime() <= now.getTime();
+}
+
 // "You need R X per month to finish on time." Null when there is no deadline.
 // If the deadline has passed, everything still outstanding is due now.
 export function monthlyNeededCents(

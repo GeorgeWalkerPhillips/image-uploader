@@ -22,6 +22,23 @@ export function formatZarShort(cents: number): string {
   return `${negative ? '-' : ''}R${NBSP}${grouped}`;
 }
 
+// Tiny chart labels: "R450", "R1,5k", "R12k", "R999k", "R1m", "R2,5m". Rolls
+// over to the next unit after rounding, so R999 999 reads "R1m", never "R1000k".
+// Empty for zero or negative amounts.
+export function formatZarCompact(cents: number): string {
+  const rands = Math.round(cents / 100);
+  if (!Number.isFinite(rands) || rands <= 0) return '';
+  const trim = (n: number): string => n.toFixed(1).replace('.', ',').replace(',0', '');
+  if (rands < 1000) return `R${rands}`;
+  const k = rands / 1000;
+  if (k < 10) {
+    const text = trim(k);
+    if (text !== '10') return `R${text}k`;
+  }
+  if (Math.round(k) < 1000) return `R${Math.round(k)}k`;
+  return `R${trim(rands / 1000000)}m`;
+}
+
 // Parses what a person types into an amount field and returns cents, or null
 // if it isn't a valid amount. Accepts "15000", "15 000", "R15 000,50",
 // "15,000.50", "15.000,50". South African convention is a decimal comma, so a

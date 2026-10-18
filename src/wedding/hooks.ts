@@ -27,14 +27,21 @@ export interface SaveVars {
 // `also` lists other tables whose cached rows this write can change (for
 // example a deleted category also removes its budget lines), so every screen
 // and Home refetch what they show.
-export function useSaveRow<T>(table: WeddingTable, weddingId: string, also: readonly WeddingTable[] = []) {
+// `silent` skips the default error toast, for callers that report failures
+// themselves (for example the multi-step accept-quote flow).
+export function useSaveRow<T>(
+  table: WeddingTable,
+  weddingId: string,
+  also: readonly WeddingTable[] = [],
+  options: { silent?: boolean } = {}
+) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: SaveVars) => saveRow<T>(table, weddingId, vars.values, vars.id),
     onSuccess: () =>
       Promise.all([table, ...also].map((t) => qc.invalidateQueries({ queryKey: rowsKey(t, weddingId) }))),
     onError: (e: unknown) => {
-      notify.error(messageOf(e));
+      if (!options.silent) notify.error(messageOf(e));
     },
   });
 }

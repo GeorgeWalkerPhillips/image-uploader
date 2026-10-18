@@ -4,7 +4,7 @@ import type { Quote } from '../types';
 const quote = (over: Partial<Quote> = {}): Quote => ({
   id: 'q1', wedding_id: 'w', vendor_id: null, vendor_name: 'Test Florist', category_id: 'c1',
   budget_line_id: 'l1', amount_cents: 650000, received_on: null, valid_until: null, status: 'shortlisted',
-  notes: null, attachment_path: null, ...over,
+  notes: null, attachment_path: null, created_at: '2026-01-01T00:00:00Z', ...over,
 });
 
 function deps(over: Partial<Parameters<typeof acceptQuote>[1]> = {}) {

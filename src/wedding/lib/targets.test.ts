@@ -1,5 +1,5 @@
 import type { Metrics } from './budget';
-import { monthlyNeededCents, monthsUntil, targetCurrentCents, targetDirection, targetProgress } from './targets';
+import { isDeadlinePassed, monthlyNeededCents, monthsUntil, targetCurrentCents, targetDirection, targetProgress } from './targets';
 import type { Target } from '../types';
 
 const metrics: Metrics = {
@@ -61,5 +61,14 @@ describe('monthlyNeededCents (savings per month)', () => {
     expect(monthlyNeededCents(500000, new Date('2026-10-01T00:00:00Z'), now)).toBe(500000);
     expect(monthsUntil(new Date('2026-10-19T00:00:00Z'), now)).toBe(1);
     expect(monthlyNeededCents(500000, new Date('2026-10-19T00:00:00Z'), now)).toBe(500000);
+  });
+});
+
+describe('isDeadlinePassed', () => {
+  const now = new Date('2026-10-18T08:00:00Z');
+  it('is true only for a deadline at or before now', () => {
+    expect(isDeadlinePassed(new Date('2026-10-01T00:00:00Z'), now)).toBe(true);
+    expect(isDeadlinePassed(new Date('2026-10-19T00:00:00Z'), now)).toBe(false);
+    expect(isDeadlinePassed(null, now)).toBe(false);
   });
 });

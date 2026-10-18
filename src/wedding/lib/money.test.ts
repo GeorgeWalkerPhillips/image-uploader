@@ -1,4 +1,4 @@
-import { centsToGroupedInput, centsToInput, formatAmountText, formatZar, formatZarShort, parseRandsToCents, sumCents } from './money';
+import { centsToGroupedInput, formatZarCompact, centsToInput, formatAmountText, formatZar, formatZarShort, parseRandsToCents, sumCents } from './money';
 
 const nb = ' ';
 
@@ -44,6 +44,12 @@ describe('parseRandsToCents', () => {
   it('parses negatives', () => {
     expect(parseRandsToCents('-R1 500')).toBe(-150000);
   });
+  it('rejects malformed thousands grouping instead of guessing', () => {
+    for (const bad of ['12,3456', '1,5,0', '1,2345.67', '12,34,567', '1,234.567', '1234,567']) {
+      expect(parseRandsToCents(bad)).toBeNull();
+    }
+    expect(formatAmountText('12,3456')).toBe('12,3456');
+  });
   it('rejects garbage', () => {
     expect(parseRandsToCents('')).toBeNull();
     expect(parseRandsToCents('abc')).toBeNull();
@@ -76,5 +82,23 @@ describe('grouped amount text', () => {
     expect(formatAmountText('R15000,5')).toBe('15 000,50');
     expect(formatAmountText('')).toBe('');
     expect(formatAmountText('abc')).toBe('abc');
+  });
+});
+
+describe('formatZarCompact', () => {
+  it('labels small, thousand and million amounts', () => {
+    expect(formatZarCompact(0)).toBe('');
+    expect(formatZarCompact(45000)).toBe('R450');
+    expect(formatZarCompact(150000)).toBe('R1,5k');
+    expect(formatZarCompact(100000)).toBe('R1k');
+    expect(formatZarCompact(1250000)).toBe('R13k');
+    expect(formatZarCompact(250000000)).toBe('R2,5m');
+  });
+  it('rolls over units instead of printing R1000k or R10,0k', () => {
+    expect(formatZarCompact(99999900)).toBe('R1m');
+    expect(formatZarCompact(99950000)).toBe('R1m');
+    expect(formatZarCompact(99900000)).toBe('R999k');
+    expect(formatZarCompact(99950)).toBe('R1k');
+    expect(formatZarCompact(996000)).toBe('R10k');
   });
 });

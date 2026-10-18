@@ -154,6 +154,7 @@ export interface Quote {
   status: QuoteStatus;
   notes: string | null;
   attachment_path: string | null;
+  created_at: string;
 }
 
 export type PaymentMethod = 'eft' | 'card' | 'cash' | 'payshap';

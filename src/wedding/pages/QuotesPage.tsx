@@ -36,8 +36,10 @@ export function QuotesPage() {
   const quotesQuery = useQuotes(wedding.id);
   const saveQuote = useSaveRow<Quote>('wedding_quotes', wedding.id);
   const deleteQuote = useDeleteRow('wedding_quotes', wedding.id);
-  const saveLine = useSaveRow<BudgetLine>('wedding_budget_lines', wedding.id);
-  const saveInvoice = useSaveRow<Invoice>('wedding_invoices', wedding.id);
+  // The accept flow reports its own descriptive outcome, so these stay silent.
+  const acceptQuoteRow = useSaveRow<Quote>('wedding_quotes', wedding.id, [], { silent: true });
+  const acceptLineRow = useSaveRow<BudgetLine>('wedding_budget_lines', wedding.id, [], { silent: true });
+  const acceptInvoiceRow = useSaveRow<Invoice>('wedding_invoices', wedding.id, [], { silent: true });
 
   const [editing, setEditing] = useState<Editing>({ mode: 'closed' });
   const [query, setQuery] = useState('');
@@ -69,7 +71,8 @@ export function QuotesPage() {
       if (sort === 'low') return a.amount_cents - b.amount_cents;
       if (sort === 'high') return b.amount_cents - a.amount_cents;
       if (sort === 'vendor') return a.vendor_name.localeCompare(b.vendor_name);
-      return (b.received_on ?? '').localeCompare(a.received_on ?? '') || b.id.localeCompare(a.id);
+      return (b.received_on ?? '').localeCompare(a.received_on ?? '') ||
+        b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id);
     });
   }, [quotes, query, categoryFilter, statusFilter, sort]);
 
@@ -128,9 +131,9 @@ export function QuotesPage() {
     }
     setAccepting(q.id);
     const outcome = await acceptQuote(q, {
-      setQuoteAccepted: (id) => saveQuote.mutateAsync({ id, values: { status: 'accepted' } }),
-      setLineQuoted: (lineId, cents) => saveLine.mutateAsync({ id: lineId, values: { quoted_cents: cents } }),
-      createInvoice: (values) => saveInvoice.mutateAsync({ values }),
+      setQuoteAccepted: (id) => acceptQuoteRow.mutateAsync({ id, values: { status: 'accepted' } }),
+      setLineQuoted: (lineId, cents) => acceptLineRow.mutateAsync({ id: lineId, values: { quoted_cents: cents } }),
+      createInvoice: (values) => acceptInvoiceRow.mutateAsync({ values }),
       confirmInvoice: () =>
         window.confirm(`Also create an invoice for ${formatZar(q.amount_cents)} from ${q.vendor_name}? You can set the due date after.`),
     });

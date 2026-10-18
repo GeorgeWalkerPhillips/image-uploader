@@ -17,7 +17,7 @@ const pay = (id: string, invoice_id: string, amount: number, on = '2026-10-01', 
 });
 const quote = (id: string, vendor: string, amount: number, status: Quote['status'] = 'received', lineId: string | null = null): Quote => ({
   id, wedding_id: W, vendor_id: null, vendor_name: vendor, category_id: 'decor', budget_line_id: lineId, amount_cents: amount,
-  received_on: null, valid_until: null, status, notes: null, attachment_path: null,
+  received_on: null, valid_until: null, status, notes: null, attachment_path: null, created_at: '2026-01-01T00:00:00Z',
 });
 
 const categories = [cat('decor', 'wedding', 2), cat('venue', 'wedding', 1), cat('flights', 'honeymoon', 1), cat('empty', 'wedding', 3)];
@@ -91,6 +91,22 @@ describe('monthlySpend', () => {
     expect(pts.find((p) => p.month === '2026-12')).toMatchObject({ paidCents: 0, dueCents: 450000 });
     expect(pts.find((p) => p.month === '2027-01')).toMatchObject({ dueCents: 1700000 });
     expect(pts.find((p) => p.month === '2027-03')).toMatchObject({ paidCents: 0, dueCents: 0 });
+  });
+  it('extends the range so late payments and late balances are not dropped or clamped', () => {
+    const late = [pay('pl', 'i-late', 100000, '2027-05-10')];
+    const lateInv = [inv('i-late', 900000, '2027-07-15')];
+    const pts = monthlySpend(late, lateInv, '2026-10-18', '2027-03-27');
+    expect(pts[0]?.month).toBe('2026-10');
+    expect(pts[pts.length - 1]?.month).toBe('2027-07');
+    expect(pts.find((p) => p.month === '2027-05')).toMatchObject({ paidCents: 100000 });
+    expect(pts.find((p) => p.month === '2027-07')).toMatchObject({ dueCents: 800000 });
+    expect(pts.find((p) => p.month === '2027-03')).toMatchObject({ paidCents: 0, dueCents: 0 });
+    const totalPaid = pts.reduce((t, p) => t + p.paidCents, 0);
+    expect(totalPaid).toBe(100000);
+  });
+  it('does not extend for fully paid invoices', () => {
+    const pts = monthlySpend([pay('pz', 'i-z', 500000, '2026-10-02')], [inv('i-z', 500000, '2028-01-01')], '2026-10-18', '2027-03-27');
+    expect(pts[pts.length - 1]?.month).toBe('2027-03');
   });
   it('handles a year boundary and an empty range', () => {
     expect(monthlySpend([], [], '2026-11-05', '2027-02-01').map((p) => p.month)).toEqual(['2026-11', '2026-12', '2027-01', '2027-02']);

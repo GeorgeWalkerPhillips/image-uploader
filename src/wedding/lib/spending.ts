@@ -225,7 +225,7 @@ function nextMonth(month: string): string {
 }
 
 // Contiguous months (zero-filled) from the earlier of `fromISO` and the first
-// payment, to `toISO`. Past months show what was paid; current and future months
+// payment, to the latest of `toISO`, the last payment and the last due balance. Past months show what was paid; current and future months
 // also show what is still due, so the graph reads "spent so far" then "to come".
 // Balances already overdue are shown in their original month.
 export function monthlySpend(
@@ -236,8 +236,14 @@ export function monthlySpend(
 ): MonthPoint[] {
   const paidMonths = payments.map((p) => monthOf(p.paid_on));
   const start = [monthOf(fromISO), ...paidMonths].sort()[0] ?? monthOf(fromISO);
-  const end = monthOf(toISO);
-  if (start > end) return [];
+  if (start > monthOf(toISO)) return [];
+  // Never drop or clamp anything: stretch the range to the latest payment and
+  // the latest month an outstanding balance falls due.
+  const lateMonths = [monthOf(toISO), ...paidMonths];
+  for (const invoice of invoices) {
+    if (invoice.due_on && invoiceBalanceCents(invoice, payments) > 0) lateMonths.push(monthOf(invoice.due_on));
+  }
+  const end = lateMonths.sort().slice(-1)[0] ?? monthOf(toISO);
 
   const points = new Map<string, MonthPoint>();
   for (let m = start; m <= end; m = nextMonth(m)) {

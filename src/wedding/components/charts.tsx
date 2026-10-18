@@ -1,4 +1,4 @@
-import { formatZar, formatZarShort } from '../lib/money';
+import { formatZar, formatZarCompact, formatZarShort } from '../lib/money';
 import type { MonthPoint } from '../lib/spending';
 import styles from '../wedding.module.css';
 
@@ -119,16 +119,6 @@ export function PlannedActualBars({ rows }: { rows: readonly BarRow[] }) {
 
 // ------------------------------------------------------------ monthly bars
 
-const compact = (cents: number): string => {
-  const rands = Math.round(cents / 100);
-  if (rands <= 0) return '';
-  if (rands < 1000) return `R${rands}`;
-  if (rands < 1000000) {
-    const k = rands / 1000;
-    return `R${k < 10 ? k.toFixed(1).replace('.', ',').replace(',0', '') : Math.round(k)}k`;
-  }
-  return `R${(rands / 1000000).toFixed(1).replace('.', ',').replace(',0', '')}m`;
-};
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -160,13 +150,13 @@ export function MonthlyBars({ points, currentMonth }: { points: readonly MonthPo
                 {p.paidCents > 0 && (
                   <>
                     <rect x={x - 15} y={BASE - h(p.paidCents)} width="14" height={h(p.paidCents)} rx="4" className={styles.barPaid} />
-                    <text x={x - 8} y={BASE - h(p.paidCents) - 4} textAnchor="middle" className={styles.chartTiny}>{compact(p.paidCents)}</text>
+                    <text x={x - 8} y={BASE - h(p.paidCents) - 4} textAnchor="middle" className={styles.chartTiny}>{formatZarCompact(p.paidCents)}</text>
                   </>
                 )}
                 {p.dueCents > 0 && (
                   <>
                     <rect x={x + 1} y={BASE - h(p.dueCents)} width="14" height={h(p.dueCents)} rx="4" className={styles.barDue} />
-                    <text x={x + 8} y={BASE - h(p.dueCents) - 4} textAnchor="middle" className={styles.chartTiny}>{compact(p.dueCents)}</text>
+                    <text x={x + 8} y={BASE - h(p.dueCents) - 4} textAnchor="middle" className={styles.chartTiny}>{formatZarCompact(p.dueCents)}</text>
                   </>
                 )}
                 <text x={x} y={BASE + 14} textAnchor="middle"
