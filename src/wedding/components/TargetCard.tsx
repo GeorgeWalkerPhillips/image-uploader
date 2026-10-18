@@ -1,17 +1,24 @@
 import type { ReactNode } from 'react';
 import { formatZar } from '../lib/money';
-import { countdownTo, formatDateJhb } from '../lib/time';
-import { monthlyNeededCents, targetProgress } from '../lib/targets';
+import { calendarDaysUntil, formatDateJhb } from '../lib/time';
+import { monthlyNeededCents, needsBudget, targetProgress } from '../lib/targets';
+import { computeMetrics } from '../lib/budget';
 import type { Metrics } from '../lib/budget';
 import type { Target } from '../types';
+import { ErrorRetry } from './ErrorRetry';
 import { useNow } from './useNow';
 import styles from '../wedding.module.css';
 
 interface Props {
   target: Target;
-  metrics: Metrics;
+  // Null when the budget failed to load; budget-measured targets then show an
+  // error instead of a misleading R 0.
+  metrics: Metrics | null;
+  onRetry?: () => void;
   children?: ReactNode;
 }
+
+const EMPTY_METRICS = computeMetrics({ categories: [], lines: [], invoices: [], payments: [], savings: [] });
 
 const STATUS_LABEL = {
   on_track: 'On track',
@@ -20,17 +27,21 @@ const STATUS_LABEL = {
   reached: 'Goal reached',
 } as const;
 
-export function TargetCard({ target, metrics, children }: Props) {
+export function TargetCard({ target, metrics, onRetry, children }: Props) {
   const now = useNow(target.kind === 'date' ? 1000 : 60000);
 
   if (target.kind === 'date' && target.target_at) {
     const at = new Date(target.target_at);
-    const c = countdownTo(at, now);
+    const days = calendarDaysUntil(at, now);
     return (
       <article className={`${styles.card} ${target.archived ? styles.archived : ''}`}>
         <h3 className={styles.h3}>{target.title}</h3>
         <p className={styles.bigNumber}>
-          {c.done ? 'Today or passed' : `${c.days} ${c.days === 1 ? 'day' : 'days'} to go`}
+          {days < 0
+            ? `${-days} ${days === -1 ? 'day' : 'days'} ago`
+            : days === 0
+              ? 'Today'
+              : `${days} ${days === 1 ? 'day' : 'days'} to go`}
         </p>
         <p className={styles.muted}>{formatDateJhb(at, { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
         {target.notes && <p className={styles.notes}>{target.notes}</p>}
@@ -39,7 +50,17 @@ export function TargetCard({ target, metrics, children }: Props) {
     );
   }
 
-  const p = targetProgress(target, metrics);
+  if (metrics === null && needsBudget(target)) {
+    return (
+      <article className={`${styles.card} ${target.archived ? styles.archived : ''}`}>
+        <h3 className={styles.h3}>{target.title}</h3>
+        <ErrorRetry message="Could not load the budget figures for this target." onRetry={onRetry ?? (() => undefined)} />
+        {children}
+      </article>
+    );
+  }
+
+  const p = targetProgress(target, metrics ?? EMPTY_METRICS);
   const deadline = target.target_at ? new Date(target.target_at) : null;
   const monthly = target.scope === 'savings' && p.direction === 'goal' && deadline
     ? monthlyNeededCents(p.remainingCents, deadline, now)

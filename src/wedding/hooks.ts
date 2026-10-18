@@ -60,6 +60,9 @@ export function useUpdateWedding() {
 
 export interface BudgetData {
   loading: boolean;
+  // True when a query failed and has no data to fall back on.
+  isError: boolean;
+  refetch: () => void;
   categories: Category[];
   lines: BudgetLine[];
   invoices: Invoice[];
@@ -93,7 +96,14 @@ export function useBudgetData(weddingId: string): BudgetData {
     [cats, lns, invs, pays, svs]
   );
 
+  const all = [categories, lines, invoices, payments, savings];
+  const failed = all.filter((q) => q.isError && q.data === undefined);
+
   return {
+    isError: failed.length > 0,
+    refetch: () => {
+      failed.forEach((q) => void q.refetch());
+    },
     loading:
       categories.isLoading || lines.isLoading || invoices.isLoading || payments.isLoading || savings.isLoading,
     categories: cats ?? [],

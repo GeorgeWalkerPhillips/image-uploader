@@ -52,6 +52,12 @@ export function daysBetweenISO(a: string, b: string): number {
   return Math.round(ms / 86400000);
 }
 
+// Calendar days (Johannesburg) from now until the target's date: 0 on the same
+// day, 1 the day before even at 23:00, negative once the date has passed.
+export function calendarDaysUntil(target: Date, now: Date): number {
+  return daysBetweenISO(todayJhbISO(now), toJhbDateISO(target));
+}
+
 export function addDaysISO(dateISO: string, days: number): string {
   const d = new Date(`${dateISO}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);

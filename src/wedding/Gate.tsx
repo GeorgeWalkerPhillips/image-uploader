@@ -22,7 +22,9 @@ export function Gate({ children }: { children: ReactNode }) {
 
   if (loading || (userId !== '' && q.isLoading)) return <PageSpinner />;
   if (!user) return <Navigate to="/" replace />;
-  if (q.isError) {
+  // A failed background refetch keeps the cached membership; only show the
+  // error screen when there is nothing to show.
+  if (q.isError && !q.data) {
     return (
       <div className={styles.centerMsg} role="alert">
         <p>Could not load. Check your connection.</p>

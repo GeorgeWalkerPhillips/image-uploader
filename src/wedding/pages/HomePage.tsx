@@ -6,6 +6,8 @@ import { Countdown } from '../components/Countdown';
 import { BudgetRing } from '../components/BudgetRing';
 import { TargetCard } from '../components/TargetCard';
 import { Skeleton } from '../components/Skeleton';
+import { ErrorRetry } from '../components/ErrorRetry';
+import { useNow } from '../components/useNow';
 import { buildNextUp } from '../lib/nextUp';
 import { formatZarShort } from '../lib/money';
 import { formatDateJhb, jhbInstant, todayJhbISO } from '../lib/time';
@@ -17,7 +19,9 @@ export function HomePage() {
   const tasks = useTasks(wedding.id);
   const targets = useTargets(wedding.id);
 
-  const today = todayJhbISO();
+  // Re-evaluated every minute so overdue/soon states roll over at midnight.
+  const now = useNow(60000);
+  const today = todayJhbISO(now);
   const nextUp = useMemo(
     () => buildNextUp(tasks.data ?? [], budget.invoices, budget.payments, today),
     [tasks.data, budget.invoices, budget.payments, today]
@@ -33,13 +37,16 @@ export function HomePage() {
 
       <Countdown label="Until the wedding" target={new Date(wedding.wedding_date)} />
       {wedding.honeymoon_start && (
-        <Countdown label="Until the honeymoon" target={jhbInstant(wedding.honeymoon_start)} compact />
+        <Countdown label="Until the honeymoon" target={jhbInstant(wedding.honeymoon_start)} compact
+          doneMessage="The honeymoon has started." />
       )}
 
       <section className={styles.card} aria-label="Budget">
         <h2 className={styles.h2}>Budget</h2>
         {budget.loading ? (
           <Skeleton height={180} />
+        ) : budget.isError ? (
+          <ErrorRetry message="Could not load the budget." onRetry={budget.refetch} />
         ) : (
           <div className={styles.rings}>
             <BudgetRing label="Wedding" budgetCents={wedding.budget_cents}
@@ -54,6 +61,14 @@ export function HomePage() {
         <h2 className={styles.h2}>Next up</h2>
         {tasks.isLoading || budget.loading ? (
           <Skeleton />
+        ) : tasks.isError || budget.isError ? (
+          <ErrorRetry
+            message="Could not load what is coming up."
+            onRetry={() => {
+              if (tasks.isError) void tasks.refetch();
+              budget.refetch();
+            }}
+          />
         ) : nextUp.length === 0 ? (
           <p className={styles.muted}>Nothing due. Tasks and unpaid invoices with a due date will show here.</p>
         ) : (
@@ -87,13 +102,15 @@ export function HomePage() {
         </div>
         {targets.isLoading || budget.loading ? (
           <Skeleton />
+        ) : targets.isError ? (
+          <ErrorRetry message="Could not load targets." onRetry={() => void targets.refetch()} />
         ) : activeTargets.length === 0 ? (
           <div className={styles.card}>
             <p className={styles.muted}>No targets yet. Add your own, like a savings goal or a date to count down to.</p>
             <Link to="/hq/targets" className={styles.btnPrimary}>Add a target</Link>
           </div>
         ) : (
-          activeTargets.map((t) => <TargetCard key={t.id} target={t} metrics={budget.metrics} />)
+          activeTargets.map((t) => <TargetCard key={t.id} target={t} metrics={budget.isError ? null : budget.metrics} onRetry={budget.refetch} />)
         )}
       </section>
     </>

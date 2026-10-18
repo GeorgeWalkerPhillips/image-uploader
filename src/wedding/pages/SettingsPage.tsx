@@ -44,13 +44,15 @@ export function SettingsPage() {
     label: string,
     props: { type?: string; inputMode?: 'decimal' | 'numeric'; placeholder?: string } = {}
   ) => (
-    <label className={styles.field}>
-      <span>{label}</span>
-      <input className={styles.input} value={v[key]} aria-invalid={!!errors[key]}
-        aria-describedby={errors[key] ? `err-${key}` : undefined}
-        onChange={(e) => set(key)(e.target.value)} {...props} />
+    <div className={styles.fieldWrap}>
+      <label className={styles.field}>
+        <span>{label}</span>
+        <input className={styles.input} value={v[key]} aria-invalid={!!errors[key]}
+          aria-describedby={errors[key] ? `err-${key}` : undefined}
+          onChange={(e) => set(key)(e.target.value)} {...props} />
+      </label>
       {errors[key] && <span className={styles.error} id={`err-${key}`} role="alert">{errors[key]}</span>}
-    </label>
+    </div>
   );
 
   return (

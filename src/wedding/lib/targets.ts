@@ -9,7 +9,16 @@ export function targetDirection(target: Pick<Target, 'scope' | 'metric'>): Targe
   return target.scope === 'savings' || target.metric === 'savings_total' ? 'goal' : 'cap';
 }
 
-export function targetCurrentCents(target: Target, metrics: Metrics): number {
+// Amount targets measured from the budget (not typed in by hand) can only be
+// shown truthfully once the budget data has loaded.
+export function needsBudget(target: Pick<Target, 'kind' | 'metric'>): boolean {
+  return target.kind === 'amount' && target.metric !== 'manual';
+}
+
+export function targetCurrentCents(
+  target: Pick<Target, 'metric' | 'category_id' | 'current_cents'>,
+  metrics: Metrics
+): number {
   switch (target.metric) {
     case 'paid_total':
       return metrics.paid;

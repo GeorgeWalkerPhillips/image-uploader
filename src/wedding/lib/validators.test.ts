@@ -76,6 +76,19 @@ describe('validateTarget', () => {
   });
 });
 
+describe('amount target deadline', () => {
+  const amount = { title: 'x', targetAmount: '100', targetDate: '2027-03-06', targetTime: '14:30' };
+  it('keeps the deadline for savings goals', () => {
+    const r = validateTarget(base({ ...amount, scope: 'savings' }));
+    expect(r.ok && r.value.target_at).toBe('2027-03-06T12:30:00.000Z');
+  });
+  it('drops a stale hidden deadline for other scopes', () => {
+    const r = validateTarget(base({ ...amount, scope: 'wedding' }));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.target_at).toBeNull();
+  });
+});
+
 describe('jhb parts', () => {
   it('round-trips', () => {
     const iso = jhbPartsToISO('2027-03-06', '14:30');

@@ -6,11 +6,12 @@ interface Props {
   label: string;
   target: Date;
   compact?: boolean;
+  doneMessage?: string;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-export function Countdown({ label, target, compact = false }: Props) {
+export function Countdown({ label, target, compact = false, doneMessage = 'The day has arrived.' }: Props) {
   const now = useNow();
   const c = countdownTo(target, now);
   const tiles: Array<[string, string]> = [
@@ -23,7 +24,7 @@ export function Countdown({ label, target, compact = false }: Props) {
     <section className={`${styles.card} ${compact ? styles.countCompact : ''}`} aria-label={label}>
       <h2 className={styles.h2}>{label}</h2>
       {c.done ? (
-        <p className={styles.muted}>The day has arrived.</p>
+        <p className={styles.muted}>{doneMessage}</p>
       ) : (
         <div className={styles.tiles} role="timer">
           {tiles.map(([value, unit]) => (

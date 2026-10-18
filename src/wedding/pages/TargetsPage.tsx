@@ -5,6 +5,7 @@ import { useBudgetData, useDeleteRow, useSaveRow, useTargets } from '../hooks';
 import { TargetCard } from '../components/TargetCard';
 import { TargetForm } from '../components/TargetForm';
 import { Skeleton } from '../components/Skeleton';
+import { ErrorRetry } from '../components/ErrorRetry';
 import type { TargetPayload } from '../lib/validators';
 import type { Target } from '../types';
 import styles from '../wedding.module.css';
@@ -20,6 +21,7 @@ export function TargetsPage() {
   const [editing, setEditing] = useState<Editing>({ mode: 'closed' });
   const [showArchived, setShowArchived] = useState(false);
 
+  const budgetMetrics = budget.isError ? null : budget.metrics;
   const all = targets.data ?? [];
   const active = all.filter((t) => !t.archived);
   const archived = all.filter((t) => t.archived);
@@ -79,6 +81,7 @@ export function TargetsPage() {
         <TargetForm
           key={editing.mode === 'edit' ? editing.target.id : 'new'}
           categories={budget.categories}
+          metrics={budgetMetrics ?? undefined}
           initial={editing.mode === 'edit' ? editing.target : undefined}
           saving={save.isPending}
           onSubmit={submit}
@@ -89,14 +92,14 @@ export function TargetsPage() {
       {targets.isLoading || budget.loading ? (
         <Skeleton height={140} />
       ) : targets.isError ? (
-        <p className={styles.error} role="alert">Could not load targets.</p>
+        <ErrorRetry message="Could not load targets." onRetry={() => void targets.refetch()} />
       ) : active.length === 0 ? (
         <div className={styles.card}>
           <p className={styles.muted}>No targets yet. Add a savings goal, a spending cap, or a date to count down to.</p>
         </div>
       ) : (
         active.map((t) => (
-          <TargetCard key={t.id} target={t} metrics={budget.metrics}>
+          <TargetCard key={t.id} target={t} metrics={budgetMetrics} onRetry={budget.refetch}>
             {actions(t)}
           </TargetCard>
         ))
@@ -110,7 +113,7 @@ export function TargetsPage() {
           </button>
           {showArchived &&
             archived.map((t) => (
-              <TargetCard key={t.id} target={t} metrics={budget.metrics}>
+              <TargetCard key={t.id} target={t} metrics={budgetMetrics} onRetry={budget.refetch}>
                 {actions(t)}
               </TargetCard>
             ))}

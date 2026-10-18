@@ -78,7 +78,9 @@ export function validateTarget(v: TargetFormValues): Validated<TargetPayload> {
       else current_cents = cur;
     }
     // An optional deadline (used for the "per month" hint on savings goals).
-    if (v.targetDate) {
+    // The date input is only shown for savings goals, so ignore a stale value
+    // left over from another scope.
+    if (v.scope === 'savings' && v.targetDate) {
       target_at = jhbPartsToISO(v.targetDate, v.targetTime);
       if (!target_at) errors.targetDate = 'Enter a valid date.';
     }

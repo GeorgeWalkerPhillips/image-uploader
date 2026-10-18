@@ -1,5 +1,6 @@
 import {
   addDaysISO,
+  calendarDaysUntil,
   countdownTo,
   daysBetweenISO,
   dueUrgency,
@@ -52,5 +53,19 @@ describe('dueUrgency', () => {
     expect(dueUrgency('2026-10-25', today)).toBe('soon');
     expect(dueUrgency('2026-10-26', today)).toBe('later');
     expect(dueUrgency(null, today)).toBe('none');
+  });
+});
+
+describe('calendarDaysUntil', () => {
+  const target = jhbInstant('2027-03-06', '10:00');
+  it('is 1 the evening before, even with under 24h left', () => {
+    expect(calendarDaysUntil(target, jhbInstant('2027-03-05', '23:00'))).toBe(1);
+  });
+  it('is 0 on the day itself, before or after the time', () => {
+    expect(calendarDaysUntil(target, jhbInstant('2027-03-06', '00:30'))).toBe(0);
+    expect(calendarDaysUntil(target, jhbInstant('2027-03-06', '18:00'))).toBe(0);
+  });
+  it('is negative once the date has passed', () => {
+    expect(calendarDaysUntil(target, jhbInstant('2027-03-08', '09:00'))).toBe(-2);
   });
 });

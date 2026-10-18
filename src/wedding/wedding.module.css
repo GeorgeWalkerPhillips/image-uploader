@@ -135,6 +135,9 @@
 }
 .input[aria-invalid='true'] { border-color: var(--red); }
 .error { color: var(--red); font-weight: 400; }
+/* Wraps a label plus its error message (the message sits outside the label). */
+.fieldWrap { margin-bottom: 12px; min-width: 0; font-size: 0.92rem; }
+.fieldWrap > .field { margin-bottom: 4px; }
 .twoCol { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 /* Countdown */

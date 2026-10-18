@@ -1,5 +1,5 @@
 import './testPolyfills';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Gate } from './Gate';
@@ -30,7 +30,7 @@ function Inside() {
 
 function renderGate() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const utils = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/hq']}>
         <Routes>
@@ -40,6 +40,7 @@ function renderGate() {
       </MemoryRouter>
     </QueryClientProvider>
   );
+  return { ...utils, client };
 }
 
 beforeEach(() => {
@@ -68,4 +69,29 @@ test('signed-out user is sent to / without querying', async () => {
   renderGate();
   expect(await screen.findByText('Valere home')).toBeInTheDocument();
   expect(mockMaybeSingle).not.toHaveBeenCalled();
+});
+
+test('a failed background refetch keeps showing the app', async () => {
+  mockMaybeSingle.mockResolvedValue({
+    data: { role: 'bride', display_name: 'Val', wedding },
+    error: null,
+  });
+  const { client } = renderGate();
+  expect(await screen.findByText('HQ content for Val')).toBeInTheDocument();
+
+  mockMaybeSingle.mockResolvedValue({ data: null, error: { message: 'network down' } });
+  await client.refetchQueries({ queryKey: ['wedding-membership'] });
+  await waitFor(() => {
+    const state = client.getQueryState(['wedding-membership', 'u1']);
+    expect(state?.status).toBe('error');
+  });
+  expect(screen.getByText('HQ content for Val')).toBeInTheDocument();
+  expect(screen.queryByText(/Could not load/)).not.toBeInTheDocument();
+});
+
+test('a failed first load shows the error screen with retry', async () => {
+  mockMaybeSingle.mockResolvedValue({ data: null, error: { message: 'network down' } });
+  renderGate();
+  expect(await screen.findByText(/Could not load/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
 });

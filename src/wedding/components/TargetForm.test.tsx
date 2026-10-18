@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TargetForm } from './TargetForm';
+import { computeMetrics } from '../lib/budget';
+import type { Metrics } from '../lib/budget';
 import type { Category } from '../types';
 
 const categories: Category[] = [
@@ -46,4 +48,41 @@ test('date target needs a date', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Save target' }));
   expect(screen.getByText('Choose the date.')).toBeInTheDocument();
   expect(onSubmit).not.toHaveBeenCalled();
+});
+
+describe('per-month hint', () => {
+  const metrics = computeMetrics({ categories: [], lines: [], invoices: [], payments: [], savings: [] });
+  const future = `${new Date().getFullYear() + 1}-12-31`;
+
+  async function fillSavings(m?: Metrics) {
+    render(<TargetForm categories={categories} metrics={m} onSubmit={jest.fn()} onCancel={jest.fn()} />);
+    await userEvent.selectOptions(screen.getByLabelText('Scope'), 'savings');
+    await userEvent.type(screen.getByLabelText('Target amount (R)'), '12 000');
+    await userEvent.type(screen.getByLabelText(/^Deadline/), future);
+  }
+
+  test('shows for a manual savings goal', async () => {
+    await fillSavings(metrics);
+    expect(screen.getByText(/per month to finish on time/)).toBeInTheDocument();
+  });
+
+  test('also shows for a budget-measured savings goal when figures loaded', async () => {
+    await fillSavings(metrics);
+    await userEvent.selectOptions(screen.getByLabelText('Measured by'), 'savings_total');
+    expect(screen.getByText(/per month to finish on time/)).toBeInTheDocument();
+  });
+
+  test('is hidden for a budget-measured goal when figures failed to load', async () => {
+    await fillSavings(undefined);
+    await userEvent.selectOptions(screen.getByLabelText('Measured by'), 'savings_total');
+    expect(screen.queryByText(/per month to finish on time/)).not.toBeInTheDocument();
+  });
+});
+
+test('field error sits outside the label but is linked by aria-describedby', async () => {
+  setup();
+  await userEvent.click(screen.getByRole('button', { name: 'Save target' }));
+  const alert = screen.getByText('Give the target a title.');
+  expect(alert.closest('label')).toBeNull();
+  expect(screen.getByLabelText('Title')).toHaveAttribute('aria-describedby', alert.id);
 });
