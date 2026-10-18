@@ -150,6 +150,57 @@ select jobid, jobname, schedule, active from cron.job;
 select * from cron.job_run_details order by start_time desc limit 10;
 ```
 
+## Wedding HQ email reminders
+
+Separate from the Capture by Val emails above. `send-wedding-reminders` sends
+each Wedding HQ member **one digest email per day** (never one per item)
+listing, grouped as Today / Tomorrow / In N days: events starting that day
+(Johannesburg time shown for timed events), open tasks due that day (the
+member's own plus "both"), and unpaid invoice balances due that day (amount
+shown as `R 15 000,00`). Subject: `Wedding HQ: N things coming up`. Emails
+contain only titles, times and payment amounts; never guest details, document
+info, notes or bank details. The button opens `<ALLOWED_ORIGIN>/hq/calendar`.
+
+- **Schedule:** pg_cron job `send-wedding-reminders-daily`, 05:00 UTC = 07:00
+  Africa/Johannesburg. "Today" is the Johannesburg date.
+- **Per-member settings:** `wedding_reminder_settings` (enabled, lead days
+  0..30 up to 6, include events/tasks/payments). A member with no row gets the
+  defaults: enabled, today + tomorrow, everything included.
+- **No repeats:** each sent item is recorded in `wedding_reminder_log`
+  (service role only) after the email succeeds; a failed send is retried on
+  the next run.
+- **Secrets:** none new. Reuses `RESEND_API_KEY`, `RESEND_FROM_EMAIL`,
+  `ALLOWED_ORIGIN`.
+
+Setup:
+
+1. Apply `wedding-hq-2026-10d-reminders.sql` (batches marked inside the file).
+   Before its cron batch, run the one `vault.create_secret(...)` call it
+   documents for `wedding_reminders_function_url` (the `service_role_key`
+   Vault secret already exists from `event-archive-and-emails.sql`).
+2. Deploy: `supabase functions deploy send-wedding-reminders --project-ref <ref>`
+
+Manual run (same auth as the archive job; anything else gets 401):
+
+```bash
+curl -X POST "https://<your-project-ref>.supabase.co/functions/v1/send-wedding-reminders" \
+  -H "Authorization: Bearer <your-service-role-key>"
+```
+
+The response is a count-only summary: `{weddings, members, emailsSent, skipped, errors}`.
+To re-test the same day, clear the log: `delete from wedding_reminder_log where wedding_id = '<id>';`
+(run as project owner). Failures are written to `error_logs`
+(`source like 'send-wedding-reminders%'`) without email addresses.
+
+**Disable:** one member can turn reminders off in their settings row
+(`enabled = false`); to stop all of them, `select cron.unschedule('send-wedding-reminders-daily');`.
+
+Logic tests (no Deno needed):
+
+```bash
+npx esbuild supabase/functions/_shared/weddingReminders.test.ts --bundle --platform=node --format=esm --outfile=/tmp/weddingReminders.test.mjs && node --test /tmp/weddingReminders.test.mjs
+```
+
 ## Known limitation
 
 `purge-expired-events` zips every due event's photos inside a single Edge

@@ -120,6 +120,13 @@ file):
 21. `wedding-hq-2026-10c-guests-activity.sql` — Wedding HQ only: `wedding_guests`
     (guest list/RSVP) and the append-only `wedding_activity` feed, both members-only
     via RLS and added to the realtime publication. Run after file 20. See `WEDDING_HQ.md`.
+22. `wedding-hq-2026-10d-reminders.sql` — Wedding HQ only: email reminders.
+    `wedding_reminder_settings` (each member's own row via RLS),
+    service-role-only `wedding_reminder_log`, and a daily pg_cron job
+    (05:00 UTC) that calls the `send-wedding-reminders` Edge Function. Run
+    after file 21 and after `event-archive-and-emails.sql` (reuses its
+    `service_role_key` Vault secret; add `wedding_reminders_function_url`
+    first). Apply in the batches marked in the file. See `EMAIL_SETUP.md`.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest

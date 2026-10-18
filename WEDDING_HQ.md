@@ -65,6 +65,8 @@ To remove access, delete the member row.
 4. **Honeymoon and purchases**: itinerary, bookings, packing list, travel documents,
    currency, purchase checklist with receipts.
 5. **Always up to date**: realtime sync, offline read cache, installable PWA, polish.
+6. **Email reminders**: a daily 07:00 (Johannesburg) digest email per member of events, tasks
+   and payments coming up; per-member settings. Backend only so far; see `EMAIL_SETUP.md`.
 
 ## Realtime, offline and install
 
