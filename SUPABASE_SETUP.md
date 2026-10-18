@@ -114,6 +114,9 @@ file):
     it to the two listed members. Purely additive; it changes nothing that
     already exists. Run after file 18 (order doesn't otherwise matter).
     See "Wedding HQ membership" below.
+20. `wedding-hq-2026-10b-constraints.sql` — Wedding HQ only: CHECK constraints so
+    the database itself rejects a non-`#rrggbb` category colour and any stored
+    file path outside the row's own `<wedding_id>/` folder. Run after file 19.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest

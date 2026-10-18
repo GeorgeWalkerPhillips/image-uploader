@@ -36,10 +36,11 @@ const TITLES: Record<string, string> = {
   '/hq/purchases': 'Purchases',
   '/hq/quotes': 'Quotes',
   '/hq/invoices': 'Invoices',
-  '/hq/spending': 'Spending',
+  '/hq/spending': 'Money spent so far',
 };
 
-const NON_MORE = ['/hq', '/hq/budget', '/hq/tasks', '/hq/calendar'];
+const MONEY = ['/hq/budget', '/hq/quotes', '/hq/invoices', '/hq/spending'];
+const NON_MORE = ['/hq', ...MONEY, '/hq/tasks', '/hq/calendar'];
 
 export function Layout({ children }: { children: ReactNode }) {
   const path = useLocation().pathname.replace(/\/+$/, '') || '/';
@@ -47,6 +48,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   const { wedding, member } = useWedding();
   const isHome = path === '/hq';
+  const onMoney = MONEY.includes(path);
   const title = isHome ? wedding.name : (TITLES[path] ?? 'Wedding HQ');
 
   return (
@@ -67,7 +69,9 @@ export function Layout({ children }: { children: ReactNode }) {
             key={to}
             to={to}
             end={end}
-            className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
+            className={({ isActive }) =>
+              `${styles.tab} ${isActive || (to === '/hq/budget' && onMoney) ? styles.tabActive : ''}`
+            }
           >
             <Glyph icon={Icon} />
             <span>{label}</span>

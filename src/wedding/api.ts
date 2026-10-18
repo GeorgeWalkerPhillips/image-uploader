@@ -1,9 +1,11 @@
 import { supabase } from '../supabaseClient';
-import type { Member, Wedding } from './types';
+import type { Member, Role, Wedding } from './types';
 
 export type WeddingTable =
   | 'wedding_categories'
   | 'wedding_budget_lines'
+  | 'wedding_quotes'
+  | 'wedding_vendors'
   | 'wedding_invoices'
   | 'wedding_payments'
   | 'wedding_savings'
@@ -96,4 +98,19 @@ export async function updateWedding(
   );
   if (!rows || rows.length === 0) throw new ApiError('Nothing was saved. Please refresh and try again.');
   return rows[0];
+}
+
+export interface MemberName {
+  role: Role;
+  display_name: string;
+}
+
+// Both people's display names (for labelling who paid). RLS lets a member read
+// the members of their own wedding only.
+export async function fetchMemberNames(weddingId: string): Promise<MemberName[]> {
+  return (
+    unwrap<MemberName[] | null>(
+      await supabase.from('wedding_members').select('role, display_name').eq('wedding_id', weddingId)
+    ) ?? []
+  );
 }

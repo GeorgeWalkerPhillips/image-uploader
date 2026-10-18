@@ -1,4 +1,4 @@
-import { centsToInput, formatZar, formatZarShort, parseRandsToCents, sumCents } from './money';
+import { centsToGroupedInput, centsToInput, formatAmountText, formatZar, formatZarShort, parseRandsToCents, sumCents } from './money';
 
 const nb = ' ';
 
@@ -60,5 +60,21 @@ describe('parseRandsToCents', () => {
 describe('sumCents', () => {
   it('adds integers exactly', () => {
     expect(sumCents([750000, 1500000, 1500000, 400000, 200000, 0])).toBe(4350000);
+  });
+});
+
+describe('grouped amount text', () => {
+  test('centsToGroupedInput groups thousands and round-trips', () => {
+    expect(centsToGroupedInput(4350000)).toBe('43 500');
+    expect(centsToGroupedInput(4350050)).toBe('43 500,50');
+    expect(centsToGroupedInput(0)).toBe('0');
+    expect(centsToGroupedInput(null)).toBe('');
+    expect(parseRandsToCents(centsToGroupedInput(123456789))).toBe(123456789);
+  });
+  test('formatAmountText formats valid text and leaves junk alone', () => {
+    expect(formatAmountText('43500')).toBe('43 500');
+    expect(formatAmountText('R15000,5')).toBe('15 000,50');
+    expect(formatAmountText('')).toBe('');
+    expect(formatAmountText('abc')).toBe('abc');
   });
 });

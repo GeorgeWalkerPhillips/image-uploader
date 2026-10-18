@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { toast } from 'react-toastify';
+import { notify } from '../notify';
 import { useWedding } from '../WeddingContext';
 import { useBudgetData, useDeleteRow, useSaveRow, useTargets } from '../hooks';
 import { TargetCard } from '../components/TargetCard';
@@ -34,7 +34,7 @@ export function TargetsPage() {
       { id, values },
       {
         onSuccess: () => {
-          toast.success('Target saved');
+          notify.success('Target saved');
           setEditing({ mode: 'closed' });
         },
       }
@@ -44,12 +44,12 @@ export function TargetsPage() {
   const toggleArchive = (t: Target) =>
     save.mutate(
       { id: t.id, values: { archived: !t.archived } },
-      { onSuccess: () => toast.success(t.archived ? 'Target restored' : 'Target archived') }
+      { onSuccess: () => notify.success(t.archived ? 'Target restored' : 'Target archived') }
     );
 
   const remove = (t: Target) => {
     if (!window.confirm(`Delete "${t.title}"? This cannot be undone.`)) return;
-    del.mutate(t.id, { onSuccess: () => toast.success('Target deleted') });
+    del.mutate(t.id, { onSuccess: () => notify.success('Target deleted') });
   };
 
   const actions = (t: Target) => (

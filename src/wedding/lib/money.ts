@@ -27,6 +27,7 @@ export function formatZarShort(cents: number): string {
 // "15,000.50", "15.000,50". South African convention is a decimal comma, so a
 // lone separator followed by exactly 3 digits ("15,000") is a thousands
 // separator, while one followed by 1-2 digits ("15,5", "15.50") is decimal.
+// Malformed grouping ("12,3456", "1,5,0", "12,34,567") is rejected, not guessed.
 export function parseRandsToCents(input: string): number | null {
   let s = input.replace(/[\s ]/g, '');
   let negative = false;
@@ -53,8 +54,10 @@ export function parseRandsToCents(input: string): number | null {
       fracPart = after;
     }
   }
+  // Whatever separators remain are thousands grouping: one repeated character,
+  // a first group of 1-3 digits, then exactly 3 digits per group.
+  if (!/^(\d+|\d{1,3}(,\d{3})+|\d{1,3}(\.\d{3})+)$/.test(intPart)) return null;
   intPart = intPart.replace(/[.,]/g, '');
-  if (intPart === '') return null;
 
   const rands = Number(intPart);
   const frac = Number(fracPart.padEnd(2, '0'));
@@ -71,6 +74,26 @@ export function centsToInput(cents: number | null | undefined): string {
   const remainder = abs % 100;
   const base = remainder === 0 ? String(rands) : `${rands},${String(remainder).padStart(2, '0')}`;
   return cents < 0 ? `-${base}` : base;
+}
+
+// Like centsToInput but with thousands grouped by a plain space ("43 500"),
+// for showing an amount inside a form field. Still round-trips through
+// parseRandsToCents.
+export function centsToGroupedInput(cents: number | null | undefined): string {
+  const plain = centsToInput(cents);
+  if (plain === '') return '';
+  const negative = plain.startsWith('-');
+  const [rands = '', frac] = (negative ? plain.slice(1) : plain).split(',');
+  const grouped = rands.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${negative ? '-' : ''}${grouped}${frac ? `,${frac}` : ''}`;
+}
+
+// Tidies what was typed ("43500" -> "43 500") when a field loses focus. Text
+// that is not a valid amount is returned untouched so validation can explain it.
+export function formatAmountText(text: string): string {
+  if (text.trim() === '') return '';
+  const cents = parseRandsToCents(text);
+  return cents === null ? text : centsToGroupedInput(cents);
 }
 
 export function sumCents(values: readonly number[]): number {

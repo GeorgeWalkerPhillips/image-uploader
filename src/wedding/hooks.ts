@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
-import { deleteRow, fetchRows, saveRow, updateWedding } from './api';
+import { notify } from './notify';
+import { deleteRow, fetchMemberNames, fetchRows, saveRow, updateWedding } from './api';
 import type { OrderBy, WeddingTable } from './api';
 import { useWedding } from './WeddingContext';
 import { computeMetrics } from './lib/budget';
 import type { Metrics } from './lib/budget';
-import type { BudgetLine, Category, Invoice, Payment, Saving, Task, Target } from './types';
+import type { BudgetLine, Category, Invoice, Payer, Payment, Quote, Saving, Task, Target, Vendor } from './types';
 
 const rowsKey = (table: WeddingTable, weddingId: string) => [table, weddingId] as const;
 
@@ -24,24 +24,29 @@ export interface SaveVars {
   values: Record<string, unknown>;
 }
 
-export function useSaveRow<T>(table: WeddingTable, weddingId: string) {
+// `also` lists other tables whose cached rows this write can change (for
+// example a deleted category also removes its budget lines), so every screen
+// and Home refetch what they show.
+export function useSaveRow<T>(table: WeddingTable, weddingId: string, also: readonly WeddingTable[] = []) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: SaveVars) => saveRow<T>(table, weddingId, vars.values, vars.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: rowsKey(table, weddingId) }),
+    onSuccess: () =>
+      Promise.all([table, ...also].map((t) => qc.invalidateQueries({ queryKey: rowsKey(t, weddingId) }))),
     onError: (e: unknown) => {
-      toast.error(messageOf(e));
+      notify.error(messageOf(e));
     },
   });
 }
 
-export function useDeleteRow(table: WeddingTable, weddingId: string) {
+export function useDeleteRow(table: WeddingTable, weddingId: string, also: readonly WeddingTable[] = []) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteRow(table, weddingId, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: rowsKey(table, weddingId) }),
+    onSuccess: () =>
+      Promise.all([table, ...also].map((t) => qc.invalidateQueries({ queryKey: rowsKey(t, weddingId) }))),
     onError: (e: unknown) => {
-      toast.error(messageOf(e));
+      notify.error(messageOf(e));
     },
   });
 }
@@ -53,7 +58,7 @@ export function useUpdateWedding() {
     mutationFn: (values: Record<string, unknown>) => updateWedding(wedding.id, values),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['wedding-membership'] }),
     onError: (e: unknown) => {
-      toast.error(messageOf(e));
+      notify.error(messageOf(e));
     },
   });
 }
@@ -118,3 +123,23 @@ export function useBudgetData(weddingId: string): BudgetData {
 export const useTargets = (weddingId: string) =>
   useRows<Target>('wedding_targets', weddingId, { column: 'sort_order' });
 export const useTasks = (weddingId: string) => useRows<Task>('wedding_tasks', weddingId, { column: 'due_on' });
+export const useQuotes = (weddingId: string) =>
+  useRows<Quote>('wedding_quotes', weddingId, { column: 'created_at', ascending: false });
+export const useVendors = (weddingId: string) =>
+  useRows<Vendor>('wedding_vendors', weddingId, { column: 'name' });
+
+export type PayerLabels = Record<Payer, string>;
+
+// Labels for who paid: each member's display name plus "Joint", with the
+// signed-in member's own name as a fallback if the members query fails.
+export function usePayerLabels(): PayerLabels {
+  const { wedding, member } = useWedding();
+  const q = useQuery({
+    queryKey: ['wedding-member-names', wedding.id],
+    queryFn: () => fetchMemberNames(wedding.id),
+    staleTime: 10 * 60 * 1000,
+  });
+  const name = (role: 'groom' | 'bride', fallback: string): string =>
+    q.data?.find((m) => m.role === role)?.display_name ?? (member.role === role ? member.display_name : fallback);
+  return { groom: name('groom', 'Groom'), bride: name('bride', 'Bride'), joint: 'Joint' };
+}

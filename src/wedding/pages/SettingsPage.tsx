@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { toast } from 'react-toastify';
+import { notify } from '../notify';
 import { useWedding } from '../WeddingContext';
 import { useUpdateWedding } from '../hooks';
-import { centsToInput } from '../lib/money';
+import { centsToGroupedInput, formatAmountText } from '../lib/money';
 import { isoToJhbParts } from '../lib/jhb';
 import { validateWedding } from '../lib/validators';
 import type { FieldErrors, WeddingFormValues } from '../lib/validators';
@@ -19,8 +19,8 @@ export function SettingsPage() {
     weddingTime: parts.time,
     venue: wedding.venue ?? '',
     guestCount: wedding.guest_count === null ? '' : String(wedding.guest_count),
-    budget: centsToInput(wedding.budget_cents),
-    honeymoonBudget: centsToInput(wedding.honeymoon_budget_cents),
+    budget: centsToGroupedInput(wedding.budget_cents),
+    honeymoonBudget: centsToGroupedInput(wedding.honeymoon_budget_cents),
     honeymoonStart: wedding.honeymoon_start ?? '',
     honeymoonDays: wedding.honeymoon_days === null ? '' : String(wedding.honeymoon_days),
     fx: wedding.fx_thb_per_zar === null ? '' : String(wedding.fx_thb_per_zar),
@@ -36,20 +36,22 @@ export function SettingsPage() {
       return;
     }
     setErrors({});
-    update.mutate({ ...r.value }, { onSuccess: () => toast.success('Settings saved') });
+    update.mutate({ ...r.value }, { onSuccess: () => notify.success('Settings saved') });
   };
 
   const field = (
     key: keyof WeddingFormValues,
     label: string,
-    props: { type?: string; inputMode?: 'decimal' | 'numeric'; placeholder?: string } = {}
+    props: { type?: string; inputMode?: 'decimal' | 'numeric'; placeholder?: string } = {},
+    money = false
   ) => (
     <div className={styles.fieldWrap}>
       <label className={styles.field}>
         <span>{label}</span>
         <input className={styles.input} value={v[key]} aria-invalid={!!errors[key]}
           aria-describedby={errors[key] ? `err-${key}` : undefined}
-          onChange={(e) => set(key)(e.target.value)} {...props} />
+          onChange={(e) => set(key)(e.target.value)}
+          onBlur={money ? () => set(key)(formatAmountText(v[key])) : undefined} {...props} />
       </label>
       {errors[key] && <span className={styles.error} id={`err-${key}`} role="alert">{errors[key]}</span>}
     </div>
@@ -65,8 +67,8 @@ export function SettingsPage() {
         </div>
         {field('venue', 'Venue')}
         {field('guestCount', 'Guest count', { inputMode: 'numeric' })}
-        {field('budget', 'Wedding budget (R)', { inputMode: 'decimal' })}
-        {field('honeymoonBudget', 'Honeymoon budget (R)', { inputMode: 'decimal' })}
+        {field('budget', 'Wedding budget (R)', { inputMode: 'decimal' }, true)}
+        {field('honeymoonBudget', 'Honeymoon budget (R)', { inputMode: 'decimal' }, true)}
         <div className={styles.twoCol}>
           {field('honeymoonStart', 'Honeymoon start', { type: 'date' })}
           {field('honeymoonDays', 'Honeymoon days', { inputMode: 'numeric' })}
