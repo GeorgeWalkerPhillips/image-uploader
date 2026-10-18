@@ -29,7 +29,7 @@ describe('downloadTextFile', () => {
     expect(clicked).toEqual([{ href: 'blob:test-url', download: 'wedding-hq.ics' }]);
     expect(document.querySelector('a[download]')).toBeNull();
     expect(revoke).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(1000);
+    jest.advanceTimersByTime(60000);
     expect(revoke).toHaveBeenCalledWith('blob:test-url');
     spy.mockRestore();
   });

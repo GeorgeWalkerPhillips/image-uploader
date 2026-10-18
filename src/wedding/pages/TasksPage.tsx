@@ -60,7 +60,11 @@ export function TasksPage() {
   };
 
   const selectedId = params.get('task');
-  const selected = tops.find((t) => t.id === selectedId) ?? null;
+  const selectedRow = all.find((t) => t.id === selectedId) ?? null;
+  // A subtask link (e.g. from the calendar) opens its parent task.
+  const selected = selectedRow?.parent_task_id
+    ? tops.find((t) => t.id === selectedRow.parent_task_id) ?? null
+    : selectedRow;
   const openTask = (id: string | null) => {
     setEditing({ mode: 'closed' });
     setParams(id ? { task: id } : {});

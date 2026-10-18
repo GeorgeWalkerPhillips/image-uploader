@@ -12,5 +12,5 @@ export function downloadTextFile(filename: string, content: string, mime: string
   link.click();
   link.remove();
   // Revoke after the browser has had time to start reading the blob.
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
