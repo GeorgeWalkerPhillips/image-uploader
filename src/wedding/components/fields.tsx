@@ -27,7 +27,7 @@ function Wrap({ label, error, errorId, children }: Common & { errorId: string; c
 interface TextProps extends Common {
   value: string;
   onChange: (value: string) => void;
-  type?: 'text' | 'date' | 'email';
+  type?: 'text' | 'date' | 'time' | 'email';
   inputMode?: 'decimal' | 'numeric';
   placeholder?: string;
   maxLength?: number;
@@ -90,5 +90,20 @@ export function TextAreaField({ label, error, value, onChange, maxLength = 1000 
         aria-invalid={!!error} aria-describedby={error ? errorId : undefined}
         onChange={(e) => onChange(e.target.value)} />
     </Wrap>
+  );
+}
+
+export function CheckboxField({ label, checked, onChange, disabled }: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className={styles.checkRow}>
+      <input type="checkbox" className={styles.check} checked={checked} disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)} />
+      <span>{label}</span>
+    </label>
   );
 }

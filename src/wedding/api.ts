@@ -11,7 +11,8 @@ export type WeddingTable =
   | 'wedding_savings'
   | 'wedding_targets'
   | 'wedding_tasks'
-  | 'wedding_events';
+  | 'wedding_events'
+  | 'wedding_itinerary_days';
 
 interface ApiResponse {
   data: unknown;

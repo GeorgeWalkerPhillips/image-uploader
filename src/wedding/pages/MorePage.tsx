@@ -6,6 +6,8 @@ import { useAuthUser } from '../useAuthUser';
 import styles from '../wedding.module.css';
 
 const LINKS: ReadonlyArray<{ to: string; label: string; soon?: boolean }> = [
+  { to: '/hq/tasks', label: 'Tasks' },
+  { to: '/hq/calendar', label: 'Calendar' },
   { to: '/hq/budget', label: 'Budget' },
   { to: '/hq/quotes', label: 'Quotes' },
   { to: '/hq/invoices', label: 'Invoices' },

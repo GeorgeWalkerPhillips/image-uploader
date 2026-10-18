@@ -11,7 +11,7 @@ const unfold = (s: string) => s.replace(/\r\n /g, '');
 
 describe('escaping and folding', () => {
   it('escapes backslash, semicolon, comma and newlines', () => {
-    expect(escapeText('a,b;c\\d\ne')).toBe('a\\,b\;c\\\\d\\ne');
+    expect(escapeText('a,b;c\\d\ne')).toBe('a\\,b\\;c\\\\d\\ne');
   });
   it('folds long lines to 75 octets and unfolds back to the original', () => {
     const long = 'SUMMARY:' + 'x'.repeat(200);
@@ -71,7 +71,7 @@ describe('buildICS', () => {
     expect(pay).toContain('SUMMARY:Payment due: Venue');
     const ev = buildICS([item({ layer: 'events', title: 'Tasting', location: 'Test Hall; Room 2' })], { calendarName: 'x', now: NOW });
     expect(ev).toContain('SUMMARY:Tasting');
-    expect(ev).toContain('LOCATION:Test Hall\; Room 2');
+    expect(ev).toContain('LOCATION:Test Hall\\; Room 2');
   });
   it('produces an empty but valid calendar for no items', () => {
     const out = buildICS([], { calendarName: 'x', now: NOW });

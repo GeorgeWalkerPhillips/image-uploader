@@ -6,6 +6,7 @@ import type { OrderBy, WeddingTable } from './api';
 import { useWedding } from './WeddingContext';
 import { computeMetrics } from './lib/budget';
 import type { Metrics } from './lib/budget';
+import type { CalendarEventRow, ItineraryDayRow } from './lib/calendar';
 import type { BudgetLine, Category, Invoice, Payer, Payment, Quote, Saving, Task, Target, Vendor } from './types';
 
 const rowsKey = (table: WeddingTable, weddingId: string) => [table, weddingId] as const;
@@ -130,6 +131,10 @@ export function useBudgetData(weddingId: string): BudgetData {
 export const useTargets = (weddingId: string) =>
   useRows<Target>('wedding_targets', weddingId, { column: 'sort_order' });
 export const useTasks = (weddingId: string) => useRows<Task>('wedding_tasks', weddingId, { column: 'due_on' });
+export const useEvents = (weddingId: string) =>
+  useRows<CalendarEventRow>('wedding_events', weddingId, { column: 'starts_at' });
+export const useItinerary = (weddingId: string) =>
+  useRows<ItineraryDayRow>('wedding_itinerary_days', weddingId, { column: 'day_number' });
 export const useQuotes = (weddingId: string) =>
   useRows<Quote>('wedding_quotes', weddingId, { column: 'created_at', ascending: false });
 export const useVendors = (weddingId: string) =>

@@ -12,8 +12,10 @@ import { BudgetPage } from './pages/BudgetPage';
 import { QuotesPage } from './pages/QuotesPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { SpendingPage } from './pages/SpendingPage';
+import { TasksPage } from './pages/TasksPage';
+import { CalendarPage } from './pages/CalendarPage';
 
-const LATER = ['tasks', 'calendar', 'honeymoon', 'purchases'];
+const LATER = ['honeymoon', 'purchases'];
 
 // Keeps HQ out of search engines and restores the page head on the way out.
 function useHqHead() {
@@ -50,6 +52,8 @@ export default function WeddingApp() {
             <Route path="quotes" element={<QuotesPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
             <Route path="spending" element={<SpendingPage />} />
+            <Route path="tasks" element={<TasksPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="more" element={<MorePage />} />
             {LATER.map((p) => (
               <Route key={p} path={p} element={<ComingSoon name={p} />} />
