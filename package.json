@@ -4,9 +4,14 @@
   "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0",
+    "@tanstack/react-query": "^5.104.4",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^18.19.130",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
     "qrcode.react": "^4.2.0",
@@ -17,6 +22,7 @@
     "react-scripts": "5.0.1",
     "react-toastify": "^10.0.3",
     "sharp": "^0.35.3",
+    "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

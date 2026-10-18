@@ -139,3 +139,19 @@ Project subagents, used in this order for non-trivial changes:
 | Test | `tester-ui` | Headless Chromium on an iPhone profile; screenshots + console/network logs + `report.md` as proof |
 
 Rules for all agents: RLS and DB triggers are the enforcement layer; never deploy, apply SQL, push to `main` or open PRs without the user's explicit say-so; tests are never skipped or weakened to get green. Tester evidence goes in `test-evidence/` (git-ignored); testers never trigger real Paystack payments or touch production data. The generic engineering skills they lean on are in `.claude/skills/` (installed from `addyosmani/agent-skills`, pinned in `skills-lock.json`).
+
+## Wedding HQ (`src/wedding/`, route `/hq`, private)
+
+A private two-person wedding/honeymoon planner that lives inside this app but
+is unrelated to Capture by Val. **It is hidden, not secret-by-obscurity:** the
+real protection is RLS — all `wedding_*` tables and the `wedding-files` storage
+bucket are readable only by the two accounts in `wedding_members`
+(`wedding_is_member()`; anonymous guest sessions are rejected). The route is
+lazy-loaded, unlinked, absent from `sitemap.xml`/`robots.txt`, and sets
+`noindex`; a non-member who visits `/hq` is silently sent to `/`. Membership is
+added only by the owner via SQL, by auth user id (never by email — sign-up is
+open and unconfirmed). Code is strict TypeScript (CRA `allowJs`); all money is
+integer cents formatted `R 15 000,00`; dates are shown in Africa/Johannesburg.
+**This repo is public: never commit the couple's personal seed data** — apply it
+directly to the database. Any change touching `wedding_*` policies or storage
+needs `reviewer-security`. Schema: `wedding-hq-2026-10.sql`.

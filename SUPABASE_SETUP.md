@@ -108,6 +108,12 @@ file):
     existing events. Must stay in sync with `src/services/pricingTiers.js`
     and the two Paystack Edge Functions (`paystack-initialize` /
     `paystack-webhook`) — redeploy both after changing prices here.
+19. `wedding-hq-2026-10.sql` — **unrelated to Capture by Val.** Adds the
+    private "Wedding HQ" planner (`/hq`): 17 `wedding_*` tables, a private
+    `wedding-files` storage bucket, and the policies that restrict all of
+    it to the two listed members. Purely additive; it changes nothing that
+    already exists. Run after file 18 (order doesn't otherwise matter).
+    See "Wedding HQ membership" below.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
@@ -120,6 +126,28 @@ fly blind on bugs). File 13 is only needed if you enable Google Sign-In
 (`EMAIL_SETUP.md`). Files 10, 16, 17, and 18 must be applied before
 accepting real payments; run file 18 last so its `enforce_event_billing_
 integrity()` is the one that sticks.
+
+### Wedding HQ membership (file 19)
+Access is granted **by account id, never by email**: sign-up is open and
+email confirmation is off, so an email match could be spoofed. Nobody can
+join from the app. The project owner adds each person once, in the SQL
+Editor, using the `id` from the account that person actually logged in with
+(Dashboard -> Authentication -> Users), after creating the wedding row:
+
+```sql
+insert into public.wedding_members (wedding_id, user_id, role, display_name)
+values ('<wedding id>', '<that person''s auth user id>', 'groom', 'Their name');
+-- role is 'groom' or 'bride'; a role and a user can each appear only once.
+```
+
+Personal data (names, budgets, dates) is **not** in this repo — it is public.
+Seed it straight into the database, never commit it. To remove access, delete
+the member row; to remove everything, use the ROLLBACK block at the top of the
+migration file.
+
+Note: in the Supabase SQL Editor and connector, `DROP POLICY` was observed to
+hang on this project. Prefer create-only statements (check `pg_policies`
+first) when re-running parts of the file.
 
 ### Checking error logs
 Once file 8 is applied, run this in the SQL Editor any time something goes
