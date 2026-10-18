@@ -40,6 +40,10 @@ const TITLES: Record<string, string> = {
   '/hq/quotes': 'Quotes',
   '/hq/invoices': 'Invoices',
   '/hq/spending': 'Money spent so far',
+  '/hq/guests': 'Guest list',
+  '/hq/vendors': 'Vendors',
+  '/hq/activity': 'Activity',
+  '/hq/export': 'Export',
 };
 
 const MONEY = ['/hq/budget', '/hq/quotes', '/hq/invoices', '/hq/spending'];

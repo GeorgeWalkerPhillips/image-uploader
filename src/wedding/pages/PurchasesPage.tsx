@@ -3,6 +3,7 @@ import { useWedding } from '../WeddingContext';
 import { useDeleteRow, usePayerLabels, usePurchaseItems, useSaveRow } from '../hooks';
 import type { PayerLabels } from '../hooks';
 import { notify } from '../notify';
+import { useLogActivity } from '../extrasHooks';
 import { supabaseAttachmentStore } from '../storage';
 import { Skeleton } from '../components/Skeleton';
 import { ErrorRetry } from '../components/ErrorRetry';
@@ -32,6 +33,7 @@ export function PurchasesPage() {
   const query = usePurchaseItems(wedding.id);
   const save = useSaveRow<PurchaseItem>('wedding_purchase_items', wedding.id);
   const remove = useDeleteRow('wedding_purchase_items', wedding.id);
+  const logActivity = useLogActivity();
   const [editing, setEditing] = useState<Editing>({ mode: 'closed' });
   const [saving, setSaving] = useState(false);
   const today = todayJhbISO(useNow(60000));
@@ -49,7 +51,7 @@ export function PurchasesPage() {
   // One write, optionally with a receipt: validate -> upload -> database write.
   const write = async (
     existing: PurchaseItem | null, values: Record<string, unknown>, change: FileChange, okMessage: string
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     setSaving(true);
     try {
       await saveWithAttachment({
@@ -67,9 +69,11 @@ export function PurchasesPage() {
       });
       notify.success(okMessage);
       setEditing({ mode: 'closed' });
+      return true;
     } catch (e) {
       if (e instanceof AttachmentError) notify.error(e.message);
       // Database errors were already toasted by the mutation hook.
+      return false;
     } finally {
       setSaving(false);
     }
@@ -78,8 +82,9 @@ export function PurchasesPage() {
   const submitItem = (payload: PurchasePayload, change: FileChange) =>
     write(editing.mode === 'edit' ? editing.item : null, { ...payload }, change, 'Item saved');
 
-  const submitBought = (item: PurchaseItem, patch: BoughtPatch, change: FileChange) =>
-    write(item, { ...patch }, change, 'Marked as bought');
+  const submitBought = async (item: PurchaseItem, patch: BoughtPatch, change: FileChange) => {
+    if (await write(item, { ...patch }, change, 'Marked as bought')) logActivity('Marked an item bought', item.name);
+  };
 
   const markNotBought = (item: PurchaseItem) => {
     save.mutate({ id: item.id, values: { ...UNBOUGHT_PATCH } }, { onSuccess: () => notify.success('Moved back to to-buy') });

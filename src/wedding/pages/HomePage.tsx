@@ -6,6 +6,7 @@ import { Countdown } from '../components/Countdown';
 import { BudgetRing } from '../components/BudgetRing';
 import { TargetCard } from '../components/TargetCard';
 import { Skeleton } from '../components/Skeleton';
+import { ActivityFeed } from '../components/ActivityFeed';
 import { ErrorRetry } from '../components/ErrorRetry';
 import { useNow } from '../components/useNow';
 import { buildNextUp } from '../lib/nextUp';
@@ -108,6 +109,8 @@ export function HomePage() {
           activeTargets.map((t) => <TargetCard key={t.id} target={t} metrics={budget.isError ? null : budget.metrics} onRetry={budget.refetch} />)
         )}
       </section>
+
+      <ActivityFeed limit={5} compact />
     </>
   );
 }

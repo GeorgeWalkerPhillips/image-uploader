@@ -68,6 +68,8 @@ test('adding payments flips the invoice status and balance, and warns (without b
   const after = screen.getByRole('region', { name: 'Invoice summary' });
   expect(after.textContent).toContain(`Paid${formatZar(400000)}`);
   expect(after.textContent).toContain(`Balance${formatZar(600000)}`);
+  await waitFor(() => expect(db.tables.wedding_activity).toHaveLength(1));
+  expect(db.tables.wedding_activity![0]).toMatchObject({ action: 'Added a payment', subject: expect.any(String) });
   expect(saveRow).toHaveBeenCalledWith(
     'wedding_payments', WID,
     expect.objectContaining({ invoice_id: 'i1', amount_cents: 400000, paid_by: 'bride', method: 'eft' }),

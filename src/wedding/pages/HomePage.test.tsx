@@ -20,6 +20,11 @@ jest.mock('../WeddingContext', () => ({
   }),
 }));
 
+// The compact activity feed has its own tests (ActivityPage.test.tsx).
+jest.mock('../extrasHooks', () => ({
+  useActivity: () => ({ data: [], isLoading: false, isError: false, refetch: jest.fn() }),
+}));
+
 const mockBudget = jest.fn();
 const mockTasks = jest.fn();
 const mockTargets = jest.fn();

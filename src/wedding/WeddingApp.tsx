@@ -19,6 +19,10 @@ import { InvoicesPage } from './pages/InvoicesPage';
 import { SpendingPage } from './pages/SpendingPage';
 import { TasksPage } from './pages/TasksPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { GuestsPage } from './pages/GuestsPage';
+import { VendorsPage } from './pages/VendorsPage';
+import { ActivityPage } from './pages/ActivityPage';
+import { ExportPage } from './pages/ExportPage';
 
 // Keeps HQ out of search engines and restores the page head on the way out.
 function useHqHead() {
@@ -84,6 +88,10 @@ export default function WeddingApp() {
               <Route path="more" element={<MorePage />} />
               <Route path="honeymoon" element={<HoneymoonPage />} />
               <Route path="purchases" element={<PurchasesPage />} />
+              <Route path="guests" element={<GuestsPage />} />
+              <Route path="vendors" element={<VendorsPage />} />
+              <Route path="activity" element={<ActivityPage />} />
+              <Route path="export" element={<ExportPage />} />
               <Route path="*" element={<ComingSoon name="This page" />} />
             </Routes>
           </Layout>

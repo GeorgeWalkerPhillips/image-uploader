@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { notify } from '../notify';
+import { useLogActivity } from '../extrasHooks';
 import { useWedding } from '../WeddingContext';
 import { useBudgetData, useDeleteRow, useSaveRow, useTargets } from '../hooks';
 import { TargetCard } from '../components/TargetCard';
@@ -18,6 +19,7 @@ export function TargetsPage() {
   const targets = useTargets(wedding.id);
   const save = useSaveRow<Target>('wedding_targets', wedding.id);
   const del = useDeleteRow('wedding_targets', wedding.id);
+  const logActivity = useLogActivity();
   const [editing, setEditing] = useState<Editing>({ mode: 'closed' });
   const [showArchived, setShowArchived] = useState(false);
 
@@ -35,6 +37,7 @@ export function TargetsPage() {
       {
         onSuccess: () => {
           notify.success('Target saved');
+          if (!id) logActivity('Created a target', payload.title);
           setEditing({ mode: 'closed' });
         },
       }

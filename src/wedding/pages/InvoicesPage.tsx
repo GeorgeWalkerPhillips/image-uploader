@@ -4,6 +4,7 @@ import { useWedding } from '../WeddingContext';
 import { useBudgetData, useDeleteRow, usePayerLabels, useSaveRow } from '../hooks';
 import type { PayerLabels } from '../hooks';
 import { notify } from '../notify';
+import { useLogActivity } from '../extrasHooks';
 import { supabaseAttachmentStore } from '../storage';
 import { MoneyTabs } from '../components/MoneyTabs';
 import { Skeleton } from '../components/Skeleton';
@@ -52,6 +53,7 @@ export function InvoicesPage() {
   const deleteInvoice = useDeleteRow('wedding_invoices', wedding.id, ['wedding_payments']);
   const savePayment = useSaveRow<Payment>('wedding_payments', wedding.id);
   const deletePayment = useDeleteRow('wedding_payments', wedding.id);
+  const logActivity = useLogActivity();
   const [params, setParams] = useSearchParams();
 
   const [editing, setEditing] = useState<Editing>({ mode: 'closed' });
@@ -166,6 +168,7 @@ export function InvoicesPage() {
           }),
       });
       notify.success('Payment saved');
+      if (!existing) logActivity('Added a payment', invoice.vendor_name);
       setPaymentEditor({ mode: 'closed' });
     } catch (e) {
       if (e instanceof AttachmentError) notify.error(e.message);

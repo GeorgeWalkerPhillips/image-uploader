@@ -62,6 +62,15 @@ const impls = {
     rows.push(row);
     return { ...row };
   },
+  insertRows: async (table: string, weddingId: string, values: Record<string, unknown>[]) => {
+    if (db.failSave.has(table)) throw new ApiError('mock save failure');
+    return values.map((v) => {
+      db.counter += 1;
+      const row: Row = { id: `new-${table}-${db.counter}`, wedding_id: weddingId, ...v };
+      rowsOf(table).push(row);
+      return { ...row };
+    });
+  },
   deleteRow: async (table: string, _weddingId: string, id: string) => {
     const rows = rowsOf(table);
     const i = rows.findIndex((r) => r.id === id);
@@ -82,6 +91,7 @@ const fns = {
   fetchRows: jest.fn(),
   saveRow: jest.fn(),
   deleteRow: jest.fn(),
+  insertRows: jest.fn(),
   fetchMembership: jest.fn(),
   updateWedding: jest.fn(),
   fetchMemberNames: jest.fn(),
@@ -91,6 +101,7 @@ function install(): void {
   fns.fetchRows.mockImplementation(impls.fetchRows);
   fns.saveRow.mockImplementation(impls.saveRow);
   fns.deleteRow.mockImplementation(impls.deleteRow);
+  fns.insertRows.mockImplementation(impls.insertRows);
   fns.fetchMembership.mockImplementation(impls.fetchMembership);
   fns.updateWedding.mockImplementation(impls.updateWedding);
   fns.fetchMemberNames.mockImplementation(impls.fetchMemberNames);

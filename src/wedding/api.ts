@@ -16,7 +16,9 @@ export type WeddingTable =
   | 'wedding_purchase_items'
   | 'wedding_bookings'
   | 'wedding_packing_items'
-  | 'wedding_travel_docs';
+  | 'wedding_travel_docs'
+  | 'wedding_guests'
+  | 'wedding_activity';
 
 interface ApiResponse {
   data: unknown;
@@ -34,6 +36,8 @@ export function unwrap<T>(res: ApiResponse): T {
 export interface OrderBy {
   column: string;
   ascending?: boolean;
+  // Caps the rows fetched (for append-only feeds that grow without bound).
+  limit?: number;
 }
 
 export async function fetchRows<T>(
@@ -43,6 +47,7 @@ export async function fetchRows<T>(
 ): Promise<T[]> {
   let query = supabase.from(table).select('*').eq('wedding_id', weddingId);
   if (order) query = query.order(order.column, { ascending: order.ascending ?? true });
+  if (order?.limit) query = query.limit(order.limit);
   return unwrap<T[] | null>(await query) ?? [];
 }
 
@@ -64,6 +69,20 @@ export async function saveRow<T>(
   );
   if (!rows || rows.length === 0) throw new ApiError('Nothing was saved. Please try again.');
   return rows[0];
+}
+
+// Inserts many rows in one request (all-or-nothing), for the guest CSV import.
+export async function insertRows<T>(
+  table: WeddingTable,
+  weddingId: string,
+  rows: readonly Record<string, unknown>[]
+): Promise<T[]> {
+  if (rows.length === 0) return [];
+  const saved = unwrap<T[] | null>(
+    await supabase.from(table).insert(rows.map((r) => ({ ...r, wedding_id: weddingId }))).select()
+  );
+  if (!saved || saved.length !== rows.length) throw new ApiError('Nothing was imported. Please try again.');
+  return saved;
 }
 
 export async function deleteRow(table: WeddingTable, weddingId: string, id: string): Promise<void> {
