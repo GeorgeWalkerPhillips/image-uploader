@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { PageSpinner } from './components/Spinner';
 import { AuthCallbackRedirect } from './components/AuthCallbackRedirect';
 import Home from './Home';
 import CameraCapture from './CameraCapture';
@@ -15,6 +16,8 @@ import PrivacyPolicy from './PrivacyPolicy';
 import Terms from './Terms';
 import RefundPolicy from './RefundPolicy';
 import './App.css';
+
+const WeddingApp = React.lazy(() => import('./wedding/WeddingApp'));
 
 function App() {
   return (
@@ -37,6 +40,16 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route
+          path="/hq/*"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageSpinner />}>
+                <WeddingApp />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
       <ToastContainer
         position="bottom-right"
