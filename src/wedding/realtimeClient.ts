@@ -3,9 +3,13 @@ import { filterFor } from './lib/realtime';
 import type { ChannelFactory, ChannelStatus } from './lib/realtime';
 
 // The only place Wedding HQ opens a realtime channel. RLS still decides which
-// rows a subscriber is sent, so this adds no access on its own.
+// rows a subscriber is sent, so this adds no access on its own. The topic is
+// unique per start so a fast remount never collides with a channel that is
+// still being torn down.
+let channelSeq = 0;
+
 export const supabaseChannelFactory: ChannelFactory = ({ weddingId, tables, onChange, onStatus }) => {
-  let channel = supabase.channel(`wedding-hq:${weddingId}`);
+  let channel = supabase.channel(`wedding-hq:${weddingId}:${(channelSeq += 1)}`);
   for (const table of tables) {
     channel = channel.on(
       'postgres_changes',
@@ -19,7 +23,7 @@ export const supabaseChannelFactory: ChannelFactory = ({ weddingId, tables, onCh
   });
   return {
     close: () => {
-      void supabase.removeChannel(channel);
+      void Promise.resolve(supabase.removeChannel(channel)).catch(() => undefined);
     },
   };
 };

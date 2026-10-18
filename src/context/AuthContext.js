@@ -179,6 +179,16 @@ export function AuthProvider({ children }) {
     setError(null);
     setUser(null);
 
+    // Private planner data cached for offline reading must not outlive the
+    // session on a shared device, even when the user signs out from here.
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('wedding-hq:'))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* storage blocked: nothing was cached */
+    }
+
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;

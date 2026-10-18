@@ -69,9 +69,10 @@ export interface RegisterOptions {
 
 // Registers the HQ worker. Resolves quietly on any failure: HQ works fine
 // without a worker, it just will not open offline.
-export async function registerHqServiceWorker(opts: RegisterOptions): Promise<void> {
+export async function registerHqServiceWorker(opts: RegisterOptions): Promise<() => void> {
+  const disposers: Array<() => void> = [];
   const container = opts.container ?? (typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined);
-  if (!container) return;
+  if (!container) return () => undefined;
   const reload = opts.reload ?? (() => window.location.reload());
   let applying = false;
 
@@ -93,14 +94,20 @@ export async function registerHqServiceWorker(opts: RegisterOptions): Promise<vo
 
     if (reg.waiting && container.controller) offer(reg.waiting);
     if (reg.installing) watch(reg.installing);
-    reg.addEventListener('updatefound', () => {
+    const onUpdateFound = () => {
       if (reg.installing) watch(reg.installing);
-    });
-    container.addEventListener('controllerchange', () => {
+    };
+    const onControllerChange = () => {
       if (applying) {
         applying = false;
         reload();
       }
+    };
+    reg.addEventListener('updatefound', onUpdateFound);
+    container.addEventListener('controllerchange', onControllerChange);
+    disposers.push(() => {
+      reg.removeEventListener('updatefound', onUpdateFound);
+      container.removeEventListener('controllerchange', onControllerChange);
     });
 
     const ready = await container.ready;
@@ -109,11 +116,14 @@ export async function registerHqServiceWorker(opts: RegisterOptions): Promise<vo
 
     // Look for a new version whenever the app is brought back to the front.
     if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => {
+      const onVisible = () => {
         if (document.visibilityState === 'visible') void reg.update().catch(() => undefined);
-      });
+      };
+      document.addEventListener('visibilitychange', onVisible);
+      disposers.push(() => document.removeEventListener('visibilitychange', onVisible));
     }
   } catch {
     /* unsupported or blocked: carry on without offline shell */
   }
+  return () => disposers.forEach((d) => d());
 }

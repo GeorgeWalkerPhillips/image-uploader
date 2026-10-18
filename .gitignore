@@ -24,3 +24,4 @@ yarn-error.log*
 
 # agent test evidence (screenshots, logs, reports)
 /test-evidence
+.claude/worktrees/

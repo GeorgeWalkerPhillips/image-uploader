@@ -7,9 +7,13 @@ import { showUpdateToast } from './UpdateToast';
 export function usePwa(): void {
   useEffect(() => {
     const restoreHead = installHqHead();
+    let disposeWorker: Promise<() => void> | null = null;
     if (process.env.NODE_ENV === 'production') {
-      void registerHqServiceWorker({ onUpdate: (apply) => showUpdateToast(apply) });
+      disposeWorker = registerHqServiceWorker({ onUpdate: (apply) => showUpdateToast(apply) });
     }
-    return restoreHead;
+    return () => {
+      restoreHead();
+      void disposeWorker?.then((dispose) => dispose());
+    };
   }, []);
 }

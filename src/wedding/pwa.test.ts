@@ -84,5 +84,7 @@ test('first install (no controller) offers no update; failures are swallowed', a
   f.listeners['w:statechange']();
   expect(onUpdate).not.toHaveBeenCalled();
   (f.container.register as jest.Mock).mockRejectedValueOnce(new Error('blocked'));
-  await expect(registerHqServiceWorker({ container: f.container, onUpdate })).resolves.toBeUndefined();
+  const dispose = await registerHqServiceWorker({ container: f.container, onUpdate });
+  expect(typeof dispose).toBe('function');
+  expect(() => dispose()).not.toThrow();
 });
