@@ -3,6 +3,9 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { FaHome, FaWallet, FaTasks, FaCalendarAlt, FaEllipsisH } from 'react-icons/fa';
 import type { IconType } from 'react-icons';
 import { useWedding } from './WeddingContext';
+import { useRealtimeSync } from './useRealtimeSync';
+import type { ConnectionState } from './useRealtimeSync';
+import { usePwa } from './usePwa';
 import styles from './wedding.module.css';
 
 // react-icons 5 returns ReactNode, which TS 4.9 rejects as a JSX element type;
@@ -19,7 +22,7 @@ interface Tab {
 }
 
 const TABS: readonly Tab[] = [
-  { to: '/hq', label: 'Home', Icon: FaHome, end: true },
+  { to: '/hq/', label: 'Home', Icon: FaHome, end: true },
   { to: '/hq/budget', label: 'Budget', Icon: FaWallet },
   { to: '/hq/tasks', label: 'Tasks', Icon: FaTasks },
   { to: '/hq/calendar', label: 'Calendar', Icon: FaCalendarAlt },
@@ -42,11 +45,30 @@ const TITLES: Record<string, string> = {
 const MONEY = ['/hq/budget', '/hq/quotes', '/hq/invoices', '/hq/spending'];
 const NON_MORE = ['/hq', ...MONEY, '/hq/tasks', '/hq/calendar'];
 
+const CONNECTION_LABEL: Record<ConnectionState, string> = {
+  connecting: 'Connecting…',
+  live: 'Live',
+  reconnecting: 'Reconnecting…',
+  offline: 'Offline',
+};
+
+// Subtle sync indicator. Text is always present, colour is only a hint.
+function ConnectionBadge({ state }: { state: ConnectionState }) {
+  return (
+    <span className={`${styles.conn} ${styles[`conn_${state}`]}`} role="status" aria-live="polite" aria-label={`Sync status: ${CONNECTION_LABEL[state]}`}>
+      <span className={styles.connDot} aria-hidden="true" />
+      {CONNECTION_LABEL[state]}
+    </span>
+  );
+}
+
 export function Layout({ children }: { children: ReactNode }) {
   const path = useLocation().pathname.replace(/\/+$/, '') || '/';
   const moreActive = !NON_MORE.some((p) => path === p || (p !== '/hq' && path.startsWith(`${p}/`)));
 
   const { wedding, member } = useWedding();
+  const connection = useRealtimeSync();
+  usePwa();
   const isHome = path === '/hq';
   const onMoney = MONEY.includes(path);
   const title = isHome ? wedding.name : (TITLES[path] ?? 'Wedding HQ');
@@ -55,12 +77,20 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className={styles.root}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <Link to="/hq" className={styles.headerBrand} aria-label="Wedding HQ home">
-            <img src="/valere_logo.png" alt="Valere" className={styles.headerBrandLogo} />
-          </Link>
+          <div className={styles.headerTop}>
+            <Link to="/hq/" className={styles.headerBrand} aria-label="Wedding HQ home">
+              <img src="/valere_logo.png" alt="" className={styles.headerBrandLogo} />
+            </Link>
+            <ConnectionBadge state={connection} />
+          </div>
           <h1 className={styles.h1}>{title}</h1>
           {isHome && <p className={styles.headerSub}>Hi {member.display_name}</p>}
         </header>
+        {connection === 'offline' && (
+          <p className={styles.offlineBanner} role="status">
+            You're offline — showing last saved data
+          </p>
+        )}
         <main className={styles.main}>{children}</main>
       </div>
       <nav className={styles.tabs} aria-label="Wedding HQ">

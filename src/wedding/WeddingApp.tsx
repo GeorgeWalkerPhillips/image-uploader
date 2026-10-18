@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Gate } from './Gate';
 import { Layout } from './Layout';
+import { Persistence } from './Persistence';
+import { isOnline } from './useOnline';
+import { PERSIST_MAX_AGE_MS } from './lib/persist';
 import { HomePage } from './pages/HomePage';
 import { TargetsPage } from './pages/TargetsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -33,34 +36,59 @@ function useHqHead() {
   }, []);
 }
 
+// The service worker's scope is /hq/, which does not include "/hq" itself, so
+// the app always lives at "/hq/" (offline reloads of Home need the worker).
+function EnsureTrailingSlash() {
+  const { pathname, search, hash } = useLocation();
+  return pathname === '/hq' ? <Navigate to={{ pathname: '/hq/', search, hash }} replace /> : null;
+}
+
 export default function WeddingApp() {
   useHqHead();
   // Scoped to HQ: not shared with the rest of Valere.
   const [client] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } } })
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: false,
+            // Offline: try once (so a restored copy shows and a screen with no
+            // copy errors honestly) and never sit in a paused "loading" state.
+            networkMode: 'offlineFirst',
+            retry: (failures) => failures < 1 && isOnline(),
+            // Keep restored data in memory so unvisited screens stay in the next snapshot.
+            gcTime: PERSIST_MAX_AGE_MS,
+          },
+          // Writes fail immediately while offline (see assertOnline); never queued.
+          mutations: { networkMode: 'always' },
+        },
+      })
   );
 
   return (
     <QueryClientProvider client={client}>
-      <Gate>
-        <Layout>
-          <Routes>
-            <Route index element={<HomePage />} />
-            <Route path="targets" element={<TargetsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="budget" element={<BudgetPage />} />
-            <Route path="quotes" element={<QuotesPage />} />
-            <Route path="invoices" element={<InvoicesPage />} />
-            <Route path="spending" element={<SpendingPage />} />
-            <Route path="tasks" element={<TasksPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="more" element={<MorePage />} />
-            <Route path="honeymoon" element={<HoneymoonPage />} />
-            <Route path="purchases" element={<PurchasesPage />} />
-            <Route path="*" element={<ComingSoon name="This page" />} />
-          </Routes>
-        </Layout>
-      </Gate>
+      <Persistence>
+        <Gate>
+          <EnsureTrailingSlash />
+          <Layout>
+            <Routes>
+              <Route index element={<HomePage />} />
+              <Route path="targets" element={<TargetsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="budget" element={<BudgetPage />} />
+              <Route path="quotes" element={<QuotesPage />} />
+              <Route path="invoices" element={<InvoicesPage />} />
+              <Route path="spending" element={<SpendingPage />} />
+              <Route path="tasks" element={<TasksPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="more" element={<MorePage />} />
+              <Route path="honeymoon" element={<HoneymoonPage />} />
+              <Route path="purchases" element={<PurchasesPage />} />
+              <Route path="*" element={<ComingSoon name="This page" />} />
+            </Routes>
+          </Layout>
+        </Gate>
+      </Persistence>
     </QueryClientProvider>
   );
 }

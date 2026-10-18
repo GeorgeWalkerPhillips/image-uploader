@@ -117,6 +117,9 @@ file):
 20. `wedding-hq-2026-10b-constraints.sql` — Wedding HQ only: CHECK constraints so
     the database itself rejects a non-`#rrggbb` category colour and any stored
     file path outside the row's own `<wedding_id>/` folder. Run after file 19.
+21. `wedding-hq-2026-10c-guests-activity.sql` — Wedding HQ only: `wedding_guests`
+    (guest list/RSVP) and the append-only `wedding_activity` feed, both members-only
+    via RLS and added to the realtime publication. Run after file 20. See `WEDDING_HQ.md`.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest

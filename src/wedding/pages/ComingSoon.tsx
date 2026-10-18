@@ -7,7 +7,7 @@ export function ComingSoon({ name }: { name: string }) {
     <section className={styles.card}>
       <h2 className={styles.h2}>Coming soon</h2>
       <p className={styles.muted}>{title} is still being built. Check back soon.</p>
-      <Link to="/hq" className={styles.btn}>
+      <Link to="/hq/" className={styles.btn}>
         Back home
       </Link>
     </section>

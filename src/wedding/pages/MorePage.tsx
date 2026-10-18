@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { notify } from '../notify';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWedding } from '../WeddingContext';
+import { clearAll as clearPersisted } from '../lib/persist';
 import { useAuthUser } from '../useAuthUser';
 import styles from '../wedding.module.css';
 
@@ -26,7 +27,10 @@ export function MorePage() {
 
   const out = async () => {
     try {
+      // The offline copy is personal data: wipe it before the session goes.
+      clearPersisted();
       await signOut();
+      clearPersisted(); // again: a debounced save may have landed during sign-out
       qc.clear();
       navigate('/', { replace: true });
     } catch {

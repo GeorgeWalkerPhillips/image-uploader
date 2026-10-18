@@ -154,4 +154,9 @@ open and unconfirmed). Code is strict TypeScript (CRA `allowJs`); all money is
 integer cents formatted `R 15 000,00`; dates are shown in Africa/Johannesburg.
 **This repo is public: never commit the couple's personal seed data** — apply it
 directly to the database. Any change touching `wedding_*` policies or storage
-needs `reviewer-security`. Schema: `wedding-hq-2026-10.sql`.
+needs `reviewer-security`. Schema: `wedding-hq-2026-10.sql` (+ `-10b`, `-10c`).
+Realtime sync (`lib/realtime.ts`), a per-user offline read cache in localStorage
+(`wedding-hq:` prefix, cleared on sign-out) and a `/hq/`-scoped PWA
+(`public/hq/sw.js`, registered only from inside `WeddingApp`; `vercel.json` sets its
+headers) live in the lazy chunk and must never touch the main app. Full guide:
+`WEDDING_HQ.md`.

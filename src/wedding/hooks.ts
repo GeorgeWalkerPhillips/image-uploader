@@ -4,6 +4,7 @@ import { notify } from './notify';
 import { deleteRow, fetchMemberNames, fetchRows, saveRow, updateWedding } from './api';
 import type { OrderBy, WeddingTable } from './api';
 import { useWedding } from './WeddingContext';
+import { assertOnline } from './useOnline';
 import { computeMetrics } from './lib/budget';
 import type { Metrics } from './lib/budget';
 import type { CalendarEventRow, ItineraryDayRow } from './lib/calendar';
@@ -41,7 +42,10 @@ export function useSaveRow<T>(
 ) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: SaveVars) => saveRow<T>(table, weddingId, vars.values, vars.id),
+    mutationFn: (vars: SaveVars) => {
+      assertOnline();
+      return saveRow<T>(table, weddingId, vars.values, vars.id);
+    },
     onSuccess: () =>
       Promise.all([table, ...also].map((t) => qc.invalidateQueries({ queryKey: rowsKey(t, weddingId) }))),
     onError: (e: unknown) => {
@@ -53,7 +57,10 @@ export function useSaveRow<T>(
 export function useDeleteRow(table: WeddingTable, weddingId: string, also: readonly WeddingTable[] = []) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteRow(table, weddingId, id),
+    mutationFn: (id: string) => {
+      assertOnline();
+      return deleteRow(table, weddingId, id);
+    },
     onSuccess: () =>
       Promise.all([table, ...also].map((t) => qc.invalidateQueries({ queryKey: rowsKey(t, weddingId) }))),
     onError: (e: unknown) => {
@@ -66,7 +73,10 @@ export function useUpdateWedding() {
   const qc = useQueryClient();
   const { wedding } = useWedding();
   return useMutation({
-    mutationFn: (values: Record<string, unknown>) => updateWedding(wedding.id, values),
+    mutationFn: (values: Record<string, unknown>) => {
+      assertOnline();
+      return updateWedding(wedding.id, values);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['wedding-membership'] }),
     onError: (e: unknown) => {
       notify.error(messageOf(e));
