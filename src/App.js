@@ -18,7 +18,6 @@ import RefundPolicy from './RefundPolicy';
 import './App.css';
 
 const WeddingApp = React.lazy(() => import('./wedding/WeddingApp'));
-const KineticPoster = React.lazy(() => import('./components/KineticPoster'));
 
 function App() {
   return (
@@ -41,14 +40,6 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
-        <Route
-          path="/showcase"
-          element={
-            <Suspense fallback={<PageSpinner />}>
-              <KineticPoster />
-            </Suspense>
-          }
-        />
         <Route
           path="/hq/*"
           element={
