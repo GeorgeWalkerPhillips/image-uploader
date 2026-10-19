@@ -179,7 +179,8 @@ begin
           'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key'),
           'Content-Type', 'application/json'
         ),
-        body := '{}'::jsonb
+        body := '{}'::jsonb,
+        timeout_milliseconds := 60000
       );
       $cron$
     );

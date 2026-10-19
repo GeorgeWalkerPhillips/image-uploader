@@ -39,7 +39,9 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-const siteOrigin = (Deno.env.get("ALLOWED_ORIGIN") || "https://valere.co.za").split(",")[0].trim();
+const configuredOrigin = (Deno.env.get("ALLOWED_ORIGIN") || "").split(",")[0].trim();
+// Only ever link to an https origin; anything else (wildcard, no scheme) falls back.
+const siteOrigin = /^https:\/\/[^\s*]+$/.test(configuredOrigin) ? configuredOrigin : "https://valere.co.za";
 
 function fail(error: { message: string } | null) {
   if (error) throw new Error(error.message);
@@ -120,7 +122,7 @@ const store: ReminderStore = {
   async getEmail(userId) {
     const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
     if (error || !data?.user) return null;
-    if (data.user.is_anonymous || !data.user.email) return null;
+    if (data.user.is_anonymous || !data.user.email || !data.user.email_confirmed_at) return null;
     return data.user.email;
   },
 
