@@ -66,12 +66,18 @@ export function planLinePayment(input: PlanInput): LinePaymentPlan {
   const reused = reuse ? invoices.find((i) => i.id === reuse.id) ?? reuse : null;
   const target = reused ?? findOpenInvoice(line.id, invoices, payments);
   if (!target) {
+    // Size the new invoice to what is still owed on the line, so earlier
+    // (fully paid) invoices on it don't leave a phantom balance behind.
+    const lineInvoiceIds = new Set(invoices.filter((i) => i.budget_line_id === line.id).map((i) => i.id));
+    const paidOnLine = payments
+      .filter((p) => lineInvoiceIds.has(p.invoice_id))
+      .reduce((total, p) => total + p.amount_cents, 0);
     return {
       kind: 'new',
       invoice: {
         vendor_name: autoInvoiceVendorName(line.name, vendorName),
         budget_line_id: line.id,
-        total_cents: Math.max(lineCommittedCents(line), amountCents),
+        total_cents: Math.max(lineCommittedCents(line) - paidOnLine, amountCents),
         notes: AUTO_INVOICE_NOTE,
       },
     };

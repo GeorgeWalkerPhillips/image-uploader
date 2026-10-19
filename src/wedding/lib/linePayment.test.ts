@@ -43,6 +43,26 @@ describe('autoInvoiceVendorName', () => {
   });
 });
 
+describe('planLinePayment: line that already has fully paid invoices', () => {
+  test('sizes the new invoice to what is still owed, so no phantom balance is left', () => {
+    const l = line({ quoted_cents: 1000000 });
+    const plan = planLinePayment({
+      line: l, vendorName: null, invoices: [inv({ id: 'done', total_cents: 400000 })],
+      payments: [pay('done', 400000)], amountCents: 600000,
+    });
+    expect(plan.kind).toBe('new');
+    if (plan.kind === 'new') expect(plan.invoice.total_cents).toBe(600000);
+  });
+  test('a payment larger than what is owed still gets an invoice big enough to cover it', () => {
+    const l = line({ quoted_cents: 1000000 });
+    const plan = planLinePayment({
+      line: l, vendorName: null, invoices: [inv({ id: 'done', total_cents: 400000 })],
+      payments: [pay('done', 400000)], amountCents: 700000,
+    });
+    if (plan.kind === 'new') expect(plan.invoice.total_cents).toBe(700000);
+  });
+});
+
 describe('planLinePayment', () => {
   test('no invoice: new one sized at the committed amount (final, quoted, then estimate)', () => {
     const p = (l: BudgetLine, amount: number) =>
