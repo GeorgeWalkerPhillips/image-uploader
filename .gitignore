@@ -25,3 +25,6 @@ yarn-error.log*
 # agent test evidence (screenshots, logs, reports)
 /test-evidence
 .claude/worktrees/
+
+# MCP config contains an API token
+.mcp.json

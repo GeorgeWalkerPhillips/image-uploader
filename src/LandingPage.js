@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   FaQrcode,
@@ -95,10 +95,63 @@ const FAQ_JSON_LD = {
   })),
 };
 
+const MARQUEE_WORDS = [
+  'Weddings',
+  'Engagements',
+  'Birthdays',
+  'Anniversaries',
+  'Hen & stag dos',
+  'Baby showers',
+  'Corporate events',
+];
+
+// Fades sections in as they scroll into view. Elements marked
+// [data-reveal] stay fully visible when IntersectionObserver is missing or the
+// user prefers reduced motion, so nothing is ever hidden without JS.
+function useScrollReveal() {
+  useEffect(() => {
+    const els = document.querySelectorAll('[data-reveal]');
+    const reduced =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (typeof IntersectionObserver === 'undefined' || reduced) {
+      els.forEach((el) => el.setAttribute('data-revealed', 'true'));
+      return undefined;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.setAttribute('data-revealed', 'true');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+}
+
+// Shows the mobile sticky CTA once the hero has scrolled out of view.
+function usePastHero() {
+  const [past, setPast] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setPast(window.scrollY > 520);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return past;
+}
+
 function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isLoggedIn = user && !user.is_anonymous;
+  const pastHero = usePastHero();
+  useScrollReveal();
 
   return (
     <div className={styles.landing}>
@@ -157,9 +210,66 @@ function LandingPage() {
             <li>First event free</li>
             <li>Ready in under 2 minutes</li>
           </ul>
+
+          <div className={styles.heroPhotos} aria-hidden="true">
+            <img
+              className={`${styles.heroPhoto} ${styles.heroPhotoLeft}`}
+              src="/qr-table-stand.jpg"
+              alt=""
+              width="540"
+              height="675"
+              fetchPriority="high"
+            />
+            <img
+              className={`${styles.heroPhoto} ${styles.heroPhotoRight}`}
+              src="/qr-table-flowers.jpg"
+              alt=""
+              width="540"
+              height="675"
+              fetchPriority="high"
+            />
+          </div>
         </section>
 
-        <section id="how-it-works" className={styles.howItWorks} aria-labelledby="how-heading">
+        <div className={styles.marquee} aria-hidden="true">
+          <div className={styles.marqueeTrack}>
+            {[...MARQUEE_WORDS, ...MARQUEE_WORDS].map((w, i) => (
+              <span key={`${w}-${i}`}>{w}</span>
+            ))}
+          </div>
+        </div>
+
+        <section className={styles.showcase} aria-labelledby="showcase-heading" data-reveal>
+          <h2 id="showcase-heading">Your QR Code, On Every Table</h2>
+          <p className={styles.useCasesIntro}>
+            Every event gets its own code. Print it on a table card, frame it
+            for the reception, or tuck it into the invite.
+          </p>
+          <div className={styles.showcaseGrid}>
+            <figure className={styles.showcaseFigure}>
+              <img
+                src="/qr-table-stand.jpg"
+                alt="A valere table card with a QR code and the words Share your memories, standing on a wooden block at an outdoor reception"
+                width="540"
+                height="675"
+                loading="lazy"
+              />
+              <figcaption>Table cards for the garden party</figcaption>
+            </figure>
+            <figure className={styles.showcaseFigure}>
+              <img
+                src="/qr-table-flowers.jpg"
+                alt="A framed valere QR code card personalised with the couple's names, set among flowers and crystal glasses"
+                width="540"
+                height="675"
+                loading="lazy"
+              />
+              <figcaption>Framed and personalised with your names</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="how-it-works" className={styles.howItWorks} aria-labelledby="how-heading" data-reveal>
           <h2 id="how-heading">How It Works</h2>
           <ol className={styles.steps}>
             <li>
@@ -197,7 +307,7 @@ function LandingPage() {
           </ol>
         </section>
 
-        <section aria-labelledby="features-heading">
+        <section aria-labelledby="features-heading" data-reveal>
           <h2 id="features-heading">Everything You Need, Nothing You Don't</h2>
           <div className={styles.featureGrid}>
             <article className={styles.featureCard}>
@@ -251,7 +361,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className={styles.useCases} aria-labelledby="use-cases-heading">
+        <section className={styles.useCases} aria-labelledby="use-cases-heading" data-reveal>
           <h2 id="use-cases-heading">Built First for Weddings</h2>
           <p className={styles.useCasesIntro}>
             The moment you say "I do," a hundred phones start filming.
@@ -283,7 +393,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section aria-labelledby="comparison-heading">
+        <section aria-labelledby="comparison-heading" data-reveal>
           <h2 id="comparison-heading">Life Before and After Valere</h2>
           <p className={styles.useCasesIntro}>
             Every event still needs guest photos collected somehow. Here's
@@ -313,7 +423,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section id="pricing" aria-labelledby="pricing-heading">
+        <section id="pricing" aria-labelledby="pricing-heading" data-reveal>
           <h2 id="pricing-heading">Priced by Guest Count, Not Subscriptions</h2>
           <p className={styles.useCasesIntro}>
             Pay once per event, based on how many guests are contributing.
@@ -344,7 +454,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section id="faq" aria-labelledby="faq-heading">
+        <section id="faq" aria-labelledby="faq-heading" data-reveal>
           <h2 id="faq-heading">Frequently Asked Questions</h2>
           <div className={styles.faqList}>
             {FAQ_ITEMS.map((item) => (
@@ -356,11 +466,31 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className={styles.ctaSection} aria-labelledby="cta-heading">
+        <section className={styles.ctaSection} aria-labelledby="cta-heading" data-reveal>
           <h2 id="cta-heading">Ready to collect every photo from your day?</h2>
           <p>Scan your event's QR code to jump right in.</p>
+          {!isLoggedIn && (
+            <button className={styles.btnPrimary} onClick={() => navigate('/login?mode=signup')}>
+              Create Your Free Event
+            </button>
+          )}
         </section>
       </main>
+
+      {!isLoggedIn && (
+        <div
+          className={`${styles.stickyCta}${pastHero ? ` ${styles.stickyCtaVisible}` : ''}`}
+          aria-hidden={!pastHero}
+        >
+          <button
+            className={styles.btnPrimary}
+            tabIndex={pastHero ? 0 : -1}
+            onClick={() => navigate('/login?mode=signup')}
+          >
+            Create Your Free Event
+          </button>
+        </div>
+      )}
 
       <footer className={styles.landingFooter}>
         <p>&copy; {new Date().getFullYear()} Valere. All rights reserved.</p>
