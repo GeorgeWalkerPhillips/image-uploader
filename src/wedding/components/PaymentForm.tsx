@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { centsToGroupedInput, formatZar, parseRandsToCents } from '../lib/money';
 import { emptyPaymentForm, PAYERS, PAYMENT_METHODS, validatePayment } from '../lib/moneyForms';
 import type { PaymentFormValues, PaymentPayload } from '../lib/moneyForms';
@@ -25,11 +25,19 @@ interface Props {
   balanceCents: number;
   labels: PayerLabels;
   saving?: boolean;
+  // Overrides for the "record a payment from a budget line" use.
+  title?: string;
+  // Replaces "You can still save it." in the over-the-balance hint.
+  overNote?: string;
+  // Extra content shown just above the buttons (warnings, errors).
+  notice?: ReactNode;
   onSubmit: (payload: PaymentPayload, change: FileChange) => void;
   onCancel: () => void;
 }
 
-export function PaymentForm({ initial, todayISO, balanceCents, labels, saving = false, onSubmit, onCancel }: Props) {
+export function PaymentForm({
+  initial, todayISO, balanceCents, labels, saving = false, title, overNote, notice, onSubmit, onCancel,
+}: Props) {
   const [v, setV] = useState<PaymentFormValues>(() =>
     initial
       ? {
@@ -65,15 +73,15 @@ export function PaymentForm({ initial, todayISO, balanceCents, labels, saving = 
 
   return (
     <form className={`${styles.card} ${styles.subCard}`} onSubmit={submit} noValidate
-      aria-label={initial ? 'Edit payment' : 'Add payment'}>
-      <h3 className={styles.h3}>{initial ? 'Edit payment' : 'Add a payment'}</h3>
+      aria-label={title ?? (initial ? 'Edit payment' : 'Add payment')}>
+      <h3 className={styles.h3}>{title ?? (initial ? 'Edit payment' : 'Add a payment')}</h3>
       <div className={styles.twoCol}>
         <TextField label="Date paid" type="date" value={v.paidOn} error={errors.paidOn} onChange={set('paidOn')} />
         <MoneyField label="Amount (R)" value={v.amount} error={errors.amount} onChange={set('amount')} placeholder="2 500" />
       </div>
       {over > 0 && (
         <p className={`${styles.hint} ${styles.hintWarn}`} role="status">
-          This is {formatZar(over)} more than the balance of {formatZar(Math.max(0, balanceCents))}. You can still save it.
+          This is {formatZar(over)} more than the balance of {formatZar(Math.max(0, balanceCents))}. {overNote ?? 'You can still save it.'}
         </p>
       )}
       <div className={styles.twoCol}>
@@ -87,6 +95,7 @@ export function PaymentForm({ initial, todayISO, balanceCents, labels, saving = 
       <TextAreaField label="Notes" value={v.notes} error={errors.notes} onChange={set('notes')} />
       <FileField label="Proof of payment" file={file} onFile={setFile} existingPath={initial?.proof_path ?? null}
         removeExisting={removeExisting} onRemoveExisting={setRemoveExisting} disabled={saving} />
+      {notice}
       <div className={styles.actions}>
         <button type="submit" className={styles.btnPrimary} disabled={saving}>
           {saving ? 'Saving...' : 'Save payment'}

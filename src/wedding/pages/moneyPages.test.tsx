@@ -5,6 +5,8 @@ import { BudgetPage } from './BudgetPage';
 import { SpendingPage } from './SpendingPage';
 import { renderPage } from '../testHelpers';
 import { db, resetDb, WID } from '../testBackend';
+import * as api from '../api';
+import { notify } from '../notify';
 import { formatZar } from '../lib/money';
 import { addDaysISO, todayJhbISO } from '../lib/time';
 
@@ -168,6 +170,182 @@ describe('BudgetPage', () => {
     await userEvent.type(await screen.findByLabelText('Search budget lines'), 'deposit');
     const line = await screen.findByRole('article', { name: 'Hall hire' });
     expect(line.textContent).toContain(`Balance to pay${formatZar(900000)}`);
+  });
+});
+
+describe('BudgetPage: record payment from a line', () => {
+  const saveRow = api.saveRow as unknown as jest.Mock;
+  const invoices = () => db.tables.wedding_invoices!;
+  const payments = () => db.tables.wedding_payments!;
+
+  const openFlights = async () => {
+    renderPage(<BudgetPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Honeymoon' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Flights/ }));
+    const card = await screen.findByRole('article', { name: 'Return flights' });
+    await userEvent.click(within(card).getByRole('button', { name: 'Record payment' }));
+    return card;
+  };
+  const openHall = async () => {
+    renderPage(<BudgetPage />);
+    await userEvent.click(await screen.findByRole('button', { name: /Venue/ }));
+    const card = await screen.findByRole('article', { name: 'Hall hire' });
+    await userEvent.click(within(card).getByRole('button', { name: 'Record payment' }));
+    return card;
+  };
+  const setAmount = async (value: string) => {
+    const field = await screen.findByLabelText('Amount (R)');
+    await userEvent.clear(field);
+    if (value) await userEvent.type(field, value);
+  };
+  const save = () => userEvent.click(screen.getByRole('button', { name: 'Save payment' }));
+
+  test('every line card has a Record payment button', async () => {
+    renderPage(<BudgetPage />);
+    await userEvent.click(await screen.findByRole('button', { name: /Venue/ }));
+    const card = await screen.findByRole('article', { name: 'Hall hire' });
+    expect(within(card).getByRole('button', { name: 'Record payment' })).toBeInTheDocument();
+    expect(within(card).getByText('1 payment so far.')).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'See in Invoices' })).toHaveAttribute('href', '/hq/invoices?invoice=i1');
+  });
+
+  test('no invoice yet: creates one for the line, then the payment, and Paid and Balance update', async () => {
+    const card = await openFlights();
+    expect(screen.getByRole('form', { name: 'Record a payment for Return flights' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Date paid')).toHaveValue(today);
+    expect(screen.getByLabelText('Amount (R)')).toHaveValue('20 000');
+    await setAmount('5000');
+    await save();
+    await waitFor(() => expect(payments()).toHaveLength(2));
+
+    expect(invoices()).toHaveLength(2);
+    const created = invoices().find((i) => i.budget_line_id === 'l2')!;
+    expect(created).toMatchObject({
+      vendor_name: 'Return flights', total_cents: 2000000, notes: 'Created when recording a payment',
+    });
+    expect(payments().find((p) => p.invoice_id === created.id)).toMatchObject({
+      amount_cents: 500000, paid_on: today, method: 'eft', paid_by: 'joint',
+    });
+    const tables = saveRow.mock.calls.map((c) => c[0]);
+    expect(tables).toEqual(['wedding_invoices', 'wedding_payments']);
+
+    await waitFor(() => expect(card.textContent).toContain(`Balance to pay${formatZar(1500000)}`));
+    expect(card.textContent).toContain(`Paid${formatZar(500000)}`);
+    expect(within(card).getByText('1 payment so far.')).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: /Record a payment/ })).not.toBeInTheDocument();
+    expect(notify.success).toHaveBeenCalledWith('Payment saved. An invoice was created for it.');
+    await waitFor(() =>
+      expect(db.tables.wedding_activity?.some((a) => String(a.action ?? '').includes('Recorded a payment'))).toBe(true));
+  });
+
+  test('an invoice with a balance is reused: no new invoice', async () => {
+    const card = await openHall();
+    expect(screen.getByLabelText('Amount (R)')).toHaveValue('9 000');
+    await setAmount('1000');
+    await save();
+    await waitFor(() => expect(payments()).toHaveLength(2));
+    expect(invoices()).toHaveLength(1);
+    expect(payments().find((p) => p.id !== 'p1')).toMatchObject({ invoice_id: 'i1', amount_cents: 100000 });
+    expect(saveRow.mock.calls.map((c) => c[0])).toEqual(['wedding_payments']);
+    await waitFor(() => expect(card.textContent).toContain(`Paid${formatZar(400000)}`));
+    expect(card.textContent).toContain(`Balance to pay${formatZar(800000)}`);
+    expect(notify.success).toHaveBeenCalledWith('Payment saved.');
+  });
+
+  test('overpaying shows the remaining balance and writes nothing until confirmed', async () => {
+    await openHall();
+    await setAmount('10000');
+    expect(screen.getByRole('status').textContent).toContain('confirm raising the invoice total');
+    await save();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain(`more than the remaining ${formatZar(900000)}`);
+    expect(alert.textContent).toContain(formatZar(1300000));
+    expect(saveRow).not.toHaveBeenCalled();
+    expect(payments()).toHaveLength(1);
+  });
+
+  test('overpaying: confirming raises the invoice total, then pays', async () => {
+    await openHall();
+    await setAmount('10000');
+    await save();
+    await userEvent.click(await screen.findByRole('button', { name: 'Raise invoice total and save' }));
+    await waitFor(() => expect(payments()).toHaveLength(2));
+    expect(invoices()).toHaveLength(1);
+    expect(invoices()[0]).toMatchObject({ id: 'i1', total_cents: 1300000 });
+    expect(payments()[1]).toMatchObject({ invoice_id: 'i1', amount_cents: 1000000 });
+    expect(saveRow.mock.calls.map((c) => c[0])).toEqual(['wedding_invoices', 'wedding_payments']);
+  });
+
+  test('overpaying: lowering the amount saves without touching the invoice total', async () => {
+    await openHall();
+    await setAmount('10000');
+    await save();
+    await screen.findByRole('alert');
+    await setAmount('9000');
+    await save();
+    await waitFor(() => expect(payments()).toHaveLength(2));
+    expect(invoices()[0]).toMatchObject({ id: 'i1', total_cents: 1200000 });
+  });
+
+  test('validation: blank, zero and nonsense amounts and a missing date are refused', async () => {
+    await openHall();
+    await setAmount('');
+    await save();
+    expect(await screen.findByText('Enter an amount.')).toBeInTheDocument();
+    await setAmount('0');
+    await save();
+    await userEvent.clear(screen.getByLabelText('Date paid'));
+    await setAmount('abc');
+    await save();
+    expect(saveRow).not.toHaveBeenCalled();
+    expect(payments()).toHaveLength(1);
+    expect(screen.getByRole('form', { name: 'Record a payment for Hall hire' })).toBeInTheDocument();
+  });
+
+  test('the invoice step failing saves nothing and says so', async () => {
+    db.failSave.add('wedding_invoices');
+    await openFlights();
+    await setAmount('5000');
+    await save();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Could not create the invoice for this payment. Nothing was saved.');
+    expect(invoices()).toHaveLength(1);
+    expect(payments()).toHaveLength(1);
+  });
+
+  test('payment step failing after the invoice was created says so, and a retry reuses that invoice', async () => {
+    db.failSave.add('wedding_payments');
+    await openFlights();
+    await setAmount('5000');
+    await save();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('The invoice was created, but the payment was NOT saved');
+    expect(invoices()).toHaveLength(2);
+    expect(payments()).toHaveLength(1);
+    const createdId = invoices().find((i) => i.budget_line_id === 'l2')!.id;
+
+    db.failSave.clear();
+    await save();
+    await waitFor(() => expect(payments()).toHaveLength(2));
+    expect(invoices()).toHaveLength(2);
+    expect(payments()[1]).toMatchObject({ invoice_id: createdId, amount_cents: 500000 });
+    expect(saveRow.mock.calls.map((c) => c[0])).toEqual(['wedding_invoices', 'wedding_payments', 'wedding_payments']);
+  });
+
+  test('a double click saves one invoice and one payment', async () => {
+    await openFlights();
+    await setAmount('5000');
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Save payment' }));
+    await waitFor(() => expect(payments()).toHaveLength(2));
+    expect(invoices()).toHaveLength(2);
+    expect(saveRow).toHaveBeenCalledTimes(2);
+  });
+
+  test('cancel closes the form without writing', async () => {
+    await openHall();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('form', { name: /Record a payment/ })).not.toBeInTheDocument();
+    expect(saveRow).not.toHaveBeenCalled();
   });
 });
 

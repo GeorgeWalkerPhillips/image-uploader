@@ -1,8 +1,18 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWedding } from '../WeddingContext';
-import { useBudgetData, useDeleteRow, useSaveRow, useVendors } from '../hooks';
+import { useBudgetData, useDeleteRow, usePayerLabels, useSaveRow, useVendors } from '../hooks';
 import { notify } from '../notify';
+import { useLogActivity } from '../extrasHooks';
+import { supabaseAttachmentStore } from '../storage';
+import { useNow } from '../components/useNow';
+import { PaymentForm } from '../components/PaymentForm';
+import type { FileChange } from '../components/QuoteForm';
+import { AttachmentError, saveWithAttachment } from '../lib/attachments';
+import { findOpenInvoice, planLinePayment, recordLinePayment, recordPaymentMessage } from '../lib/linePayment';
+import type { LinePaymentPlan, RecordPaymentOutcome } from '../lib/linePayment';
+import { invoiceBalanceCents } from '../lib/budget';
+import { todayJhbISO } from '../lib/time';
 import { MoneyTabs } from '../components/MoneyTabs';
 import { Skeleton } from '../components/Skeleton';
 import { ErrorRetry } from '../components/ErrorRetry';
@@ -15,8 +25,8 @@ import { findVendorByName } from '../lib/vendors';
 import { budgetTotals, categorySummaries, lineSummary } from '../lib/spending';
 import type { CategorySummary } from '../lib/spending';
 import { formatZar, formatZarShort } from '../lib/money';
-import type { BudgetLinePayload } from '../lib/moneyForms';
-import type { BudgetLine, Category, Scope, Vendor } from '../types';
+import type { BudgetLinePayload, PaymentPayload } from '../lib/moneyForms';
+import type { BudgetLine, Category, Invoice, Payment, Scope, Vendor } from '../types';
 import styles from '../wedding.module.css';
 
 type LineSort = 'default' | 'name' | 'estimated' | 'balance';
@@ -24,7 +34,15 @@ type LineSort = 'default' | 'name' | 'estimated' | 'balance';
 type Editor =
   | { kind: 'none' }
   | { kind: 'category'; category?: Category }
-  | { kind: 'line'; categoryId: string; line?: BudgetLine };
+  | { kind: 'line'; categoryId: string; line?: BudgetLine }
+  | { kind: 'payment'; lineId: string };
+
+// An overpayment on an existing invoice waits here for an explicit confirm.
+interface PendingRaise {
+  plan: Extract<LinePaymentPlan, { kind: 'existing' }>;
+  payload: PaymentPayload;
+  change: FileChange;
+}
 
 const SCOPES: readonly { value: Scope; label: string }[] = [
   { value: 'wedding', label: 'Wedding' },
@@ -59,13 +77,32 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
   const saveLine = useSaveRow<BudgetLine>('wedding_budget_lines', wedding.id);
   const deleteLine = useDeleteRow('wedding_budget_lines', wedding.id, ['wedding_invoices', 'wedding_quotes']);
   const saveVendor = useSaveRow<Vendor>('wedding_vendors', wedding.id);
+  // Silent: the quick payment reports each failure itself, in words that say
+  // which of its steps did and did not happen.
+  const saveInvoice = useSaveRow<Invoice>('wedding_invoices', wedding.id, ['wedding_payments', 'wedding_budget_lines'], { silent: true });
+  const savePayment = useSaveRow<Payment>('wedding_payments', wedding.id, ['wedding_invoices', 'wedding_budget_lines'], { silent: true });
+  const labels = usePayerLabels();
+  const logActivity = useLogActivity();
+  const today = todayJhbISO(useNow(60000));
 
   const [pickedScope, setScope] = useState<Scope>('wedding');
   const scope: Scope = fixedScope ?? pickedScope;
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<LineSort>('default');
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
-  const [editor, setEditor] = useState<Editor>({ kind: 'none' });
+  const [editor, setEditorState] = useState<Editor>({ kind: 'none' });
+  // Quick-payment state, reset whenever the editor changes.
+  const [reuseInvoice, setReuseInvoice] = useState<Invoice | null>(null);
+  const [pendingRaise, setPendingRaise] = useState<PendingRaise | null>(null);
+  const [paymentFailure, setPaymentFailure] = useState<string | null>(null);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const paymentBusy = useRef(false);
+  const setEditor = (next: Editor) => {
+    setEditorState(next);
+    setReuseInvoice(null);
+    setPendingRaise(null);
+    setPaymentFailure(null);
+  };
 
   const vendors = useMemo(() => vendorsQuery.data ?? [], [vendorsQuery.data]);
   const vendorsUnavailable = vendorsQuery.data === undefined;
@@ -176,6 +213,83 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
   const removeLine = (l: BudgetLine) => {
     if (!window.confirm(`Delete "${l.name}"? Invoices and quotes linked to it are kept but unlinked.`)) return;
     deleteLine.mutate(l.id, { onSuccess: () => notify.success('Line deleted') });
+  };
+
+  // One logical operation: find or create the line's invoice (optionally
+  // raising its total after an explicit confirm), then insert the payment. The
+  // attachment wrapper uploads the proof first and removes it again if any
+  // database step fails.
+  const runLinePayment = async (
+    line: BudgetLine, plan: LinePaymentPlan, confirmedRaise: boolean, payload: PaymentPayload, change: FileChange
+  ) => {
+    if (paymentBusy.current) return;
+    paymentBusy.current = true;
+    setPaymentSaving(true);
+    setPaymentFailure(null);
+    setPendingRaise(null);
+    const result: { outcome: RecordPaymentOutcome | null } = { outcome: null };
+    try {
+      await saveWithAttachment({
+        store: supabaseAttachmentStore,
+        weddingId: wedding.id,
+        kind: 'proofs',
+        file: change.file,
+        removeExisting: false,
+        oldPath: null,
+        write: async (path) => {
+          const outcome = await recordLinePayment(plan, confirmedRaise, {
+            createInvoice: (values) => saveInvoice.mutateAsync({ values }) as Promise<Invoice>,
+            raiseInvoiceTotal: (id, totalCents) =>
+              saveInvoice.mutateAsync({ id, values: { total_cents: totalCents } }),
+            insertPayment: (invoiceId) =>
+              savePayment.mutateAsync({
+                values: path === undefined ? { ...payload, invoice_id: invoiceId } : { ...payload, invoice_id: invoiceId, proof_path: path },
+              }),
+          });
+          result.outcome = outcome;
+          if (outcome.failedStep) throw new Error(outcome.error ?? 'Something went wrong.');
+          return outcome;
+        },
+      });
+      const done = result.outcome;
+      notify.success(done ? recordPaymentMessage(done).text : 'Payment saved.');
+      logActivity('Recorded a payment', done?.invoice?.vendor_name ?? line.name);
+      setEditor({ kind: 'none' });
+    } catch (e) {
+      const failed = result.outcome;
+      if (failed?.failedStep) {
+        const m = recordPaymentMessage(failed);
+        // Remember an invoice that now exists so a retry reuses it.
+        if (failed.invoice) setReuseInvoice(failed.invoice);
+        setPaymentFailure(m.text);
+        notify.error(m.text);
+      } else if (e instanceof AttachmentError) {
+        notify.error(e.message);
+        setPaymentFailure(e.message);
+      } else {
+        const text = `The payment was not saved. (${e instanceof Error ? e.message : 'Something went wrong.'})`;
+        setPaymentFailure(text);
+        notify.error(text);
+      }
+    } finally {
+      paymentBusy.current = false;
+      setPaymentSaving(false);
+    }
+  };
+
+  const submitLinePayment = (line: BudgetLine, payload: PaymentPayload, change: FileChange) => {
+    if (paymentBusy.current) return;
+    const plan = planLinePayment({
+      line, vendorName: vendorName(line.vendor_id), invoices, payments,
+      amountCents: payload.amount_cents, reuse: reuseInvoice,
+    });
+    if (plan.kind === 'existing' && plan.overpayCents > 0) {
+      // Never overpay silently: ask first.
+      setPaymentFailure(null);
+      setPendingRaise({ plan, payload, change });
+      return;
+    }
+    void runLinePayment(line, plan, false, payload, change);
   };
 
   const scopeCategories = categories.filter((c) => c.scope === scope);
@@ -316,8 +430,18 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
                         }
                         const ls = lineSummary(l, invoices, payments);
                         const vendor = vendorName(l.vendor_id);
+                        const lineInvoiceIds = new Set(invoices.filter((i) => i.budget_line_id === l.id).map((i) => i.id));
+                        const linePayments = payments.filter((p) => lineInvoiceIds.has(p.invoice_id));
+                        const onlyInvoice = new Set(linePayments.map((p) => p.invoice_id));
+                        const paymentLinkTo = onlyInvoice.size === 1
+                          ? `/hq/invoices?invoice=${[...onlyInvoice][0]}`
+                          : '/hq/invoices';
+                        const paying = editor.kind === 'payment' && editor.lineId === l.id;
+                        const openInvoice = paying ? (reuseInvoice ?? findOpenInvoice(l.id, invoices, payments)) : null;
+                        const pendingPlan = paying ? pendingRaise : null;
                         return (
-                          <article key={l.id} className={styles.lineCard} aria-label={l.name}>
+                          <React.Fragment key={l.id}>
+                          <article className={styles.lineCard} aria-label={l.name}>
                             <div className={styles.rowBetween}>
                               <h3 className={styles.h3}>{l.name}</h3>
                               {ls.status === 'over' && <span className={`${styles.chip} ${styles.status_over}`}>Over</span>}
@@ -331,13 +455,56 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
                               <div className={styles.lineWide}><dt>Balance to pay</dt><dd>{formatZar(ls.remainingToPayCents)}</dd></div>
                             </dl>
                             {l.notes && <p className={styles.notes}>{l.notes}</p>}
+                            {linePayments.length > 0 && (
+                              <p className={styles.muted}>
+                                {linePayments.length} payment{linePayments.length === 1 ? '' : 's'} so far.{' '}
+                                <Link to={paymentLinkTo} className={styles.inlineLink}>See in Invoices</Link>
+                              </p>
+                            )}
                             <div className={styles.actions}>
+                              <button type="button" className={styles.btnPrimary}
+                                onClick={() => setEditor({ kind: 'payment', lineId: l.id })}>Record payment</button>
                               <button type="button" className={styles.btn}
                                 onClick={() => setEditor({ kind: 'line', categoryId: s.categoryId, line: l })}>Edit</button>
                               <button type="button" className={styles.btnDanger} onClick={() => removeLine(l)}
                                 disabled={deleteLine.isPending}>Delete</button>
                             </div>
                           </article>
+                          {paying && (
+                            <PaymentForm
+                              title={`Record a payment for ${l.name}`}
+                              todayISO={today}
+                              balanceCents={openInvoice ? invoiceBalanceCents(openInvoice, payments) : ls.remainingToPayCents}
+                              overNote={openInvoice ? 'You will be asked to confirm raising the invoice total.' : undefined}
+                              labels={labels}
+                              saving={paymentSaving}
+                              notice={
+                                <>
+                                  {pendingPlan && (
+                                    <div className={`${styles.hint} ${styles.hintWarn}`} role="alert">
+                                      <p>
+                                        This payment of {formatZar(pendingPlan.payload.amount_cents)} is{' '}
+                                        {formatZar(pendingPlan.plan.overpayCents)} more than the remaining{' '}
+                                        {formatZar(Math.max(0, pendingPlan.plan.balanceCents))} on the invoice from{' '}
+                                        {pendingPlan.plan.invoice.vendor_name}. Lower the amount and save again, or raise
+                                        that invoice's total to {formatZar(pendingPlan.plan.raisedTotalCents ?? 0)}.
+                                      </p>
+                                      <div className={styles.actions}>
+                                        <button type="button" className={styles.btnPrimary} disabled={paymentSaving}
+                                          onClick={() => void runLinePayment(l, pendingPlan.plan, true, pendingPlan.payload, pendingPlan.change)}>
+                                          Raise invoice total and save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {paymentFailure && <p className={`${styles.hint} ${styles.hintWarn}`} role="alert">{paymentFailure}</p>}
+                                </>
+                              }
+                              onSubmit={(payload, change) => submitLinePayment(l, payload, change)}
+                              onCancel={() => setEditor({ kind: 'none' })}
+                            />
+                          )}
+                          </React.Fragment>
                         );
                       })}
 

@@ -60,6 +60,8 @@ export interface Invoice {
   quote_id: string | null;
   attachment_path: string | null;
   notes: string | null;
+  // Present on rows read from the database; used to find the oldest invoice.
+  created_at?: string;
 }
 
 export interface Payment {
