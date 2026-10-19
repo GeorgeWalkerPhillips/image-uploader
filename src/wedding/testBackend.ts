@@ -83,6 +83,24 @@ const impls = {
   fetchMembership: async () => member,
   updateWedding: async () => wedding,
   fetchMemberNames: async () => db.names,
+  fetchReminderSettings: async (weddingId: string, userId: string) => {
+    if (db.failFetch.has('wedding_reminder_settings')) throw new ApiError('mock fetch failure');
+    const row = rowsOf('wedding_reminder_settings').find((r) => r.wedding_id === weddingId && r.user_id === userId);
+    return row ? { ...row } : null;
+  },
+  // Upsert on (wedding_id, user_id); the table has no id column.
+  saveReminderSettings: async (weddingId: string, userId: string, values: Record<string, unknown>) => {
+    if (db.failSave.has('wedding_reminder_settings')) throw new ApiError('mock save failure');
+    const rows = rowsOf('wedding_reminder_settings');
+    const existing = rows.find((r) => r.wedding_id === weddingId && r.user_id === userId);
+    if (existing) {
+      Object.assign(existing, values);
+      return { ...existing };
+    }
+    const row: Row = { id: `reminder-${userId}`, wedding_id: weddingId, user_id: userId, ...values };
+    rows.push(row);
+    return { ...row };
+  },
 };
 
 // CRA's Jest config uses resetMocks, which wipes mock implementations before
@@ -95,6 +113,8 @@ const fns = {
   fetchMembership: jest.fn(),
   updateWedding: jest.fn(),
   fetchMemberNames: jest.fn(),
+  fetchReminderSettings: jest.fn(),
+  saveReminderSettings: jest.fn(),
 };
 
 function install(): void {
@@ -105,6 +125,8 @@ function install(): void {
   fns.fetchMembership.mockImplementation(impls.fetchMembership);
   fns.updateWedding.mockImplementation(impls.updateWedding);
   fns.fetchMemberNames.mockImplementation(impls.fetchMemberNames);
+  fns.fetchReminderSettings.mockImplementation(impls.fetchReminderSettings);
+  fns.saveReminderSettings.mockImplementation(impls.saveReminderSettings);
 }
 
 export function createApiMock() {

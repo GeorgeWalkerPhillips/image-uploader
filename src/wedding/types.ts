@@ -257,3 +257,14 @@ export interface ActivityEntry {
   subject: string | null;
   created_at: string;
 }
+
+// One member's email reminder preferences (primary key wedding_id + user_id).
+export interface ReminderSettingsRow {
+  wedding_id: string;
+  user_id: string;
+  enabled: boolean;
+  lead_days: number[];
+  include_events: boolean;
+  include_tasks: boolean;
+  include_payments: boolean;
+}

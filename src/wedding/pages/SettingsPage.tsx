@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { notify } from '../notify';
 import { useWedding } from '../WeddingContext';
 import { useUpdateWedding } from '../hooks';
+import { ReminderSettingsCard } from '../components/ReminderSettingsCard';
 import { centsToGroupedInput, formatAmountText } from '../lib/money';
 import { isoToJhbParts } from '../lib/jhb';
 import { validateWedding } from '../lib/validators';
@@ -80,6 +81,7 @@ export function SettingsPage() {
           </button>
         </div>
       </form>
+      <ReminderSettingsCard />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import type { Member, Role, Wedding } from './types';
+import type { Member, ReminderSettingsRow, Role, Wedding } from './types';
 
 export type WeddingTable =
   | 'wedding_categories'
@@ -137,4 +137,35 @@ export async function fetchMemberNames(weddingId: string): Promise<MemberName[]>
       await supabase.from('wedding_members').select('role, display_name').eq('wedding_id', weddingId)
     ) ?? []
   );
+}
+
+// The signed-in member's own reminder settings, or null when they have not
+// saved any yet (the caller then shows the defaults). The table has no `id`
+// (primary key wedding_id + user_id), so it does not use the generic row helpers.
+export async function fetchReminderSettings(weddingId: string, userId: string): Promise<ReminderSettingsRow | null> {
+  return unwrap<ReminderSettingsRow | null>(
+    await supabase
+      .from('wedding_reminder_settings')
+      .select('*')
+      .eq('wedding_id', weddingId)
+      .eq('user_id', userId)
+      .maybeSingle()
+  );
+}
+
+// Creates the row on first save, updates it afterwards. Row Level Security
+// only lets a member write their own row.
+export async function saveReminderSettings(
+  weddingId: string,
+  userId: string,
+  values: Record<string, unknown>
+): Promise<ReminderSettingsRow> {
+  const rows = unwrap<ReminderSettingsRow[] | null>(
+    await supabase
+      .from('wedding_reminder_settings')
+      .upsert({ ...values, wedding_id: weddingId, user_id: userId }, { onConflict: 'wedding_id,user_id' })
+      .select()
+  );
+  if (!rows || rows.length === 0) throw new ApiError('Nothing was saved. Please try again.');
+  return rows[0];
 }

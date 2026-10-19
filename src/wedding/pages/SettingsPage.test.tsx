@@ -11,6 +11,9 @@ jest.mock('../WeddingContext', () => {
   const b = jest.requireActual('../testBackend');
   return { useWedding: () => ({ wedding: { ...b.wedding, budget_cents: 4350000 }, member: b.member }) };
 });
+jest.mock('../useAuthUser', () => ({
+  useAuthUser: () => ({ user: { id: 'user-1' }, loading: false, signOut: async () => undefined }),
+}));
 jest.mock('../notify', () => ({ notify: { success: jest.fn(), error: jest.fn(), warning: jest.fn() } }));
 
 beforeEach(() => resetDb());
