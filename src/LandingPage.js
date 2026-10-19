@@ -95,16 +95,6 @@ const FAQ_JSON_LD = {
   })),
 };
 
-const MARQUEE_WORDS = [
-  'Weddings',
-  'Engagements',
-  'Birthdays',
-  'Anniversaries',
-  'Hen & stag dos',
-  'Baby showers',
-  'Corporate events',
-];
-
 // Fades sections in as they scroll into view. Elements marked
 // [data-reveal] stay fully visible when IntersectionObserver is missing or the
 // user prefers reduced motion, so nothing is ever hidden without JS.
@@ -228,44 +218,6 @@ function LandingPage() {
               height="675"
               fetchPriority="high"
             />
-          </div>
-        </section>
-
-        <div className={styles.marquee} aria-hidden="true">
-          <div className={styles.marqueeTrack}>
-            {[...MARQUEE_WORDS, ...MARQUEE_WORDS].map((w, i) => (
-              <span key={`${w}-${i}`}>{w}</span>
-            ))}
-          </div>
-        </div>
-
-        <section className={styles.showcase} aria-labelledby="showcase-heading" data-reveal>
-          <h2 id="showcase-heading">Your QR Code, On Every Table</h2>
-          <p className={styles.useCasesIntro}>
-            Every event gets its own code. Print it on a table card, frame it
-            for the reception, or tuck it into the invite.
-          </p>
-          <div className={styles.showcaseGrid}>
-            <figure className={styles.showcaseFigure}>
-              <img
-                src="/qr-table-stand.jpg"
-                alt="A valere table card with a QR code and the words Share your memories, standing on a wooden block at an outdoor reception"
-                width="540"
-                height="675"
-                loading="lazy"
-              />
-              <figcaption>Table cards for the garden party</figcaption>
-            </figure>
-            <figure className={styles.showcaseFigure}>
-              <img
-                src="/qr-table-flowers.jpg"
-                alt="A framed valere QR code card personalised with the couple's names, set among flowers and crystal glasses"
-                width="540"
-                height="675"
-                loading="lazy"
-              />
-              <figcaption>Framed and personalised with your names</figcaption>
-            </figure>
           </div>
         </section>
 
