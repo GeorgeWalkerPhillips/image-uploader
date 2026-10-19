@@ -27,7 +27,7 @@ export function ReminderSettingsCard() {
   let body;
   if (!userId) {
     body = <p className={styles.muted}>Sign in again to change your reminders.</p>;
-  } else if (q.isError) {
+  } else if (q.isError && q.data === undefined) {
     body = <ErrorRetry message={online ? "Couldn't load your reminder settings." : OFFLINE_LOAD} onRetry={() => void q.refetch()} />;
   } else if (q.isPending) {
     body = <Skeleton height={160} />;

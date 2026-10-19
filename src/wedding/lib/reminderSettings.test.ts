@@ -69,13 +69,13 @@ test('validate: turned off needs no selection and stores valid defaults', () => 
 
 test('summary describes the default choice in plain words', () => {
   expect(summariseReminders(base)).toBe(
-    "You'll get one email around 07:00 each morning listing events, tasks and payments due today and tomorrow."
+    "On mornings when something is due you'll get one email around 07:00 listing events, tasks and payments due today and tomorrow."
   );
 });
 
 test('summary handles longer leads, single kinds, off and empty', () => {
   expect(summariseReminders({ ...base, leadDays: [0, 7, 14], includeTasks: false, includePayments: false })).toBe(
-    "You'll get one email around 07:00 each morning listing events due today, in 7 days and in 14 days."
+    "On mornings when something is due you'll get one email around 07:00 listing events due today, in 7 days and in 14 days."
   );
   expect(summariseReminders({ ...base, enabled: false })).toMatch(/off/);
   expect(summariseReminders({ ...base, leadDays: [] })).toMatch(/at least one/i);

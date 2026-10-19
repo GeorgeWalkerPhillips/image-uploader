@@ -107,3 +107,9 @@ test('blocked storage (null) never throws', () => {
   expect(load('u1', null)).toEqual([]);
   expect(() => clearAll(null)).not.toThrow();
 });
+
+describe('reminder settings privacy', () => {
+  it('never persists the per-user reminder settings query', () => {
+    expect(isPersistableKey(['wedding-reminder-settings', 'w-1', 'u-1'])).toBe(false);
+  });
+});

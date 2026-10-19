@@ -13,11 +13,11 @@ export interface LeadOption {
 export const LEAD_OPTIONS: readonly LeadOption[] = [
   { days: 0, label: 'Same day' },
   { days: 1, label: '1 day before' },
-  { days: 2, label: '2 days' },
-  { days: 3, label: '3 days' },
-  { days: 7, label: '1 week' },
-  { days: 14, label: '2 weeks' },
-  { days: 30, label: '30 days' },
+  { days: 2, label: '2 days before' },
+  { days: 3, label: '3 days before' },
+  { days: 7, label: '1 week before' },
+  { days: 14, label: '2 weeks before' },
+  { days: 30, label: '30 days before' },
 ];
 
 export interface ReminderValues {
@@ -134,5 +134,5 @@ export function summariseReminders(v: ReminderValues): string {
   ].filter(Boolean);
   if (days.length === 0) return 'Pick at least one reminder time to get emails.';
   if (kinds.length === 0) return 'Choose at least one of events, tasks or payments to get emails.';
-  return `You'll get one email around 07:00 each morning listing ${joinList(kinds)} due ${joinList(days.map(phrase))}.`;
+  return `On mornings when something is due you'll get one email around 07:00 listing ${joinList(kinds)} due ${joinList(days.map(phrase))}.`;
 }
