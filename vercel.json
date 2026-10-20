@@ -1,6 +1,10 @@
 {
   "headers": [
     {
+      "source": "/wedding-planner/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+    },
+    {
       "source": "/hq/sw.js",
       "headers": [
         { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },

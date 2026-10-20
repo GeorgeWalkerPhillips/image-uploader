@@ -76,6 +76,11 @@ async function prerender() {
       const url = `http://localhost:${PORT}${route.path}`;
       await page.goto(url, { waitUntil: 'networkidle0' });
       await page.waitForSelector('h1');
+      // Scroll-reveal sections start transparent until they scroll into view;
+      // reveal them so the saved HTML is fully visible without JavaScript.
+      await page.evaluate(() =>
+        document.querySelectorAll('[data-reveal]').forEach((el) => el.setAttribute('data-revealed', 'true'))
+      );
       const html = await page.content();
       const outPath = path.join(BUILD_DIR, route.outFile);
       fs.mkdirSync(path.dirname(outPath), { recursive: true });

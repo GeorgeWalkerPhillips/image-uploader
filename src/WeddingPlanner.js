@@ -1,195 +1,152 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  FaWallet,
-  FaTasks,
-  FaCalendarAlt,
-  FaUserFriends,
-  FaPlane,
-  FaMobileAlt,
-  FaLock,
-  FaUsers,
-  FaCheck,
-} from 'react-icons/fa';
+import { FaCheck, FaLock } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { WEDDING_PLANNER, TIERS, formatPrice } from './services/pricingTiers';
+import { WEDDING_PLANNER } from './services/pricingTiers';
 import { startCheckout, verifyPurchase } from './services/weddingPlannerService';
 import { useAuth } from './context/AuthContext';
 import { useWeddingPlannerStatus, hasPlannerAccess } from './hooks/useWeddingPlannerStatus';
 import { UserBadge } from './components/UserBadge';
 import { Spinner } from './components/Spinner';
+import {
+  APPLICATION_JSON_LD,
+  AUDIENCE,
+  BREADCRUMB_JSON_LD,
+  COMPARISON,
+  DEEP_DIVES,
+  DESCRIPTION,
+  FAQ_ITEMS,
+  FAQ_JSON_LD,
+  H1,
+  HERO_IMAGE,
+  IMAGES,
+  NOT_FOR,
+  OG_IMAGE,
+  PAGE_URL,
+  PRIVACY_CAN,
+  PRIVACY_CANNOT,
+  STEPS,
+  TIMELINE,
+  TITLE,
+  includedWith,
+  plannerPriceText,
+} from './weddingPlannerContent';
 import styles from './WeddingPlanner.module.css';
+
+export { plannerPriceText };
 
 // Paystack redirects back before the webhook always lands, so "pending" is
 // normal for a few seconds. Exported for tests.
 export const VERIFY_ATTEMPTS = 5;
 export const VERIFY_DELAY_MS = 3000;
 
-const TITLE = 'Wedding Planner: budget, tasks, guest list & honeymoon in one app | Valere';
-const DESCRIPTION =
-  'A private wedding planner for you, your partner and your wedding party. Budget, quotes, tasks, calendar, guest list with RSVPs and honeymoon planning. One-time payment, works offline on your phone.';
-
-// Price text for copy, e.g. "R199" (no cents).
-export const plannerPriceText = () =>
-  formatPrice(WEDDING_PLANNER.amountCents, WEDDING_PLANNER.currency)
-    .replace(/[\s ]/g, '')
-    .replace(/[,.]00$/, '');
-
-const FEATURES = [
-  {
-    icon: FaWallet,
-    title: 'Budget, quotes and payments',
-    text: 'Set a budget, compare supplier quotes, accept one to create a budget line, and record invoices and payments with proof attached.',
-  },
-  {
-    icon: FaTasks,
-    title: 'Tasks you can assign',
-    text: 'Break the to-do list into tasks and subtasks, repeat the ones that recur, and hand tasks to your wedding party.',
-  },
-  {
-    icon: FaCalendarAlt,
-    title: 'Calendar and email reminders',
-    text: 'Month, week and agenda views, an .ics export, and a daily email of what is coming up. Reminders are optional per person.',
-  },
-  {
-    icon: FaUserFriends,
-    title: 'Guest list with RSVPs',
-    text: 'Keep every guest and their RSVP in one list, and bring an existing list in with a CSV import.',
-  },
-  {
-    icon: FaPlane,
-    title: 'Honeymoon planner',
-    text: 'An itinerary, bookings, a packing list and travel documents, all next to the wedding plan.',
-  },
-  {
-    icon: FaMobileAlt,
-    title: 'Works offline, installs on your phone',
-    text: 'Add it to your home screen and read your plan without signal. Changes sync live when you are back online.',
-  },
-  {
-    icon: FaUsers,
-    title: 'Plan together',
-    text: 'Your partner joins with full access, and up to 10 helpers can be invited to the tasks you give them.',
-  },
-  {
-    icon: FaLock,
-    title: 'Private by design',
-    text: 'Your plan is locked to the people you invite at the database level. Files open only through short-lived links.',
-  },
+// Head tags this page owns. Existing tags from index.html are updated in place
+// and restored on the way out; missing ones are created and removed again.
+const META_TAGS = [
+  { sel: 'meta[name="description"]', tag: 'meta', key: { name: 'description' }, attr: 'content', value: DESCRIPTION },
+  { sel: 'meta[name="keywords"]', tag: 'meta', key: { name: 'keywords' }, attr: 'content', value: 'wedding planner app, wedding budget tracker, wedding planner South Africa, wedding checklist, wedding guest list RSVP, honeymoon planner' },
+  { sel: 'meta[name="robots"]', tag: 'meta', key: { name: 'robots' }, attr: 'content', value: 'index,follow,max-image-preview:large' },
+  { sel: 'link[rel="canonical"]', tag: 'link', key: { rel: 'canonical' }, attr: 'href', value: PAGE_URL },
+  { sel: 'meta[property="og:title"]', tag: 'meta', key: { property: 'og:title' }, attr: 'content', value: TITLE },
+  { sel: 'meta[property="og:description"]', tag: 'meta', key: { property: 'og:description' }, attr: 'content', value: DESCRIPTION },
+  { sel: 'meta[property="og:type"]', tag: 'meta', key: { property: 'og:type' }, attr: 'content', value: 'website' },
+  { sel: 'meta[property="og:url"]', tag: 'meta', key: { property: 'og:url' }, attr: 'content', value: PAGE_URL },
+  { sel: 'meta[property="og:locale"]', tag: 'meta', key: { property: 'og:locale' }, attr: 'content', value: 'en_ZA' },
+  { sel: 'meta[property="og:image"]', tag: 'meta', key: { property: 'og:image' }, attr: 'content', value: OG_IMAGE.url },
+  { sel: 'meta[property="og:image:width"]', tag: 'meta', key: { property: 'og:image:width' }, attr: 'content', value: String(OG_IMAGE.width) },
+  { sel: 'meta[property="og:image:height"]', tag: 'meta', key: { property: 'og:image:height' }, attr: 'content', value: String(OG_IMAGE.height) },
+  { sel: 'meta[property="og:image:alt"]', tag: 'meta', key: { property: 'og:image:alt' }, attr: 'content', value: OG_IMAGE.alt },
+  { sel: 'meta[name="twitter:card"]', tag: 'meta', key: { name: 'twitter:card' }, attr: 'content', value: 'summary_large_image' },
+  { sel: 'meta[name="twitter:title"]', tag: 'meta', key: { name: 'twitter:title' }, attr: 'content', value: TITLE },
+  { sel: 'meta[name="twitter:description"]', tag: 'meta', key: { name: 'twitter:description' }, attr: 'content', value: DESCRIPTION },
+  { sel: 'meta[name="twitter:image"]', tag: 'meta', key: { name: 'twitter:image' }, attr: 'content', value: OG_IMAGE.url },
+  { sel: 'meta[name="twitter:image:alt"]', tag: 'meta', key: { name: 'twitter:image:alt' }, attr: 'content', value: OG_IMAGE.alt },
 ];
 
-const STEPS = [
-  {
-    title: 'Buy the Wedding Planner',
-    text: 'Sign in or create an account and pay once. There is no subscription.',
-  },
-  {
-    title: 'Set up your wedding',
-    text: 'Add your date, budget and the things you already know. Bring a guest list in from a CSV.',
-  },
-  {
-    title: 'Invite your partner and helpers',
-    text: 'Your partner gets full access. Helpers see only the tasks you assign to them.',
-  },
-];
-
-const FAQ_ITEMS = [
-  {
-    q: 'Is it a one-time payment?',
-    a: `Yes. It is ${plannerPriceText()} once per wedding. There is no subscription and no renewal.`,
-  },
-  {
-    q: 'Can my partner join for free?',
-    a: 'Yes. Your partner and up to 10 helpers are included in the one price. Nobody you invite has to pay.',
-  },
-  {
-    q: 'How many people can I invite?',
-    a: 'Your partner plus up to 10 helpers, such as your wedding party or family who are pitching in.',
-  },
-  {
-    q: 'Does it work offline, and can I put it on my phone?',
-    a: 'Yes. Open it on your phone and add it to your home screen. Once loaded it can be read without signal, and it syncs again when you are back online.',
-  },
-  {
-    q: 'Is my data private?',
-    a: 'Yes. Only the people you invite can open your plan, and access is enforced in the database, not just in the app. Helpers see only the tasks assigned to them. Money, files and guest details stay private to you and your partner.',
-  },
-  {
-    q: 'Is it part of the photo gallery product?',
-    a: 'It is a separate add-on from Valere. You can buy it without creating a photo event, and the photo gallery works without it.',
-  },
-];
-
-const FAQ_JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: FAQ_ITEMS.map((item) => ({
-    '@type': 'Question',
-    name: item.q,
-    acceptedAnswer: { '@type': 'Answer', text: item.a },
-  })),
-};
-
-const PRODUCT_JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'Product',
-  name: `Valere ${WEDDING_PLANNER.name}`,
-  description: DESCRIPTION,
-  brand: { '@type': 'Brand', name: 'Valere' },
-  offers: {
-    '@type': 'Offer',
-    price: (WEDDING_PLANNER.amountCents / 100).toFixed(2),
-    priceCurrency: WEDDING_PLANNER.currency,
-    availability: 'https://schema.org/InStock',
-    url: 'https://www.valere.co.za/wedding-planner',
-  },
-};
-
-// Sets document title / description / canonical for this route, restoring
-// whatever index.html had on the way out.
+// Sets document title and head meta for this route.
 function usePageMeta() {
   useEffect(() => {
     const prevTitle = document.title;
-    const ensure = (selector, create) => {
-      let el = document.head.querySelector(selector);
+    const restores = META_TAGS.map(({ sel, tag, key, attr, value }) => {
+      let el = document.head.querySelector(sel);
       const created = !el;
       if (!el) {
-        el = create();
+        el = document.createElement(tag);
+        Object.entries(key).forEach(([k, v]) => el.setAttribute(k, v));
         document.head.appendChild(el);
       }
-      return { el, created };
-    };
-    const desc = ensure('meta[name="description"]', () => {
-      const m = document.createElement('meta');
-      m.setAttribute('name', 'description');
-      return m;
+      const prev = el.getAttribute(attr);
+      el.setAttribute(attr, value);
+      return () => {
+        if (created) el.remove();
+        else el.setAttribute(attr, prev ?? '');
+      };
     });
-    const canon = ensure('link[rel="canonical"]', () => {
-      const l = document.createElement('link');
-      l.setAttribute('rel', 'canonical');
-      return l;
+    // index.html carries the photo product's JSON-LD; it does not describe this
+    // page, so park it while the planner page is open.
+    const parked = Array.from(document.head.querySelectorAll('script[type="application/ld+json"]')).map((el) => {
+      const parent = el.parentNode;
+      const next = el.nextSibling;
+      el.remove();
+      return () => parent.insertBefore(el, next && next.parentNode === parent ? next : null);
     });
-    const prevDesc = desc.el.getAttribute('content');
-    const prevCanon = canon.el.getAttribute('href');
-
     document.title = TITLE;
-    desc.el.setAttribute('content', DESCRIPTION);
-    canon.el.setAttribute('href', 'https://www.valere.co.za/wedding-planner');
-
     return () => {
       document.title = prevTitle;
-      if (desc.created) desc.el.remove();
-      else desc.el.setAttribute('content', prevDesc ?? '');
-      if (canon.created) canon.el.remove();
-      else canon.el.setAttribute('href', prevCanon ?? '');
+      restores.forEach((r) => r());
+      parked.forEach((r) => r());
     };
   }, []);
+}
+
+// Fades sections in as they scroll into view (same pattern as the landing
+// page). Nothing stays hidden without IntersectionObserver or with reduced motion.
+function useScrollReveal() {
+  useEffect(() => {
+    const els = document.querySelectorAll('[data-reveal]');
+    const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (typeof IntersectionObserver === 'undefined' || reduced) {
+      els.forEach((el) => el.setAttribute('data-revealed', 'true'));
+      return undefined;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.setAttribute('data-revealed', 'true');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+}
+
+// A phone-shaped frame drawn in CSS around a screenshot.
+function Phone({ image, eager = false, className = '' }) {
+  return (
+    <div className={`${styles.phone} ${className}`}>
+      <img
+        src={image.src}
+        alt={image.alt}
+        width={image.width}
+        height={image.height}
+        loading={eager ? undefined : 'lazy'}
+        decoding="async"
+        {...(eager ? { fetchpriority: 'high' } : {})}
+      />
+    </div>
+  );
 }
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function WeddingPlanner() {
   usePageMeta();
+  useScrollReveal();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
@@ -315,11 +272,13 @@ function WeddingPlanner() {
   };
 
   const price = plannerPriceText();
+  const entitled = signedIn && hasAccess;
 
   return (
     <div className={styles.page}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(PRODUCT_JSON_LD) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(APPLICATION_JSON_LD) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_JSON_LD) }} />
 
       <header className={styles.nav}>
         <Link to="/" aria-label="Valere home" className={styles.navBrandLink}>
@@ -327,6 +286,7 @@ function WeddingPlanner() {
         </Link>
         <nav className={styles.navLinks} aria-label="Page sections">
           <a href="#features">Features</a>
+          <a href="#checklist">Checklist</a>
           <a href="#pricing">Pricing</a>
           <a href="#faq">FAQ</a>
         </nav>
@@ -424,44 +384,37 @@ function WeddingPlanner() {
         )}
 
         <section className={styles.hero} aria-labelledby="planner-hero">
-          <p className={styles.eyebrow}>Wedding Planner</p>
-          <h1 id="planner-hero">Plan the whole wedding, together, in one private place.</h1>
-          <p className={styles.heroSub}>
-            Budget, tasks, guest list and honeymoon for you, your partner and your wedding party. {price} once,
-            no subscription.
-          </p>
-          <div className={styles.heroActions}>
-            {renderAction(`Get the Wedding Planner · ${price}`)}
-            <a className={styles.btnGhost} href="#features">
-              See what is included
-            </a>
-          </div>
-          {checkoutError && (
-            <p role="alert" className={styles.errorText}>
-              {checkoutError}
+          <div className={styles.heroText}>
+            <nav aria-label="Breadcrumb" className={styles.breadcrumb}>
+              <Link to="/">Home</Link> <span aria-hidden="true">/</span> <span aria-current="page">Wedding Planner</span>
+            </nav>
+            <p className={styles.eyebrow}>Wedding Planner by Valere</p>
+            <h1 id="planner-hero">{H1}</h1>
+            <p className={styles.heroSub}>
+              Budget, vendor quotes, tasks for your wedding party, guest list and honeymoon, together in one private app
+              for you and your partner. {price} once, no subscription.
             </p>
-          )}
-          <ul className={styles.trustBar}>
-            <li>One-time payment</li>
-            <li>Partner and helpers included</li>
-            <li>Works offline on your phone</li>
-          </ul>
-        </section>
-
-        <section id="features" aria-labelledby="features-heading">
-          <h2 id="features-heading">Everything the planning needs</h2>
-          <div className={styles.featureGrid}>
-            {FEATURES.map(({ icon: Icon, title, text }) => (
-              <article className={styles.featureCard} key={title}>
-                <Icon className={styles.featureIcon} aria-hidden="true" />
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </article>
-            ))}
+            <div className={styles.heroActions}>
+              {renderAction(`Get the Wedding Planner · ${price}`)}
+              <a className={styles.btnGhost} href="#features">
+                See what is included
+              </a>
+            </div>
+            {checkoutError && (
+              <p role="alert" className={styles.errorText}>
+                {checkoutError}
+              </p>
+            )}
+            <ul className={styles.trustBar}>
+              <li>One-time payment</li>
+              <li>Partner and helpers included</li>
+              <li>Works offline on your phone</li>
+            </ul>
           </div>
+          <Phone image={HERO_IMAGE} eager className={styles.heroPhone} />
         </section>
 
-        <section className={styles.band} aria-labelledby="how-heading">
+        <section className={styles.band} aria-labelledby="how-heading" data-reveal>
           <h2 id="how-heading">How it works</h2>
           <ol className={styles.steps}>
             {STEPS.map((step, i) => (
@@ -476,31 +429,129 @@ function WeddingPlanner() {
           </ol>
         </section>
 
-        <section aria-labelledby="privacy-heading">
-          <h2 id="privacy-heading">Who sees what</h2>
+        <section id="features" aria-labelledby="features-heading">
+          <h2 id="features-heading">Everything you need to plan the wedding</h2>
           <p className={styles.intro}>
-            Your helpers should be able to help without seeing your finances. That is how it is built.
+            Real screens from the app, shown with a made-up couple. Every feature below is included in the one price.
           </p>
-          <div className={styles.privacyGrid}>
-            <div className={styles.privacyCard}>
-              <h3>Helpers can see</h3>
-              <ul>
-                <li><FaCheck aria-hidden="true" /> Only the tasks assigned to them</li>
-                <li><FaCheck aria-hidden="true" /> Nothing else from your plan</li>
-              </ul>
-            </div>
-            <div className={`${styles.privacyCard} ${styles.privacyCardDark}`}>
-              <h3>Private to you and your partner</h3>
-              <ul>
-                <li><FaLock aria-hidden="true" /> Budget, quotes and payments</li>
-                <li><FaLock aria-hidden="true" /> Uploaded files and documents</li>
-                <li><FaLock aria-hidden="true" /> Guest details and RSVPs</li>
-              </ul>
+          <div className={styles.dives}>
+            {DEEP_DIVES.map((d, i) => (
+              <article id={d.id} className={`${styles.dive} ${i % 2 ? styles.diveFlip : ''}`} key={d.id} data-reveal>
+                <div className={styles.diveText}>
+                  <h3>{d.title}</h3>
+                  <p>{d.text}</p>
+                  <ul className={styles.checkList}>
+                    {d.bullets.map((b) => (
+                      <li key={b}><FaCheck aria-hidden="true" /> <span>{b}</span></li>
+                    ))}
+                  </ul>
+                </div>
+                <div className={`${styles.diveShots} ${d.images.length > 1 ? styles.diveShotsTwo : ''}`}>
+                  {d.images.map((key) => (
+                    <Phone image={IMAGES[key]} key={key} />
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.band} aria-labelledby="audience-heading" data-reveal>
+          <h2 id="audience-heading">Who the Wedding Planner is for</h2>
+          <div className={styles.cardGrid}>
+            {AUDIENCE.map((a) => (
+              <div className={styles.card} key={a.title}>
+                <h3>{a.title}</h3>
+                <p>{a.text}</p>
+              </div>
+            ))}
+          </div>
+          <div className={styles.notFor}>
+            <h3>What it is not</h3>
+            <ul>
+              {NOT_FOR.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section aria-labelledby="compare-heading" data-reveal>
+          <h2 id="compare-heading">Wedding Planner vs spreadsheets</h2>
+          <div className={styles.tableWrap}>
+            <table className={styles.compare}>
+              <caption className={styles.srOnly}>{COMPARISON.caption}</caption>
+              <thead>
+                <tr>
+                  <th scope="col"><span className={styles.srOnly}>Feature</span></th>
+                  <th scope="col">Spreadsheet</th>
+                  <th scope="col">Wedding Planner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON.rows.map((r) => (
+                  <tr key={r.label}>
+                    <th scope="row">{r.label}</th>
+                    <td>{r.sheet}</td>
+                    <td>{r.planner}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className={styles.tableNote}>{COMPARISON.note}</p>
+        </section>
+
+        <section id="checklist" className={styles.band} aria-labelledby="checklist-heading" data-reveal>
+          <h2 id="checklist-heading">Wedding planning checklist: 12 months to the big day</h2>
+          <p className={styles.intro}>
+            A general timeline for South African weddings. Squeeze it or stretch it to fit your own date, then put the
+            tasks into your planner and hand some to your wedding party.
+          </p>
+          <ol className={styles.timeline}>
+            {TIMELINE.map((t) => (
+              <li key={t.when}>
+                <h3>{t.when}</h3>
+                <ul>
+                  {t.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section aria-labelledby="privacy-heading" data-reveal>
+          <h2 id="privacy-heading">Private and secure: who sees what</h2>
+          <p className={styles.intro}>
+            Your helpers should be able to help without seeing your finances. Only the people you invite can open your
+            plan, and the database enforces it, not just the app.
+          </p>
+          <div className={styles.privacySplit}>
+            <Phone image={IMAGES.helper} />
+            <div className={styles.privacyGrid}>
+              <div className={styles.privacyCard}>
+                <h3>Helpers can see</h3>
+                <ul>
+                  {PRIVACY_CAN.map((t) => (
+                    <li key={t}><FaCheck aria-hidden="true" /> {t}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className={`${styles.privacyCard} ${styles.privacyCardDark}`}>
+                <h3>Private to you and your partner</h3>
+                <ul>
+                  {PRIVACY_CANNOT.map((t) => (
+                    <li key={t}><FaLock aria-hidden="true" /> {t}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </section>
 
-        <section id="pricing" className={styles.band} aria-labelledby="pricing-heading">
+        <section id="pricing" className={styles.band} aria-labelledby="pricing-heading" data-reveal>
           <h2 id="pricing-heading">One price. Everyone included.</h2>
           <div className={styles.priceCard}>
             <h3>{WEDDING_PLANNER.name}</h3>
@@ -513,8 +564,9 @@ function WeddingPlanner() {
               <li><FaCheck aria-hidden="true" /> Up to 10 helpers on assigned tasks</li>
               <li><FaCheck aria-hidden="true" /> Budget, tasks, calendar, guests, honeymoon</li>
               <li><FaCheck aria-hidden="true" /> Offline reading and phone install</li>
+              <li><FaCheck aria-hidden="true" /> No subscription</li>
             </ul>
-            {signedIn && hasAccess ? (
+            {entitled ? (
               <>
                 <p className={styles.owned}>You have the Wedding Planner.</p>
                 {renderAction('', styles.btnPrimaryBlock)}
@@ -528,7 +580,7 @@ function WeddingPlanner() {
               </p>
             )}
             <p className={styles.fine}>
-              Included free with {TIERS.unlimited.name} for Capture by Val events.{' '}
+              Included free with {includedWith} for Capture by Val events.{' '}
               <a href="/#pricing">See event pricing</a>
             </p>
             <p className={styles.fine}>
@@ -537,29 +589,50 @@ function WeddingPlanner() {
           </div>
         </section>
 
-        <section id="faq" aria-labelledby="faq-heading">
-          <h2 id="faq-heading">Frequently asked questions</h2>
+        <section id="faq" aria-labelledby="faq-heading" data-reveal>
+          <h2 id="faq-heading">Wedding Planner questions answered</h2>
           <div className={styles.faqList}>
             {FAQ_ITEMS.map((item) => (
               <details className={styles.faqItem} key={item.q}>
                 <summary>{item.q}</summary>
                 <p>{item.a}</p>
+                {item.link && (
+                  <p>
+                    <Link to={item.link.to}>{item.link.label}</Link>
+                  </p>
+                )}
               </details>
             ))}
-            <details className={styles.faqItem}>
-              <summary>What if I need a refund?</summary>
-              <p>
-                Our <Link to="/refund-policy">Refund Policy</Link> explains when a payment can be refunded.
-              </p>
-            </details>
           </div>
+        </section>
+
+        <section className={styles.ctaBand} aria-labelledby="cta-heading" data-reveal>
+          <h2 id="cta-heading">Start planning together</h2>
+          <p className={styles.intro}>
+            {entitled
+              ? 'Your plan is waiting.'
+              : `${price} once for the whole wedding, with your partner and up to 10 helpers included.`}
+          </p>
+          <div className={styles.ctaActions}>
+            {renderAction(`Buy for ${price}`)}
+            {!signedIn && (
+              <Link className={styles.btnGhost} to="/login?mode=signup&next=%2Fwedding-planner">
+                Create an account first
+              </Link>
+            )}
+          </div>
+          <p className={styles.fine}>
+            Also planning the photos? <a href="/#how-it-works">See how Capture by Val works</a>, where guests upload
+            photos straight from their phones.
+          </p>
         </section>
       </main>
 
       <footer className={styles.footer}>
         <p>&copy; {new Date().getFullYear()} Valere. All rights reserved.</p>
-        <nav className={styles.footerLinks}>
+        <nav className={styles.footerLinks} aria-label="Footer">
           <Link to="/">Home</Link>
+          <a href="/#how-it-works">Wedding photo gallery</a>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms and Conditions</Link>
           <Link to="/refund-policy">Refund Policy</Link>

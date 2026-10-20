@@ -184,3 +184,12 @@ Realtime sync (`lib/realtime.ts`), a per-user offline read cache in localStorage
 (`public/hq/sw.js`, registered only from inside `WeddingApp`; `vercel.json` sets its
 headers) live in the lazy chunk and must never touch the main app. Full guide:
 `WEDDING_HQ.md`.
+
+The `/wedding-planner` marketing page is SEO-driven: copy, FAQ, images and JSON-LD
+constants live in `src/weddingPlannerContent.js` (the FAQ JSON-LD is generated from
+the same data as the rendered FAQ); head meta is set at runtime and captured by
+`scripts/prerender.js`. Its phone screenshots in `public/wedding-planner/` come
+from `scripts/generate-planner-screenshots.js` (mocked Supabase + entirely
+fictional fixtures in `scripts/planner-screenshot-fixtures.js`; run by hand, never
+in build/tests). Never put real couple, guest or supplier data in those fixtures.
+Page claims must stay true: no ratings, reviews, user counts or awards.

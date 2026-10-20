@@ -34,7 +34,9 @@
 }
 
 .navBrandLink {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   flex-shrink: 0;
 }
 
@@ -51,6 +53,7 @@
 }
 
 .navLinks a {
+  padding: 14px 4px;
   color: #333;
   text-decoration: none;
   font-size: 14px;
@@ -127,9 +130,29 @@
 
 /* Hero */
 .page .hero {
-  max-width: 760px;
-  padding: 60px 24px 40px;
+  max-width: 1100px;
+  padding: 36px 24px 40px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+}
+
+.heroText {
+  max-width: 600px;
+}
+
+.breadcrumb {
+  font-size: 13px;
+  color: #777;
+  margin: 0 0 18px;
+}
+
+.breadcrumb a {
+  color: #555;
+  display: inline-block;
+  padding: 14px 4px;
 }
 
 .eyebrow {
@@ -488,6 +511,9 @@
 
 .fine a {
   color: #111;
+  display: inline-block;
+  padding: 14px 2px;
+  margin: -14px 0;
 }
 
 /* FAQ */
@@ -506,7 +532,12 @@
   font-weight: 600;
   font-size: 16px;
   list-style: none;
-  min-height: 24px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -10px 0;
 }
 
 .faqItem summary::-webkit-details-marker {
@@ -515,7 +546,6 @@
 
 .faqItem summary::after {
   content: '+';
-  float: right;
   font-weight: 400;
   color: #999;
 }
@@ -532,6 +562,8 @@
 
 .faqItem a {
   color: #111;
+  display: inline-block;
+  padding: 14px 0;
 }
 
 /* Footer */
@@ -583,5 +615,375 @@
 @media (min-width: 900px) {
   .featureGrid {
     grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Reveal on scroll (same idea as the landing page). The hook marks sections
+   revealed; reduced motion and a missing IntersectionObserver reveal at once. */
+.page [data-reveal]:not([data-revealed]) {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.page [data-reveal] {
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* CSS-only phone frame around a screenshot */
+.phone {
+  width: 100%;
+  max-width: 250px;
+  margin: 0 auto;
+  padding: 7px;
+  box-sizing: border-box;
+  background: #111;
+  border-radius: 36px;
+  box-shadow: 0 24px 48px rgba(40, 20, 60, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 29px;
+  background: #f3eef6;
+}
+
+.heroPhone {
+  max-width: 270px;
+}
+
+/* Feature deep-dives */
+.dives {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+
+.dive {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  align-items: center;
+}
+
+.diveText {
+  width: 100%;
+  max-width: 520px;
+}
+
+.page .diveText h3 {
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 0 0 12px;
+}
+
+.diveText > p {
+  margin: 0 0 16px;
+  color: #555;
+  line-height: 1.65;
+  font-size: 16px;
+}
+
+.checkList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.checkList li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 5px 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.checkList svg {
+  flex-shrink: 0;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #2e7d4f;
+}
+
+.diveShots {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.diveShotsTwo {
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.diveShotsTwo .phone {
+  max-width: 210px;
+  margin: 0;
+}
+
+.diveShotsTwo .phone:nth-child(2) {
+  margin-top: 36px;
+}
+
+/* Audience cards */
+.cardGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: 0 4px 24px rgba(17, 17, 17, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.card h3 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+
+.card p {
+  margin: 0;
+  color: #555;
+  line-height: 1.55;
+  font-size: 15px;
+}
+
+.notFor {
+  max-width: 900px;
+  margin: 28px auto 0;
+  color: #555;
+}
+
+.notFor h3 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.notFor ul {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+/* Comparison */
+.tableWrap {
+  max-width: 820px;
+  margin: 0 auto;
+  overflow-x: auto;
+}
+
+.compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.compare th,
+.compare td {
+  padding: 12px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+  line-height: 1.4;
+}
+
+.compare thead th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666;
+}
+
+.compare tbody th {
+  font-weight: 700;
+  color: #111;
+  width: 26%;
+}
+
+.compare td:last-child {
+  font-weight: 600;
+  color: #111;
+}
+
+.tableNote {
+  max-width: 640px;
+  margin: 18px auto 0;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* Timeline */
+.timeline {
+  list-style: none;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 0 0 22px;
+  border-left: 2px solid rgba(17, 17, 17, 0.15);
+}
+
+.timeline > li {
+  position: relative;
+  padding: 0 0 26px 14px;
+}
+
+.timeline > li:last-child {
+  padding-bottom: 0;
+}
+
+.timeline > li::before {
+  content: '';
+  position: absolute;
+  left: -29px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #111;
+}
+
+.timeline h3 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.timeline ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #444;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+/* Privacy with phone */
+.privacySplit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.privacySplit .privacyGrid {
+  grid-template-columns: 1fr;
+  margin: 0;
+}
+
+/* Closing call to action */
+.page section.ctaBand {
+  text-align: center;
+  padding-bottom: 72px;
+}
+
+.ctaActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ctaActions {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 900px) {
+  .page .hero {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+    gap: 56px;
+    padding-top: 56px;
+  }
+
+  .heroText {
+    max-width: 560px;
+  }
+
+  .page .hero .heroActions,
+  .page .hero .trustBar {
+    justify-content: flex-start;
+  }
+
+  .heroPhone {
+    flex-shrink: 0;
+    margin: 0;
+  }
+
+  .dive {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 64px;
+  }
+
+  .diveFlip {
+    flex-direction: row-reverse;
+  }
+
+  .diveText {
+    flex: 1 1 0;
+    max-width: none;
+  }
+
+  .diveShots {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .diveShots .phone {
+    max-width: 250px;
+  }
+
+  .diveShotsTwo .phone {
+    max-width: 220px;
+  }
+
+  .privacySplit {
+    flex-direction: row;
+    gap: 48px;
+  }
+
+  .privacySplit .phone {
+    flex-shrink: 0;
+    max-width: 230px;
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page [data-reveal] {
+    transition: none;
   }
 }

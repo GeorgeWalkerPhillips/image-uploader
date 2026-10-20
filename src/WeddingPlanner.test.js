@@ -1,4 +1,6 @@
 import './testUtils/routerPolyfill';
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,6 +11,7 @@ import { UserBadge } from './components/UserBadge';
 import { WEDDING_PLANNER, formatPrice } from './services/pricingTiers';
 import * as service from './services/weddingPlannerService';
 import { useAuth } from './context/AuthContext';
+import { FAQ_ITEMS, IMAGES, HERO_IMAGE, OG_IMAGE, TITLE, DESCRIPTION, PAGE_URL, H1 } from './weddingPlannerContent';
 
 jest.mock('./supabaseClient', () => ({ supabase: {} }));
 jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
@@ -302,5 +305,133 @@ describe('landing page section', () => {
     expect(cards).toHaveLength(1);
     expect(cards[0].closest('div')).toHaveTextContent('The Whole Reel');
     expect(screen.getByRole('link', { name: 'See pricing' })).toHaveAttribute('href', '#pricing');
+  });
+});
+
+describe('SEO and content', () => {
+  const ldBlocks = (container) =>
+    Array.from(container.querySelectorAll('script[type="application/ld+json"]')).map((n) => JSON.parse(n.textContent));
+  const metaContent = (sel) => document.head.querySelector(sel)?.getAttribute('content');
+
+  it('has exactly one h1 containing "wedding planner"', () => {
+    const { container } = renderAt('/wedding-planner');
+    const h1s = container.querySelectorAll('h1');
+    expect(h1s).toHaveLength(1);
+    expect(h1s[0].textContent).toBe(H1);
+    expect(h1s[0].textContent).toMatch(/wedding planner/i);
+  });
+
+  it('gives every image alt text, width and height, and lazy-loads all but the hero', () => {
+    const { container } = renderAt('/wedding-planner');
+    const imgs = Array.from(container.querySelectorAll('img'));
+    expect(imgs.length).toBeGreaterThan(10);
+    imgs.forEach((img) => {
+      expect(img.getAttribute('alt')).toBeTruthy();
+      expect(Number(img.getAttribute('width'))).toBeGreaterThan(0);
+      expect(Number(img.getAttribute('height'))).toBeGreaterThan(0);
+    });
+    const shots = imgs.filter((i) => i.getAttribute('src').startsWith('/wedding-planner/'));
+    const hero = shots.find((i) => i.getAttribute('src') === HERO_IMAGE.src);
+    expect(hero.getAttribute('fetchpriority')).toBe('high');
+    expect(hero.getAttribute('loading')).toBeNull();
+    shots.filter((i) => i !== hero).forEach((i) => {
+      expect(i.getAttribute('loading')).toBe('lazy');
+      expect(i.getAttribute('decoding')).toBe('async');
+    });
+  });
+
+  it('emits valid JSON-LD: SoftwareApplication, FAQPage, BreadcrumbList', () => {
+    const { container } = renderAt('/wedding-planner');
+    const blocks = ldBlocks(container);
+    expect(blocks.map((b) => b['@type']).sort()).toEqual(['BreadcrumbList', 'FAQPage', 'SoftwareApplication']);
+    const app = blocks.find((b) => b['@type'] === 'SoftwareApplication');
+    expect(app.applicationCategory).toBe('LifestyleApplication');
+    expect(app.operatingSystem).toBe('Web, iOS, Android (PWA)');
+    expect(app.offers.price).toBe((WEDDING_PLANNER.amountCents / 100).toFixed(2));
+    expect(app.offers.priceCurrency).toBe(WEDDING_PLANNER.currency);
+    expect(app.offers.price).toBe('199.00');
+    expect(app).not.toHaveProperty('aggregateRating');
+    expect(app).not.toHaveProperty('review');
+    const crumbs = blocks.find((b) => b['@type'] === 'BreadcrumbList');
+    expect(crumbs.itemListElement.map((i) => i.name)).toEqual(['Home', 'Wedding Planner']);
+  });
+
+  it('FAQ JSON-LD equals the rendered FAQ', () => {
+    const { container } = renderAt('/wedding-planner');
+    const faq = ldBlocks(container).find((b) => b['@type'] === 'FAQPage');
+    const rendered = Array.from(container.querySelectorAll('#faq details')).map((d) => ({
+      q: d.querySelector('summary').textContent,
+      a: d.querySelector('p').textContent,
+    }));
+    expect(rendered).toEqual(FAQ_ITEMS.map((i) => ({ q: i.q, a: i.a })));
+    expect(faq.mainEntity.map((e) => [e.name, e.acceptedAnswer.text])).toEqual(rendered.map((r) => [r.q, r.a]));
+    expect(rendered.length).toBeGreaterThanOrEqual(10);
+    expect(rendered.length).toBeLessThanOrEqual(12);
+  });
+
+  it('sets title, description, canonical, robots, Open Graph and Twitter tags', () => {
+    renderAt('/wedding-planner');
+    expect(document.title).toBe(TITLE);
+    expect(TITLE.length).toBeLessThanOrEqual(60);
+    expect(DESCRIPTION.length).toBeLessThanOrEqual(155);
+    expect(metaContent('meta[name="description"]')).toBe(DESCRIPTION);
+    expect(document.head.querySelector('link[rel="canonical"]').getAttribute('href')).toBe('https://www.valere.co.za/wedding-planner');
+    expect(PAGE_URL).toBe('https://www.valere.co.za/wedding-planner');
+    expect(metaContent('meta[name="robots"]')).toBe('index,follow,max-image-preview:large');
+    expect(metaContent('meta[property="og:title"]')).toBe(TITLE);
+    expect(metaContent('meta[property="og:description"]')).toBe(DESCRIPTION);
+    expect(metaContent('meta[property="og:url"]')).toBe(PAGE_URL);
+    expect(metaContent('meta[property="og:image"]')).toBe(OG_IMAGE.url);
+    expect(OG_IMAGE.url).toMatch(/^https:\/\/www\.valere\.co\.za\/wedding-planner\/.+\.(jpg|png)$/);
+    expect(metaContent('meta[property="og:image:width"]')).toBe('1200');
+    expect(metaContent('meta[property="og:image:height"]')).toBe('630');
+    expect(metaContent('meta[name="twitter:card"]')).toBe('summary_large_image');
+    expect(metaContent('meta[name="twitter:image"]')).toBe(OG_IMAGE.url);
+  });
+
+  it('restores the head when the page unmounts', () => {
+    const before = document.title;
+    const { unmount } = renderAt('/wedding-planner');
+    unmount();
+    expect(document.title).toBe(before);
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+    expect(document.head.querySelector('meta[property="og:image:width"]')).toBeNull();
+  });
+
+  it('only mentions photo pricing as the included-with-The-Whole-Reel note', () => {
+    const { container } = renderAt('/wedding-planner');
+    const text = container.textContent;
+    expect(text).not.toMatch(/Gathering|Big Day|R\s?179|R\s?399|R\s?999|R\s?50\b/);
+    expect(text.match(/The Whole Reel/g)).toHaveLength(1);
+  });
+
+  it('makes no fabricated claims', () => {
+    const { container } = renderAt('/wedding-planner');
+    const all = container.textContent + JSON.stringify(ldBlocks(container)) + FAQ_ITEMS.map((i) => i.a).join(' ');
+    expect(all).not.toMatch(/\brated\b|\bstars?\b|testimonial|trusted by|\breviews?\b|award|\d+\s?(\+\s?)?(couples|users|weddings)\b/i);
+  });
+
+  it('links to the key internal pages', () => {
+    renderAt('/wedding-planner');
+    const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
+    ['/', '/#pricing', '/refund-policy', '/privacy', '/terms', '/#how-it-works'].forEach((h) => expect(hrefs).toContain(h));
+    expect(hrefs.some((h) => h.startsWith('/login?mode=signup'))).toBe(true);
+  });
+});
+
+describe('image assets', () => {
+  const publicDir = path.join(__dirname, '..', 'public');
+  const paths = [...new Set([...Object.values(IMAGES).map((i) => i.src), OG_IMAGE.url.replace('https://www.valere.co.za', '')])];
+
+  it.each(paths)('%s exists in public/ and is within the size budget', (p) => {
+    const file = path.join(publicDir, p);
+    expect(fs.existsSync(file)).toBe(true);
+    expect(fs.statSync(file).size).toBeLessThanOrEqual(200 * 1024);
+  });
+
+  it('references only files that exist, and uses every screenshot on disk', () => {
+    const onDisk = fs.readdirSync(path.join(publicDir, 'wedding-planner'));
+    const referenced = paths.map((p) => path.basename(p));
+    onDisk.forEach((f) => expect(referenced).toContain(f));
   });
 });

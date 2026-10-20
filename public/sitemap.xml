@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://www.valere.co.za/</loc>
     <changefreq>monthly</changefreq>
@@ -7,8 +7,65 @@
   </url>
   <url>
     <loc>https://www.valere.co.za/wedding-planner</loc>
+    <lastmod>2026-10-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-planner-home-dashboard.webp</image:loc>
+      <image:title>Wedding Planner home screen with a countdown to the wedding day, budget rings and next-up list</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-budget-tracker-app.webp</image:loc>
+      <image:title>Wedding budget tracker with the photography category open, showing estimated, quoted, final and paid amounts in rand</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-money-spent-who-paid.webp</image:loc>
+      <image:title>Money spent so far screen showing paid to date and how much each partner has paid</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/compare-wedding-vendor-quotes.webp</image:loc>
+      <image:title>Vendor quote comparison with the lowest quote highlighted and an Accept button</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-task-list-assign-helpers.webp</image:loc>
+      <image:title>Wedding task list grouped by person, with chips showing which helper each task is assigned to</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/invite-wedding-party-helpers.webp</image:loc>
+      <image:title>Team screen listing three helpers and an Invite someone form</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-helper-my-tasks-view.webp</image:loc>
+      <image:title>A helper’s view of the planner showing only their own tasks, with no budget or guest list</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-calendar-reminders.webp</image:loc>
+      <image:title>Wedding calendar for a month with coloured dots for events, tasks and payments</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-email-reminder-settings.webp</image:loc>
+      <image:title>Email reminder settings with choices for when to be reminded and what to include</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-guest-list-rsvp-tracker.webp</image:loc>
+      <image:title>Guest list with an RSVP summary and buttons to mark each guest as coming, maybe or not coming</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/honeymoon-planner-itinerary.webp</image:loc>
+      <image:title>Honeymoon planner day-by-day itinerary with accommodation and transport for each day</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/honeymoon-currency-converter-zar-thb.webp</image:loc>
+      <image:title>Honeymoon currency converter between South African rand and Thai baht</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-purchases-checklist-receipts.webp</image:loc>
+      <image:title>Wedding shopping list with items still to buy, totals and a Mark bought button</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.valere.co.za/wedding-planner/wedding-planner-works-offline.webp</image:loc>
+      <image:title>Wedding Planner showing an offline banner and the last saved plan</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://www.valere.co.za/privacy</loc>
