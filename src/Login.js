@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { toast } from 'react-toastify';
 import { Spinner } from './components/Spinner';
+import { safeNextPath, rememberNextPath, consumeNextPath } from './utils/postAuthRedirect';
 import styles from './Login.module.css';
 
 // 'signin' | 'signup' | 'forgot'
@@ -21,6 +22,13 @@ function Login() {
   const [unconfirmedEmail, setUnconfirmedEmail] = useState(null);
   const { user, signIn, signUp, signInWithGoogle, resendConfirmationEmail, resetPasswordForEmail } = useAuth();
   const navigate = useNavigate();
+  // Optional validated return path (e.g. the Wedding Planner purchase page).
+  const nextPath = safeNextPath(searchParams.get('next'));
+
+  useEffect(() => {
+    // Remember it across Google OAuth / email-confirmation round trips.
+    rememberNextPath(nextPath);
+  }, [nextPath]);
 
   // Covers every path that lands an already-authenticated session back on
   // this page: Google OAuth's redirect (auth-js processes the URL's token
@@ -31,9 +39,9 @@ function Login() {
   // assumes sign-in silently failed even though they're actually signed in.
   useEffect(() => {
     if (user && !user.is_anonymous) {
-      navigate('/admin', { replace: true });
+      navigate(nextPath || consumeNextPath() || '/admin', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, nextPath]);
 
   const resetFields = () => {
     setPassword('');
@@ -65,7 +73,7 @@ function Login() {
       // On success this redirects the whole page to Google, so there's
       // nothing to do after it resolves — only a config/network error
       // returns here without navigating away.
-      await signInWithGoogle();
+      await signInWithGoogle(nextPath);
     } catch (error) {
       toast.error(error.message || 'Could not sign in with Google');
       setLoading(false);
@@ -120,7 +128,7 @@ function Login() {
       } else {
         await signIn(email, password);
         toast.success('Logged in successfully!');
-        navigate('/admin');
+        navigate(nextPath || '/admin');
       }
     } catch (error) {
       if (error.code === 'email_not_confirmed') {

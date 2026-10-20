@@ -357,6 +357,35 @@ Edit pricing in `src/services/pricingTiers.js` — and keep the
 `TIER_AMOUNTS_CENTS` map in the Edge Function (step 4 above) in sync, since
 that's what actually determines what Paystack charges.
 
+## Wedding Planner purchase
+
+A one-time R499 purchase (separate product from event tiers) that lets a user create their own Wedding HQ wedding. DB side: `wedding-hq-2026-10e-planner-product.sql` (`wedding_planner_entitlements`); API shapes: `WEDDING_PLANNER_CONTRACT.md`.
+
+Flow:
+1. `wedding-planner-checkout` (user JWT; anonymous refused; 409 if already entitled) calls Paystack `transaction/initialize` with the amount from the server constant, reference `wp-<userId>-<12 random chars>`, metadata `{ product: "wedding_planner", userId }`, callback `<origin>/wedding-planner?payment=success`.
+2. Paystack redirects back; the browser calls `wedding-planner-verify { reference }`, which re-fetches the charge from Paystack and requires: status success, ZAR, amount exactly the planner price, `metadata.product = wedding_planner`, and a planner reference whose embedded user id is the authenticated caller. A Capture by Val event reference (`cbv-...`) can never be turned into an entitlement.
+3. `paystack-webhook` (same endpoint and HMAC check as event payments) diverts charges that carry a planner signal (planner reference or `metadata.product`) to the same `applyPlannerPayment` in `_shared/weddingPlanner.ts`. Everything else runs the unchanged event flow. A charge mixing event and planner signals is refused (200) and logged to `error_logs` (`paystack-webhook:planner-conflict`).
+4. `applyPlannerPayment` inserts into `wedding_planner_entitlements` (service role, `source = 'paystack'`, `payment_reference` unique). Replays are idempotent; a reference owned by another user is refused; the receipt email is sent only by the call that inserted the row.
+
+Secrets: reuses `PAYSTACK_SECRET_KEY`, `ALLOWED_ORIGIN`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. None new.
+
+Deploy (NOT done by the code change; run yourself):
+
+```bash
+supabase functions deploy wedding-planner-checkout --project-ref <ref>
+supabase functions deploy wedding-planner-verify --project-ref <ref>
+supabase functions deploy wedding-invite --project-ref <ref>
+supabase functions deploy paystack-webhook --project-ref <ref>   # now routes planner charges
+```
+
+**Price sync point:** `WEDDING_PLANNER.amountCents` in `supabase/functions/_shared/weddingPlanner.ts` must equal `WEDDING_PLANNER.amountCents` in `src/services/pricingTiers.js`. The server constant alone decides what is charged and accepted.
+
+Inspect / refund:
+- Entitlements: `select user_id, payment_reference, amount_cents, source, paid_at from wedding_planner_entitlements order by paid_at desc;` (SQL editor, service role).
+- Duplicate or stray charges: `select created_at, source, message from error_logs where source like 'wedding-planner%' or source = 'paystack-webhook:planner-conflict' order by created_at desc;`. A `duplicate-charge` row means the user already had the planner; refund that reference in the Paystack dashboard (Transactions -> Refund). The code never refunds automatically.
+- To remove access after a refund: `delete from wedding_planner_entitlements where payment_reference = '<ref>';` (does not delete any wedding already created).
+- Logic tests (no Deno): see the top of `supabase/functions/_shared/weddingPlanner.test.ts` and `paystackWebhookRouting.test.mjs`.
+
 ## Troubleshooting
 
 **Payment not processing?**

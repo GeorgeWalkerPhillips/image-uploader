@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
+import { consumeNextPath } from '../utils/postAuthRedirect';
 
 // Email confirmation links and Google OAuth both redirect back into the app
 // with a session already encoded in the URL (hash tokens or a PKCE `code`),
@@ -54,8 +55,12 @@ export function AuthCallbackRedirect() {
 
     if (user && !user.is_anonymous) {
       toast.success("You're signed in!");
-      if (location.pathname !== '/admin') {
-        navigate('/admin', { replace: true });
+      // A purchase flow (e.g. /wedding-planner?buy=1) may have asked to be
+      // returned to; otherwise default to the dashboard.
+      const target = consumeNextPath() || (location.pathname === '/wedding-planner' ? location.pathname : '/admin');
+      const here = location.pathname + location.search;
+      if (target === '/admin' ? location.pathname !== '/admin' : target !== here && target !== location.pathname) {
+        navigate(target, { replace: true });
       }
     }
     // Intentionally only reacts once loading resolves after the callback

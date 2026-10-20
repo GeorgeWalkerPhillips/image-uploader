@@ -9,3 +9,4 @@ guest count, not a subscription.
 - [Homepage](https://www.valere.co.za/)
 - [Pricing](https://www.valere.co.za/#pricing)
 - [How it works](https://www.valere.co.za/#how-it-works)
+- [Wedding Planner](https://www.valere.co.za/wedding-planner): a separate one-time-purchase wedding planning add-on (budget, tasks, guest list, honeymoon)

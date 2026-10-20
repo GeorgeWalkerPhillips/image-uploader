@@ -62,3 +62,13 @@ export const formatPrice = (amountCents, currency = 'ZAR') => {
     currency: currency,
   });
 };
+
+// The Wedding Planner add-on (Wedding HQ, sold separately from the photo
+// tiers above): a single one-time purchase per wedding. This is display
+// data only — the charged amount is recomputed server-side. KEEP IN SYNC
+// with the server constant in supabase/functions/_shared/weddingPlanner.ts.
+export const WEDDING_PLANNER = {
+  name: 'Wedding Planner',
+  amountCents: 49900, // R499, one-time
+  currency: 'ZAR',
+};

@@ -10,13 +10,41 @@ import {
   FaHeart,
   FaCheck,
   FaTimes,
+  FaWallet,
+  FaTasks,
+  FaCalendarAlt,
+  FaUserFriends,
+  FaPlane,
+  FaLock,
 } from 'react-icons/fa';
-import { TIERS, TIER_ORDER, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
+import {
+  TIERS,
+  TIER_ORDER,
+  WEDDING_PLANNER,
+  formatGuestCap,
+  formatPhotoCap,
+  formatPrice,
+} from './services/pricingTiers';
 import { useAuth } from './context/AuthContext';
 import { UserBadge } from './components/UserBadge';
 import styles from './LandingPage.module.css';
 
 const POPULAR_TIER = 'growth';
+
+// "R499", no cents — formatted from the one price constant.
+const PLANNER_PRICE = formatPrice(WEDDING_PLANNER.amountCents, WEDDING_PLANNER.currency)
+  .replace(/[\s\u00a0]/g, '')
+  .replace(/[,.]00$/, '');
+
+const PLANNER_FEATURES = [
+  { icon: FaWallet, text: 'Budget, quotes and payments in one place' },
+  { icon: FaTasks, text: 'Tasks you can assign to your wedding party' },
+  { icon: FaCalendarAlt, text: 'Calendar with email reminders' },
+  { icon: FaUserFriends, text: 'Guest list with RSVPs and CSV import' },
+  { icon: FaPlane, text: 'A honeymoon planner for the trip after' },
+  { icon: FaMobileAlt, text: 'Works offline on your phone, and installs to your home screen' },
+  { icon: FaLock, text: 'Private by design: only the people you invite' },
+];
 
 const FAQ_ITEMS = [
   {
@@ -118,6 +146,7 @@ function LandingPage() {
         <nav className={styles.landingNavLinks}>
           <a href="#how-it-works">How it works</a>
           <a href="#pricing">Pricing</a>
+          <Link to="/wedding-planner">Wedding Planner</Link>
           <a href="#faq">FAQ</a>
         </nav>
         <div className={styles.landingNavActions}>
@@ -135,6 +164,9 @@ function LandingPage() {
           )}
         </div>
       </header>
+      <p className={styles.mobileSubNav}>
+        <Link to="/wedding-planner">Wedding Planner &rarr;</Link>
+      </p>
 
       <main>
         <section className={styles.hero} aria-labelledby="hero-heading">
@@ -344,6 +376,31 @@ function LandingPage() {
           </div>
         </section>
 
+        <section id="wedding-planner" className={styles.plannerSection} aria-labelledby="planner-heading">
+          <p className={styles.plannerEyebrow}>New: Wedding Planner</p>
+          <h2 id="planner-heading">Plan the whole wedding in one private place</h2>
+          <p className={styles.useCasesIntro}>
+            Budget, tasks, guests and honeymoon for you, your partner and your wedding party.
+          </p>
+          <ul className={styles.plannerList}>
+            {PLANNER_FEATURES.map(({ icon: Icon, text }) => (
+              <li key={text}>
+                <Icon className={styles.plannerIcon} aria-hidden="true" />
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.plannerFooter}>
+            <p className={styles.plannerPrice}>
+              One-time {PLANNER_PRICE} per wedding
+              <span> Partner and helpers included. No subscription.</span>
+            </p>
+            <Link to="/wedding-planner" className={styles.btnPrimaryLink}>
+              Explore the Wedding Planner
+            </Link>
+          </div>
+        </section>
+
         <section id="faq" aria-labelledby="faq-heading">
           <h2 id="faq-heading">Frequently Asked Questions</h2>
           <div className={styles.faqList}>
@@ -368,6 +425,7 @@ function LandingPage() {
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms and Conditions</Link>
           <Link to="/refund-policy">Refund Policy</Link>
+          <Link to="/wedding-planner">Wedding Planner</Link>
         </nav>
       </footer>
     </div>

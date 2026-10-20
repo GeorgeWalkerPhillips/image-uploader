@@ -201,6 +201,14 @@ Logic tests (no Deno needed):
 npx esbuild supabase/functions/_shared/weddingReminders.test.ts --bundle --platform=node --format=esm --outfile=/tmp/weddingReminders.test.mjs && node --test /tmp/weddingReminders.test.mjs
 ```
 
+## Wedding Planner emails (invites and receipt)
+
+Sent through Resend with the shared Valere template; no new secrets (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ALLOWED_ORIGIN` first https value for links, fallback `https://valere.co.za`).
+
+- **Invitation** (`wedding-invite`, actions create/resend). Subject: `You've been invited to a wedding planner on Valere`. Names the inviter's display name, explains the role in plain words (helper: sees only tasks assigned to them; partner: full access), shows a button to `<origin>/hq/join#token=<token>` and the expiry date (14 days). The token is in the URL fragment so it never reaches server logs or Referer headers; only its sha256 is stored, and it is never returned by the API or logged. Contains no other person's data. If Resend fails, the function returns an error and revokes the just-created invite (a failed resend restores the previous link).
+- **Purchase receipt** (`paystack-webhook` / `wedding-planner-verify`, via `applyPlannerPayment`). Subject: `Wedding Planner purchase confirmed`; amount, Paystack reference, button to `<origin>/hq/`. Sent once, by the call that first records the purchase; a send failure never fails the payment and is written to `error_logs` (`wedding-planner:sendReceipt`, email addresses redacted).
+- Deploy: `supabase functions deploy wedding-invite --project-ref <ref>` (and the payment functions per `PAYMENT_SETUP.md`).
+
 ## Known limitation
 
 `purge-expired-events` zips every due event's photos inside a single Edge

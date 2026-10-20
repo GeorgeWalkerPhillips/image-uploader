@@ -391,7 +391,10 @@ as $$
 declare
   v_allowed text[] := array['status', 'completed_at', 'completed_by', 'updated_at'];
 begin
+  -- pg_trigger_depth() = 1: only guard direct client writes, not updates made by
+  -- our own trigger (the after-delete unassign when a collaborator leaves).
   if auth.uid() is not null
+     and pg_trigger_depth() = 1
      and not public.wedding_is_member(old.wedding_id)
      and public.wedding_is_collaborator(old.wedding_id) then
     if (to_jsonb(new) - v_allowed) is distinct from (to_jsonb(old) - v_allowed) then

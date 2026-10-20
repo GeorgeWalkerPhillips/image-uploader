@@ -67,6 +67,8 @@ check can be bypassed via DevTools:
   verify the charge against the tier price), and the billing-integrity
   trigger `enforce_event_billing_integrity()` — last redefined in
   `pricing-rework-2026-09.sql` (originally `security-hardening.sql`).
+  It also holds `WEDDING_PLANNER` (the one-time R499 add-on price), which must
+  match the server constant in `supabase/functions/_shared/weddingPlanner.ts`.
 
 **Payments (Paystack, hosted-checkout flow, not the Inline/client SDK
 flow)**: no public key or Paystack JS ever loads client-side. An Edge
@@ -142,10 +144,24 @@ Rules for all agents: RLS and DB triggers are the enforcement layer; never deplo
 
 ## Wedding HQ (`src/wedding/`, route `/hq`, private)
 
-A private two-person wedding/honeymoon planner that lives inside this app but
-is unrelated to Capture by Val. **It is hidden, not secret-by-obscurity:** the
+A private wedding/honeymoon planner that lives inside this app but is unrelated
+to Capture by Val. It is now a **sold add-on ("Wedding Planner", one-time
+`WEDDING_PLANNER` price in `pricingTiers.js`)**. Public marketing + purchase
+page: `/wedding-planner` (`src/WeddingPlanner.js`; indexable, in `sitemap.xml`;
+a landing-page section and nav link point to it). Purchase flow
+(`src/services/weddingPlannerService.js`, same hosted-checkout pattern as
+Paystack above): `wedding-planner-checkout` returns a Paystack URL, Paystack
+returns to `/wedding-planner?payment=success&reference=…`, and the page calls
+`wedding-planner-verify` with a few retries. Signed-out and anonymous-guest
+users are sent to `/login?next=/wedding-planner?buy=1` (Login honours a
+validated same-origin `next`, see `utils/postAuthRedirect.js`), then continue
+to checkout. Entitlement is read through the `my_wedding_planner_status()` RPC
+(`hooks/useWeddingPlannerStatus.js`, fails closed) to show a "Wedding Planner"
+entry in the signed-in menu and "Open" instead of Buy; the client never grants
+access, the server does. The main bundle must not import anything from
+`src/wedding/`. **The app itself is hidden, not secret-by-obscurity:** the
 real protection is RLS — all `wedding_*` tables and the `wedding-files` storage
-bucket are readable only by the two accounts in `wedding_members`
+bucket are readable only by the accounts in `wedding_members`
 (`wedding_is_member()`; anonymous guest sessions are rejected). The route is
 lazy-loaded, unlinked, absent from `sitemap.xml`/`robots.txt`, and sets
 `noindex`; a non-member who visits `/hq` is silently sent to `/`. Membership is

@@ -591,7 +591,121 @@
   text-decoration: underline;
 }
 
+/* Wedding Planner add-on */
+.mobileSubNav {
+  text-align: center;
+  margin: 10px 0 0;
+}
+
+.mobileSubNav a {
+  display: inline-block;
+  padding: 13px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  text-decoration: none;
+}
+
+@media (min-width: 760px) {
+  .mobileSubNav {
+    display: none;
+  }
+}
+
+.plannerSection {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(30px) saturate(140%);
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
+  max-width: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.plannerEyebrow {
+  margin: 0 0 10px;
+  text-align: center;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 20px;
+  color: #555;
+}
+
+.landing section.plannerSection h2 {
+  margin-bottom: 40px;
+}
+
+.plannerList {
+  list-style: none;
+  max-width: 720px;
+  margin: 0 auto 32px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.plannerList li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 15px;
+  line-height: 1.4;
+  box-shadow: 0 4px 24px rgba(17, 17, 17, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.plannerIcon {
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.plannerFooter {
+  text-align: center;
+}
+
+.plannerPrice {
+  margin: 0 0 18px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.plannerPrice span {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+
+.btnPrimaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  background: #111;
+  color: #fff;
+  padding: 14px 28px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btnPrimaryLink:hover {
+  background: #333;
+}
+
 @media (min-width: 640px) {
+  .plannerList {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .heroActions {
     flex-direction: row;
     justify-content: center;

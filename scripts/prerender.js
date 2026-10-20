@@ -21,6 +21,7 @@ const ROUTES = [
   { path: '/privacy', outFile: path.join('privacy', 'index.html') },
   { path: '/terms', outFile: path.join('terms', 'index.html') },
   { path: '/refund-policy', outFile: path.join('refund-policy', 'index.html') },
+  { path: '/wedding-planner', outFile: path.join('wedding-planner', 'index.html') },
 ];
 
 // Mirrors Vercel's zero-config CRA behavior: serve a real static file if one

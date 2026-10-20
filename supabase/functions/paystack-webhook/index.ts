@@ -5,16 +5,23 @@
 // attempt at the database level, regardless of what the frontend does or
 // doesn't check.
 //
+// Also receives Wedding Planner purchases (reference wp-<userId>-<rand>,
+// metadata.product "wedding_planner"): those are routed to applyPlannerPayment
+// (_shared/weddingPlanner.ts) right after signature verification; every other
+// charge takes the original event path unchanged.
+//
 // Deploy: supabase functions deploy paystack-webhook --project-ref <ref>
 // Secrets required: PAYSTACK_SECRET_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL
 // (see _shared/resend.ts for the latter two — used for the payment receipt
-// email below). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-injected
+// email below), ALLOWED_ORIGIN (receipt links). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-injected
 // by Supabase for Edge Functions — no need to set them yourself.
 // Register in Paystack Dashboard -> Settings -> API Keys & Webhooks:
 //   https://<project-ref>.supabase.co/functions/v1/paystack-webhook
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { applyPaystackPayment, eventIdFromTransaction } from "../_shared/paystackPayment.ts";
+import { routeTransaction } from "../_shared/weddingPlanner.ts";
+import { applyPlannerPaymentServer } from "../_shared/weddingPlannerServer.ts";
 
 const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY")!;
 
@@ -58,6 +65,31 @@ Deno.serve(async (req) => {
 
   if (event.event === "charge.success") {
     const data = event.data;
+
+    // Wedding Planner purchases share this webhook. Only charges carrying a
+    // planner signal (wp- reference or metadata.product) are diverted here;
+    // everything else falls through to the unchanged event flow below.
+    const route = routeTransaction(data);
+    if (route.kind !== "event") {
+      if (route.kind === "conflict") {
+        console.error(`Planner charge ${data?.reference} refused: ${route.reason}`);
+        await supabaseAdmin.from("error_logs").insert({
+          severity: "error",
+          source: "paystack-webhook:planner-conflict",
+          message: `charge.success ${data?.reference} refused: ${route.reason}`,
+        });
+        return new Response("Conflicting product signals", { status: 200 });
+      }
+      const planned = await applyPlannerPaymentServer(supabaseAdmin, route.userId, data);
+      if (!planned.ok) {
+        console.error(`Planner payment not applied: ${planned.error}`);
+        return new Response(planned.error, { status: planned.status === 500 ? 500 : 200 });
+      }
+      return new Response(JSON.stringify({ received: true }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
 
     // metadata -> reference, in that order (see eventIdFromTransaction).
     // Charges that carry neither (e.g. paid through a Paystack-hosted page)

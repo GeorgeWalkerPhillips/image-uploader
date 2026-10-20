@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaChevronDown } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
+import { useWeddingPlannerStatus, hasPlannerAccess } from '../hooks/useWeddingPlannerStatus';
 import styles from './UserBadge.module.css';
 
 // Persistent "logged in as X" indicator, shown on every account-holder
@@ -13,6 +14,8 @@ export function UserBadge() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
+  // Quiet and fail-closed: false until the server says otherwise.
+  const { status: plannerStatus } = useWeddingPlannerStatus();
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +52,11 @@ export function UserBadge() {
           <button className={styles.dropdownItem} onClick={() => { setOpen(false); navigate('/admin'); }}>
             Your Events
           </button>
+          {hasPlannerAccess(plannerStatus) && (
+            <button className={styles.dropdownItem} onClick={() => { setOpen(false); navigate('/hq/'); }}>
+              Wedding Planner
+            </button>
+          )}
           <button className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={handleSignOut}>
             Sign Out
           </button>
