@@ -36,6 +36,9 @@ Apply the SQL files by hand in the Supabase SQL Editor, in this order:
 3. `wedding-hq-2026-10c-guests-activity.sql` adds `wedding_guests` and the append-only
    `wedding_activity` feed (already applied in production).
 
+4. `wedding-hq-2026-10e-planner-product.sql` makes HQ multi-tenant (see "Planner product"
+   below). Apply in its labelled batches, in order.
+
 The `wedding-files` bucket is created by file 1 and must stay **private**.
 No new env vars are needed; HQ uses the same `REACT_APP_SUPABASE_URL` and
 `REACT_APP_SUPABASE_ANON_KEY` as the rest of the app. `vercel.json` (repo root)
@@ -54,6 +57,26 @@ values ('<wedding id>', '<that person''s auth user id>', 'groom', 'Their name');
 ```
 
 To remove access, delete the member row.
+
+## Planner product (multi-tenant, `wedding-hq-2026-10e-planner-product.sql`)
+
+Any signed-in, non-anonymous user with a `wedding_planner_entitlements` row (paid via
+Paystack, written by the service role; existing members are grandfathered) can call
+`create_my_wedding(...)` to get their own wedding, seeded with generic template data
+(no names, vendors or amounts). Each wedding is still isolated by `wedding_is_member()`.
+One wedding per user in v1.
+
+- **Partner**: invited by email (`wedding_invites`, kind `partner`); takes the free
+  groom/bride slot. The couple's membership cannot be changed from the client.
+- **Collaborators** (max 10): kind `collaborator`. They are not in `wedding_members`, so
+  every existing policy denies them. They can only see and update the status of tasks
+  assigned to them (`wedding_tasks.assigned_to`; trigger-enforced), and read
+  `my_collab_wedding()` / `wedding_people()`. Couple can remove them; they can leave.
+- **Invites**: only the sha256 of the secret token is stored; the token is emailed by an
+  Edge Function. Accepting requires a confirmed email equal to the invited address.
+  `token_hash` is never granted to clients and the table is not in realtime.
+
+RPC names, shapes and error strings: `WEDDING_PLANNER_CONTRACT.md`.
 
 ## Features by phase
 

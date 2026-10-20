@@ -127,6 +127,12 @@ file):
     after file 21 and after `event-archive-and-emails.sql` (reuses its
     `service_role_key` Vault secret; add `wedding_reminders_function_url`
     first). Apply in the batches marked in the file. See `EMAIL_SETUP.md`.
+23. `wedding-hq-2026-10e-planner-product.sql` — Wedding HQ only: multi-tenant
+    planner product. `wedding_planner_entitlements` (grandfathers every existing
+    member), `wedding_collaborators` (max 10, tasks-only access), `wedding_invites`
+    (hashed tokens), `wedding_tasks.assigned_to`, and the RPCs `create_my_wedding`,
+    `accept_wedding_invite`, etc. Create-only; run after file 22, in the 8 batches
+    marked in the file, in order. Contract: `WEDDING_PLANNER_CONTRACT.md`.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
