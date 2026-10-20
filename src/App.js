@@ -45,11 +45,11 @@ function App() {
         <Route
           path="/hq/*"
           element={
-            <ProtectedRoute>
-              <Suspense fallback={<PageSpinner />}>
-                <WeddingApp />
-              </Suspense>
-            </ProtectedRoute>
+            // Not behind ProtectedRoute: Wedding HQ's own gate sends signed-out
+            // visitors to /login?next=... (and /hq/join must be reachable first).
+            <Suspense fallback={<PageSpinner />}>
+              <WeddingApp />
+            </Suspense>
           }
         />
       </Routes>

@@ -99,6 +99,9 @@ export interface Task {
   catch_up: boolean;
   recurrence: 'daily' | 'weekly' | 'monthly' | null;
   sort_order: number;
+  // A couple member or helper (auth user id) this task is delegated to; null when nobody in
+  // particular. Optional only because offline copies saved before this column existed lack it.
+  assigned_to?: string | null;
 }
 
 export type TargetKind = 'amount' | 'date';
@@ -269,4 +272,45 @@ export interface ReminderSettingsRow {
   include_events: boolean;
   include_tasks: boolean;
   include_payments: boolean;
+}
+
+// ---- Planner product: team, invites, helpers (see WEDDING_PLANNER_CONTRACT.md)
+
+export type PlannerAccess = 'partner' | 'collaborator';
+
+export interface PlannerStatus {
+  entitled: boolean;
+  wedding_id: string | null;
+  access: PlannerAccess | null;
+  role: Role | null;
+}
+
+// A row of the wedding_people RPC: the couple plus helpers.
+export interface Person {
+  user_id: string;
+  display_name: string;
+  kind: 'partner' | 'collaborator';
+  role: Role | null;
+}
+
+export type InviteKind = 'partner' | 'collaborator';
+
+// The non-secret columns of wedding_invites (token_hash is never selectable).
+export interface InviteRow {
+  id: string;
+  wedding_id: string;
+  email: string;
+  kind: InviteKind;
+  display_name: string | null;
+  expires_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+// A helper's only view of the wedding (my_collab_wedding).
+export interface CollabWedding {
+  id: string;
+  name: string;
+  wedding_date: string | null;
 }

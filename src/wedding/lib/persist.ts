@@ -12,7 +12,14 @@ export const CACHE_PREFIX = `${PREFIX}cache:`;
 export const PERSIST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const VERSION = 1;
 
-const ALLOWED_ROOTS: readonly string[] = [...REALTIME_TABLES, 'wedding-membership', 'wedding-member-names'];
+// Planner product: the user's own access status, the team's display names and a
+// helper's wedding header. Invites (email addresses) and reminder settings are
+// intentionally absent. A helper's wedding_tasks only ever holds the rows the
+// database lets them read.
+const ALLOWED_ROOTS: readonly string[] = [
+  ...REALTIME_TABLES, 'wedding-membership', 'wedding-member-names',
+  'wedding-planner-status', 'wedding-people', 'wedding-collab-wedding',
+];
 
 export interface StoredQuery {
   queryKey: unknown[];

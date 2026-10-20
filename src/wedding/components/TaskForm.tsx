@@ -3,7 +3,8 @@ import type { FormEvent } from 'react';
 import { ASSIGNEES, emptyTaskForm, PRIORITIES, RECURRENCES, STATUSES, validateTask } from '../lib/taskForms';
 import type { TaskFormValues, TaskPayload } from '../lib/taskForms';
 import type { FieldErrors } from '../lib/validators';
-import type { Assignee, Task } from '../types';
+import { NOBODY, personLabel } from '../lib/assignment';
+import type { Assignee, Person, Task } from '../types';
 import { CheckboxField, SelectField, TextAreaField, TextField } from './fields';
 import styles from '../wedding.module.css';
 
@@ -17,13 +18,15 @@ interface Props {
   initial?: Task;
   assigneeLabels: Record<Assignee, string>;
   categories: readonly string[];
+  // The couple and helpers; the "Assign to" field is shown only when this has people.
+  people?: readonly Person[];
   saving?: boolean;
   onSubmit: (payload: TaskPayload, catchUp: boolean) => void;
   onCancel: () => void;
   onDelete?: () => void;
 }
 
-export function TaskForm({ initial, assigneeLabels, categories, saving = false, onSubmit, onCancel, onDelete }: Props) {
+export function TaskForm({ initial, assigneeLabels, categories, people, saving = false, onSubmit, onCancel, onDelete }: Props) {
   const [v, setV] = useState<TaskFormValues>(() =>
     initial
       ? {
@@ -40,6 +43,9 @@ export function TaskForm({ initial, assigneeLabels, categories, saving = false, 
       : emptyTaskForm()
   );
   const [catchUp, setCatchUp] = useState(initial?.catch_up ?? false);
+  const [assignedTo, setAssignedTo] = useState(initial?.assigned_to ?? NOBODY);
+  const canAssign = !!people && people.length > 0;
+  const knownPerson = !assignedTo || (people ?? []).some((p) => p.user_id === assignedTo);
   const [errors, setErrors] = useState<FieldErrors>({});
   const set = <K extends keyof TaskFormValues>(key: K) => (value: TaskFormValues[K]) =>
     setV((p) => ({ ...p, [key]: value }));
@@ -52,7 +58,7 @@ export function TaskForm({ initial, assigneeLabels, categories, saving = false, 
       return;
     }
     setErrors({});
-    onSubmit(r.value, catchUp);
+    onSubmit(canAssign ? { ...r.value, assigned_to: assignedTo || null } : r.value, catchUp);
   };
 
   return (
@@ -69,6 +75,13 @@ export function TaskForm({ initial, assigneeLabels, categories, saving = false, 
           {PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
         </SelectField>
       </div>
+      {canAssign && (
+        <SelectField label="Assign to" value={assignedTo} onChange={setAssignedTo}>
+          <option value={NOBODY}>Nobody in particular</option>
+          {(people ?? []).map((p) => <option key={p.user_id} value={p.user_id}>{personLabel(p)}</option>)}
+          {!knownPerson && <option value={assignedTo}>A former helper (no longer on the team)</option>}
+        </SelectField>
+      )}
       <TextField label="Category (optional)" value={v.category} maxLength={60} error={errors.category}
         list="task-categories" onChange={set('category')} />
       <datalist id="task-categories">

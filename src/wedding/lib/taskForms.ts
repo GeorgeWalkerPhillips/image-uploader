@@ -29,6 +29,8 @@ export interface TaskPayload {
   status: Task['status'];
   recurrence: Task['recurrence'];
   parent_task_id: string | null;
+  // Set by the form only when the team list is loaded; otherwise left out so a save never clears it.
+  assigned_to?: string | null;
 }
 
 export const emptyTaskForm = (assignee: Assignee = 'both'): TaskFormValues => ({

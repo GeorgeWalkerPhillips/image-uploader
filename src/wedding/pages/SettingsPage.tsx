@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { notify } from '../notify';
 import { useWedding } from '../WeddingContext';
 import { useUpdateWedding } from '../hooks';
+import { useWeddingPeople } from '../teamHooks';
+import { helpers, HELPER_CAP } from '../lib/team';
 import { ReminderSettingsCard } from '../components/ReminderSettingsCard';
 import { centsToGroupedInput, formatAmountText } from '../lib/money';
 import { isoToJhbParts } from '../lib/jhb';
@@ -13,6 +16,7 @@ import styles from '../wedding.module.css';
 export function SettingsPage() {
   const { wedding } = useWedding();
   const update = useUpdateWedding();
+  const people = useWeddingPeople(wedding.id);
   const parts = isoToJhbParts(wedding.wedding_date);
   const [v, setV] = useState<WeddingFormValues>({
     name: wedding.name,
@@ -82,6 +86,17 @@ export function SettingsPage() {
         </div>
       </form>
       <ReminderSettingsCard />
+      <section className={styles.card} aria-label="Team">
+        <h2 className={styles.h2}>Team</h2>
+        <p className={styles.muted}>
+          {people.data
+            ? `${helpers(people.data).length} of ${HELPER_CAP} helpers. Invite your partner or helpers and choose who sees what.`
+            : 'Invite your partner or helpers and choose who sees what.'}
+        </p>
+        <div className={styles.actions}>
+          <Link to="/hq/team" className={styles.btn}>Manage team</Link>
+        </div>
+      </section>
     </>
   );
 }

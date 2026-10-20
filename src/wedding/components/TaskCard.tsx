@@ -9,6 +9,8 @@ interface Props {
   today: string;
   assigneeLabels: Record<Assignee, string>;
   progress: { done: number; total: number };
+  // "Assigned to Sam", or null/undefined when nobody is assigned.
+  assignedLabel?: string | null;
   busy?: boolean;
   onToggle: (task: Task) => void;
   onOpen: (task: Task) => void;
@@ -17,7 +19,7 @@ interface Props {
   onMove?: (task: Task, status: Task['status']) => void;
 }
 
-export function TaskCard({ task, today, assigneeLabels, progress, busy = false, onToggle, onOpen, moveTo, onMove }: Props) {
+export function TaskCard({ task, today, assigneeLabels, progress, assignedLabel, busy = false, onToggle, onOpen, moveTo, onMove }: Props) {
   const done = isDone(task);
   const urgency = taskUrgency(task, today);
   const dueClass = urgency === 'overdue' ? styles.red : urgency === 'soon' ? styles.amberText : styles.muted;
@@ -43,6 +45,7 @@ export function TaskCard({ task, today, assigneeLabels, progress, busy = false, 
       </div>
       <div className={styles.chipRow}>
         <span className={styles.chip}>{assigneeLabels[task.assignee]}</span>
+        {assignedLabel && <span className={`${styles.chip} ${styles.chipAssigned}`}>{assignedLabel}</span>}
         {task.category && <span className={styles.chip}>{task.category}</span>}
         <span className={`${styles.chip} ${task.priority === 'high' ? styles.chipHigh : ''}`}>
           {PRIORITY_LABELS[task.priority]}

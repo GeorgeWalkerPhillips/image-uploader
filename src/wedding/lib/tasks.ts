@@ -1,4 +1,5 @@
 import type { Assignee, Role, Task } from '../types';
+import { matchesAssigned } from './assignment';
 import { addDaysISO, dueUrgency, toJhbDateISO, type Urgency } from './time';
 
 export type TaskStatus = Task['status'];
@@ -29,6 +30,8 @@ export interface TaskFilter {
   category?: string;
   priority?: TaskPriority | 'all';
   catchUpOnly?: boolean;
+  // 'all' (default), 'unassigned', or a user id: who it was delegated to (assigned_to).
+  assignedTo?: string;
 }
 
 export function filterTasks(tasks: readonly Task[], f: TaskFilter): Task[] {
@@ -41,6 +44,7 @@ export function filterTasks(tasks: readonly Task[], f: TaskFilter): Task[] {
     if (f.category && f.category !== 'all' && (t.category ?? '') !== f.category) return false;
     if (f.priority && f.priority !== 'all' && t.priority !== f.priority) return false;
     if (f.catchUpOnly && !t.catch_up) return false;
+    if (!matchesAssigned(t, f.assignedTo)) return false;
     if (q) {
       const hay = `${t.title} ${t.description ?? ''} ${t.category ?? ''}`.toLowerCase();
       if (!hay.includes(q)) return false;

@@ -1,5 +1,7 @@
 import { supabase } from '../supabaseClient';
-import type { Member, ReminderSettingsRow, Role, Wedding } from './types';
+import { parsePlannerStatus } from './lib/planner';
+import type { SetupPayload } from './lib/planner';
+import type { CollabWedding, InviteKind, InviteRow, Member, Person, PlannerStatus, ReminderSettingsRow, Role, Wedding } from './types';
 
 export type WeddingTable =
   | 'wedding_categories'
@@ -168,4 +170,83 @@ export async function saveReminderSettings(
   );
   if (!rows || rows.length === 0) throw new ApiError('Nothing was saved. Please try again.');
   return rows[0];
+}
+
+// ---------------------------------------------------------------------------
+// Planner product: status, setup, invites, team, helpers. The database checks
+// everything again; these are thin wrappers (see WEDDING_PLANNER_CONTRACT.md).
+
+export async function fetchPlannerStatus(): Promise<PlannerStatus> {
+  return parsePlannerStatus(unwrap<unknown>(await supabase.rpc('my_wedding_planner_status')));
+}
+
+// Creates the wedding (seeded by the database) and returns its id.
+export async function createMyWedding(args: SetupPayload): Promise<string> {
+  const id = unwrap<unknown>(await supabase.rpc('create_my_wedding', args));
+  if (typeof id !== 'string') throw new ApiError('Unexpected reply from the server.');
+  return id;
+}
+
+// The token is only ever passed through: never stored, logged or returned.
+export async function acceptWeddingInvite(token: string, displayName: string | null): Promise<{ kind: InviteKind }> {
+  const row = unwrap<{ kind?: unknown } | { kind?: unknown }[] | null>(
+    await supabase.rpc('accept_wedding_invite', { p_token: token, p_display_name: displayName })
+  );
+  const r = Array.isArray(row) ? row[0] : row;
+  return { kind: r?.kind === 'partner' ? 'partner' : 'collaborator' };
+}
+
+// The couple plus helpers (a helper gets themselves plus the couple).
+export async function fetchWeddingPeople(weddingId: string): Promise<Person[]> {
+  return unwrap<Person[] | null>(await supabase.rpc('wedding_people', { p_wedding: weddingId })) ?? [];
+}
+
+export async function fetchCollabWedding(): Promise<CollabWedding | null> {
+  const rows = unwrap<CollabWedding[] | CollabWedding | null>(await supabase.rpc('my_collab_wedding'));
+  if (!rows) return null;
+  return Array.isArray(rows) ? rows[0] ?? null : rows;
+}
+
+// `select('*')` is denied on wedding_invites (token_hash): list the columns.
+const INVITE_COLUMNS = 'id, wedding_id, email, kind, display_name, expires_at, accepted_at, revoked_at, created_at';
+
+export async function fetchInvites(weddingId: string): Promise<InviteRow[]> {
+  return (
+    unwrap<InviteRow[] | null>(
+      await supabase.from('wedding_invites').select(INVITE_COLUMNS).eq('wedding_id', weddingId).order('created_at', { ascending: false })
+    ) ?? []
+  );
+}
+
+// An error from the wedding-invite Edge Function, carrying its HTTP status
+// (0 when the function was never reached) so the UI can pick plain copy.
+export class FunctionError extends ApiError {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+export type InviteRequest =
+  | { action: 'create'; email: string; kind: InviteKind; displayName?: string }
+  | { action: 'resend' | 'revoke'; inviteId: string };
+
+export async function inviteAction(body: InviteRequest): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('wedding-invite', { body });
+  if (error) {
+    const ctx = (error as { context?: { status?: unknown } }).context;
+    throw new FunctionError('The invitation request failed.', typeof ctx?.status === 'number' ? ctx.status : 0);
+  }
+  const res = data as { ok?: unknown; inviteId?: unknown } | null;
+  if (!res || res.ok !== true) throw new FunctionError('The invitation request failed.', 0);
+  return typeof res.inviteId === 'string' ? res.inviteId : '';
+}
+
+export async function removeCollaborator(weddingId: string, userId: string): Promise<void> {
+  unwrap<unknown>(await supabase.rpc('remove_collaborator', { p_wedding: weddingId, p_user: userId }));
+}
+
+export async function leaveWedding(): Promise<void> {
+  unwrap<unknown>(await supabase.rpc('leave_wedding'));
 }

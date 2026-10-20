@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useWedding } from '../WeddingContext';
 import { useDeleteRow, usePayerLabels, useSaveRow, useTasks } from '../hooks';
+import { useWeddingPeople } from '../teamHooks';
 import { useAuthUser } from '../useAuthUser';
 import { notify } from '../notify';
 import { useLogActivity } from '../extrasHooks';
@@ -19,6 +20,7 @@ import {
 import type { RecurringDraft, TaskFilter, TaskSort } from '../lib/tasks';
 import { ASSIGNEES, emptyTaskForm, PRIORITIES, STATUSES, validateTask } from '../lib/taskForms';
 import type { TaskPayload } from '../lib/taskForms';
+import { assignedChip, personLabel, UNASSIGNED_FILTER } from '../lib/assignment';
 import { formatDateJhb, todayJhbISO } from '../lib/time';
 import type { Assignee, Task } from '../types';
 import styles from '../wedding.module.css';
@@ -32,6 +34,9 @@ export function TasksPage() {
   const { user } = useAuthUser();
   const tasksQuery = useTasks(wedding.id);
   const labels = usePayerLabels();
+  const peopleQuery = useWeddingPeople(wedding.id);
+  // undefined until loaded, so a task is never labelled "former helper" while the team loads.
+  const people = peopleQuery.data;
   // Both writes of a completion report through one toast, so the default error toast is off.
   const saveTask = useSaveRow<Task>('wedding_tasks', wedding.id, [], { silent: true });
   const deleteTask = useDeleteRow('wedding_tasks', wedding.id);
@@ -41,6 +46,7 @@ export function TasksPage() {
   const [view, setView] = useState<View>('list');
   const [mine, setMine] = useState(false);
   const [catchUpOnly, setCatchUpOnly] = useState(false);
+  const [assignedFilter, setAssignedFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [priority, setPriority] = useState('all');
@@ -80,14 +86,15 @@ export function TasksPage() {
       // The board's columns are the statuses, so its status filter is "all".
       status: view === 'board' ? 'all' : status,
       catchUpOnly,
+      assignedTo: assignedFilter,
       ...(mine ? { mineRole: member.role } : {}),
     };
     return sortTasks(filterTasks(tops, f), sort);
-  }, [tops, query, category, priority, status, catchUpOnly, mine, member.role, sort, view]);
+  }, [tops, query, category, priority, status, catchUpOnly, assignedFilter, mine, member.role, sort, view]);
 
-  const filtersActive = query.trim() !== '' || category !== 'all' || priority !== 'all' || status !== 'open' || catchUpOnly || mine;
+  const filtersActive = query.trim() !== '' || category !== 'all' || priority !== 'all' || status !== 'open' || catchUpOnly || mine || assignedFilter !== 'all';
   const clearFilters = () => {
-    setQuery(''); setCategory('all'); setPriority('all'); setStatus('open'); setCatchUpOnly(false); setMine(false);
+    setQuery(''); setCategory('all'); setPriority('all'); setStatus('open'); setCatchUpOnly(false); setMine(false); setAssignedFilter('all');
   };
 
   // Writes a task change and then, for a repeating task being completed, the next
@@ -140,7 +147,13 @@ export function TasksPage() {
     setSaving(true);
     const ok = await persist(existing?.id, values, next, payload.title, 'Task saved.');
     setSaving(false);
-    if (ok) setEditing({ mode: 'closed' });
+    if (ok) {
+      setEditing({ mode: 'closed' });
+      // Non-identifying: the task title only, never who it went to.
+      if (payload.assigned_to && payload.assigned_to !== (existing?.assigned_to ?? null)) {
+        logActivity('Assigned a task', payload.title);
+      }
+    }
   };
 
   const quickAdd = async (e: FormEvent) => {
@@ -211,7 +224,7 @@ export function TasksPage() {
       <>
         <button type="button" className={styles.btn} onClick={() => openTask(null)}>Back to tasks</button>
         {editing.mode === 'edit' ? (
-          <TaskForm key={selected.id} initial={selected} assigneeLabels={assigneeLabels} categories={categories}
+          <TaskForm key={selected.id} initial={selected} assigneeLabels={assigneeLabels} categories={categories} people={people}
             saving={saving} onSubmit={(p, c) => void submitTask(p, c)} onCancel={() => setEditing({ mode: 'closed' })}
             onDelete={() => removeTask(selected)} />
         ) : (
@@ -220,6 +233,9 @@ export function TasksPage() {
             <div className={styles.chipRow}>
               <span className={styles.chip}>{STATUS_LABELS[selected.status]}</span>
               <span className={styles.chip}>{assigneeLabels[selected.assignee]}</span>
+              {people && assignedChip(people, selected) && (
+                <span className={`${styles.chip} ${styles.chipAssigned}`}>{assignedChip(people, selected)}</span>
+              )}
               {selected.category && <span className={styles.chip}>{selected.category}</span>}
               <span className={`${styles.chip} ${selected.priority === 'high' ? styles.chipHigh : ''}`}>
                 {PRIORITY_LABELS[selected.priority]}
@@ -254,7 +270,7 @@ export function TasksPage() {
   // -------------------------------------------------------------- list view
   const card = (t: Task, board: boolean) => (
     <TaskCard key={t.id} task={t} today={today} assigneeLabels={assigneeLabels}
-      progress={subtaskProgress(t.id, all)} busy={busyId === t.id} onToggle={toggleTask} onOpen={(x) => openTask(x.id)}
+      progress={subtaskProgress(t.id, all)} assignedLabel={people ? assignedChip(people, t) : null} busy={busyId === t.id} onToggle={toggleTask} onOpen={(x) => openTask(x.id)}
       {...(board ? { moveTo: STATUSES.filter((s) => s !== t.status), onMove: (x: Task, s: Task['status']) => void moveTask(x, s) } : {})} />
   );
 
@@ -280,7 +296,7 @@ export function TasksPage() {
           </button>
         </section>
       ) : (
-        <TaskForm key="new" assigneeLabels={assigneeLabels} categories={categories} saving={saving}
+        <TaskForm key="new" assigneeLabels={assigneeLabels} categories={categories} people={people} saving={saving}
           onSubmit={(p, c) => void submitTask(p, c)} onCancel={() => setEditing({ mode: 'closed' })} />
       )}
 
@@ -314,6 +330,14 @@ export function TasksPage() {
             <option value="done">Done</option>
           </select>
         )}
+        {people && people.length > 0 && (
+          <select className={styles.input} value={assignedFilter} aria-label="Filter by person"
+            onChange={(e) => setAssignedFilter(e.target.value)}>
+            <option value="all">Anyone</option>
+            <option value={UNASSIGNED_FILTER}>Not assigned</option>
+            {people.map((p) => <option key={p.user_id} value={p.user_id}>{personLabel(p)}</option>)}
+          </select>
+        )}
         <select className={styles.input} value={sort} aria-label="Sort tasks"
           onChange={(e) => setSort(e.target.value as TaskSort)}>
           <option value="due">Sort: Due date</option>
@@ -324,6 +348,11 @@ export function TasksPage() {
       <div className={styles.chipToggles}>
         <button type="button" className={`${styles.toggleChip} ${mine ? styles.toggleChipOn : ''}`} aria-pressed={mine}
           onClick={() => setMine(!mine)}>My tasks</button>
+        {user?.id && people && people.length > 0 && (
+          <button type="button" className={`${styles.toggleChip} ${assignedFilter === user.id ? styles.toggleChipOn : ''}`}
+            aria-pressed={assignedFilter === user.id}
+            onClick={() => setAssignedFilter(assignedFilter === user.id ? 'all' : user.id)}>Assigned to me</button>
+        )}
         <button type="button" className={`${styles.toggleChip} ${catchUpOnly ? styles.toggleChipOn : ''}`}
           aria-pressed={catchUpOnly} onClick={() => setCatchUpOnly(!catchUpOnly)}>Catch up only</button>
         {filtersActive && <button type="button" className={styles.linkButton} onClick={clearFilters}>Clear filters</button>}

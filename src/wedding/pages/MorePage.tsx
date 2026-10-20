@@ -1,9 +1,6 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { notify } from '../notify';
-import { useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { useWedding } from '../WeddingContext';
-import { clearAll as clearPersisted } from '../lib/persist';
-import { useAuthUser } from '../useAuthUser';
+import { useSignOut } from '../useSignOut';
 import styles from '../wedding.module.css';
 
 const LINKS: ReadonlyArray<{ to: string; label: string }> = [
@@ -14,6 +11,7 @@ const LINKS: ReadonlyArray<{ to: string; label: string }> = [
   { to: '/hq/invoices', label: 'Invoices' },
   { to: '/hq/spending', label: 'Money spent so far' },
   { to: '/hq/targets', label: 'Targets' },
+  { to: '/hq/team', label: 'Team' },
   { to: '/hq/settings', label: 'Settings' },
   { to: '/hq/honeymoon', label: 'Honeymoon' },
   { to: '/hq/purchases', label: 'Purchases' },
@@ -25,22 +23,8 @@ const LINKS: ReadonlyArray<{ to: string; label: string }> = [
 
 export function MorePage() {
   const { member } = useWedding();
-  const { signOut } = useAuthUser();
-  const navigate = useNavigate();
-  const qc = useQueryClient();
-
-  const out = async () => {
-    try {
-      // The offline copy is personal data: wipe it before the session goes.
-      clearPersisted();
-      await signOut();
-      clearPersisted(); // again: a debounced save may have landed during sign-out
-      qc.clear();
-      navigate('/', { replace: true });
-    } catch {
-      notify.error('Could not sign out. Please try again.');
-    }
-  };
+  const signOut = useSignOut();
+  const out = () => void signOut();
 
   return (
     <>
@@ -48,7 +32,7 @@ export function MorePage() {
         <p>
           Signed in as <strong>{member.display_name}</strong> ({member.role})
         </p>
-        <button type="button" className={styles.btn} onClick={() => void out()}>
+        <button type="button" className={styles.btn} onClick={out}>
           Sign out
         </button>
       </section>

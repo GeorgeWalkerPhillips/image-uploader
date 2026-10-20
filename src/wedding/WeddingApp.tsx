@@ -23,6 +23,9 @@ import { GuestsPage } from './pages/GuestsPage';
 import { VendorsPage } from './pages/VendorsPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { ExportPage } from './pages/ExportPage';
+import { TeamPage } from './pages/TeamPage';
+import { JoinPage } from './pages/JoinPage';
+import { CollabApp } from './collab/CollabApp';
 
 // Keeps HQ out of search engines and restores the page head on the way out.
 function useHqHead() {
@@ -72,30 +75,40 @@ export default function WeddingApp() {
   return (
     <QueryClientProvider client={client}>
       <Persistence>
-        <Gate>
-          <EnsureTrailingSlash />
-          <Layout>
-            <Routes>
-              <Route index element={<HomePage />} />
-              <Route path="targets" element={<TargetsPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="budget" element={<BudgetPage />} />
-              <Route path="quotes" element={<QuotesPage />} />
-              <Route path="invoices" element={<InvoicesPage />} />
-              <Route path="spending" element={<SpendingPage />} />
-              <Route path="tasks" element={<TasksPage />} />
-              <Route path="calendar" element={<CalendarPage />} />
-              <Route path="more" element={<MorePage />} />
-              <Route path="honeymoon" element={<HoneymoonPage />} />
-              <Route path="purchases" element={<PurchasesPage />} />
-              <Route path="guests" element={<GuestsPage />} />
-              <Route path="vendors" element={<VendorsPage />} />
-              <Route path="activity" element={<ActivityPage />} />
-              <Route path="export" element={<ExportPage />} />
-              <Route path="*" element={<ComingSoon name="This page" />} />
-            </Routes>
-          </Layout>
-        </Gate>
+        <Routes>
+          {/* The invite page is outside the gate: the person has no wedding yet. */}
+          <Route path="join" element={<JoinPage />} />
+          <Route
+            path="*"
+            element={
+              <Gate collaborator={<CollabApp />}>
+                <EnsureTrailingSlash />
+                <Layout>
+                  <Routes>
+                    <Route index element={<HomePage />} />
+                    <Route path="targets" element={<TargetsPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                    <Route path="team" element={<TeamPage />} />
+                    <Route path="budget" element={<BudgetPage />} />
+                    <Route path="quotes" element={<QuotesPage />} />
+                    <Route path="invoices" element={<InvoicesPage />} />
+                    <Route path="spending" element={<SpendingPage />} />
+                    <Route path="tasks" element={<TasksPage />} />
+                    <Route path="calendar" element={<CalendarPage />} />
+                    <Route path="more" element={<MorePage />} />
+                    <Route path="honeymoon" element={<HoneymoonPage />} />
+                    <Route path="purchases" element={<PurchasesPage />} />
+                    <Route path="guests" element={<GuestsPage />} />
+                    <Route path="vendors" element={<VendorsPage />} />
+                    <Route path="activity" element={<ActivityPage />} />
+                    <Route path="export" element={<ExportPage />} />
+                    <Route path="*" element={<ComingSoon name="This page" />} />
+                  </Routes>
+                </Layout>
+              </Gate>
+            }
+          />
+        </Routes>
       </Persistence>
     </QueryClientProvider>
   );

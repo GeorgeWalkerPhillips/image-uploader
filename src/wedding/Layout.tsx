@@ -35,6 +35,7 @@ const TITLES: Record<string, string> = {
   '/hq/more': 'More',
   '/hq/targets': 'Targets',
   '/hq/settings': 'Settings',
+  '/hq/team': 'Team',
   '/hq/honeymoon': 'Honeymoon',
   '/hq/purchases': 'Purchases',
   '/hq/quotes': 'Quotes',

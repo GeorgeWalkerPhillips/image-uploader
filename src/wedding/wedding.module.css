@@ -610,3 +610,27 @@ button.itemRow, a.itemRow { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .root *, .hqToast { transition: none !important; animation: none !important; }
 }
+
+/* ===== Planner product: onboarding, join, team, helper shell ===== */
+.containerNoNav { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+.radioGroup { border: 0; padding: 0; margin: 0 0 12px; min-width: 0; }
+.radioGroup legend { padding: 0; }
+.radioRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.radioOption {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border-radius: 14px; box-sizing: border-box;
+  background: var(--hq-inner); border: 1px solid var(--hq-input-border); font-weight: 600; cursor: pointer;
+}
+.radioOption input { width: 20px; height: 20px; margin: 0; accent-color: #111; flex-shrink: 0; }
+.radioOption:focus-within { outline: 3px solid rgba(17, 17, 17, 0.35); outline-offset: 2px; }
+.radioOn { border-color: #111; background: #fff; }
+.teamRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-height: 48px;
+  padding: 10px 14px; border-radius: 14px; box-sizing: border-box;
+  background: var(--hq-inner); border: 1px solid var(--hq-input-border);
+}
+.teamRow .itemMain { min-width: 160px; }
+.teamActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pastHeading { margin: 16px 0 8px; }
+.tabButton { background: none; border: 0; font: inherit; font-size: 10px; font-weight: 600; cursor: pointer; padding: 0; }
+.tabButton:focus-visible { outline: 3px solid rgba(17, 17, 17, 0.35); outline-offset: 2px; border-radius: 999px; }
+.chipAssigned { background: #fff; border-color: #111; color: #111; text-transform: none; letter-spacing: 0; font-size: 12px; }
