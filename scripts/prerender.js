@@ -32,6 +32,12 @@ const ROUTES = [
     'wedding-planning-checklist-12-month-timeline',
     'delegate-wedding-tasks-wedding-party',
   ].map((slug) => ({ path: `/guides/${slug}`, outFile: path.join('guides', slug, 'index.html') })),
+  { path: '/blog', outFile: path.join('blog', 'index.html') },
+  // One per post in src/blog/content.js (src/seoFiles.test.js checks the lists match).
+  ...[
+    'wedding-qr-code-sign-wording',
+    'wedding-day-guest-photo-plan',
+  ].map((slug) => ({ path: `/blog/${slug}`, outFile: path.join('blog', slug, 'index.html') })),
 ];
 
 // Mirrors Vercel's zero-config CRA behavior: serve a real static file if one

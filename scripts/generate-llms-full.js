@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Generates public/llms-full.txt: the full text of the About page, the guides
-// and their FAQs as plain markdown, for LLM ingestion. It reads the same
+// Generates public/llms-full.txt: the full text of the About page, the guides,
+// the blog posts and their FAQs as plain markdown, for LLM ingestion. It reads the same
 // content modules the website renders (src/aboutContent.js, src/guides/content.js,
-// src/siteProfile.js), so the file cannot say something the pages do not.
+// src/blog/content.js, src/siteProfile.js), so the file cannot say something the pages do not.
 //
 //   node scripts/generate-llms-full.js          # rewrite public/llms-full.txt
 //   node scripts/generate-llms-full.js --check  # exit 1 if the file is stale
@@ -49,7 +49,7 @@ function renderBlock(block, ctx) {
   }
 }
 
-function render({ site, about, guides }) {
+function render({ site, about, guides, blog }) {
   const ctx = {
     siteUrl: site.SITE_URL,
     budget: { zar: guides.zar, total: guides.BUDGET_EXAMPLE_TOTAL, rows: guides.BUDGET_ROWS },
@@ -57,7 +57,7 @@ function render({ site, about, guides }) {
   const out = [];
   out.push('# Valere: full text for language models');
   out.push(
-    `${site.DISAMBIGUATION} Site: ${site.SITE_URL}/ . This file repeats the text of the About page and the guides in plain markdown. The short version is ${site.SITE_URL}/llms.txt . Last updated ${guides.DATE_MODIFIED}.`
+    `${site.DISAMBIGUATION} Site: ${site.SITE_URL}/ . This file repeats the text of the About page, the guides and the blog posts in plain markdown. The short version is ${site.SITE_URL}/llms.txt . Last updated ${guides.DATE_MODIFIED}.`
   );
 
   out.push(`## About Valere (${about.ABOUT_URL})`);
@@ -70,9 +70,13 @@ function render({ site, about, guides }) {
   out.push(`### Contact\n\nContact details are on ${about.ABOUT_URL} .`);
   out.push(`### Frequently asked\n\n${about.FAQ_ITEMS.map((f) => `**${f.q}**\n${f.a}`).join('\n\n')}`);
 
-  guides.GUIDES.forEach((g) => {
+  const articles = [
+    ...guides.GUIDES.map((g) => ({ ...g, updated: guides.DATE_MODIFIED })),
+    ...blog.sortedPosts().map((p) => ({ ...p, updated: p.dateModified, title: p.h1 })),
+  ];
+  articles.forEach((g) => {
     out.push(`## ${g.h1}`);
-    out.push(`URL: ${g.url}\nUpdated: ${guides.DATE_MODIFIED}`);
+    out.push(`URL: ${g.url}\nUpdated: ${g.updated}`);
     out.push(g.intro);
     out.push(`### Key takeaways\n\n${g.takeaways.map((t) => `- ${t}`).join('\n')}`);
     g.sections.forEach((s) => {
@@ -109,6 +113,7 @@ function loadModules() {
       site: require(path.join(srcDir, 'siteProfile.js')),
       about: require(path.join(srcDir, 'aboutContent.js')),
       guides: require(path.join(srcDir, 'guides', 'content.js')),
+      blog: require(path.join(srcDir, 'blog', 'content.js')),
     };
   } finally {
     Module._extensions['.js'] = original;

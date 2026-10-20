@@ -18,6 +18,7 @@ import RefundPolicy from './RefundPolicy';
 import WeddingPlanner from './WeddingPlanner';
 import About from './About';
 import { GuidesIndex, GuidePage } from './guides/Guides';
+import { BlogIndex, BlogPostPage } from './blog/Blog';
 import './App.css';
 
 const WeddingApp = React.lazy(() => import('./wedding/WeddingApp'));
@@ -47,6 +48,8 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/guides" element={<GuidesIndex />} />
         <Route path="/guides/:slug" element={<GuidePage />} />
+        <Route path="/blog" element={<BlogIndex />} />
+        <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route
           path="/hq/*"
           element={

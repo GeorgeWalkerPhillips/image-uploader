@@ -14,6 +14,7 @@ export function ContentHeader() {
         <nav className={styles.navLinks} aria-label="Main">
           <Link to="/wedding-planner">Wedding Planner</Link>
           <Link to="/guides">Guides</Link>
+          <Link to="/blog">Blog</Link>
           <Link to="/about">About</Link>
         </nav>
         <Link to="/login?mode=signup" className={styles.navCta}>
@@ -23,6 +24,7 @@ export function ContentHeader() {
       <nav className={styles.mobileSubNav} aria-label="Sections">
         <Link to="/wedding-planner">Wedding Planner</Link>
         <Link to="/guides">Guides</Link>
+        <Link to="/blog">Blog</Link>
         <Link to="/about">About</Link>
       </nav>
     </>
@@ -36,6 +38,7 @@ export function ContentFooter() {
       <nav className={styles.footerLinks} aria-label="Footer">
         <Link to="/">Home</Link>
         <Link to="/guides">Guides</Link>
+        <Link to="/blog">Blog</Link>
         <Link to="/about">About Valere</Link>
         <Link to="/wedding-planner">Wedding Planner</Link>
         <Link to="/privacy">Privacy Policy</Link>

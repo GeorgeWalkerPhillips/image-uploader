@@ -3,12 +3,13 @@
 import fs from 'fs';
 import path from 'path';
 import { GUIDES, GUIDES_PATH } from './guides/content';
+import { BLOG_PATH, POSTS } from './blog/content';
 import { TIERS, WEDDING_PLANNER } from './services/pricingTiers';
 import { ORG_ID, SOCIAL_PROFILES, SITE_URL, homeGraph, organizationNode } from './siteProfile';
 
 const root = path.join(__dirname, '..');
 const read = (...p) => fs.readFileSync(path.join(root, ...p), 'utf8');
-const ROUTES = ['/about', GUIDES_PATH, ...GUIDES.map((g) => g.path)];
+const ROUTES = ['/about', GUIDES_PATH, ...GUIDES.map((g) => g.path), BLOG_PATH, ...POSTS.map((p) => p.path)];
 
 describe('sitemap.xml', () => {
   const xml = read('public', 'sitemap.xml');
@@ -77,15 +78,17 @@ describe('prerender routes', () => {
     expect(js).toContain("path: '/about'");
     expect(js).toContain("path: '/guides'");
     GUIDES.forEach((g) => expect(js).toContain(`'${g.slug}'`));
-    expect((js.match(/'[a-z0-9-]{12,}',\n/g) || []).length).toBe(GUIDES.length);
+    expect(js).toContain("path: '/blog'");
+    POSTS.forEach((p) => expect(js).toContain(`'${p.slug}'`));
+    expect((js.match(/'[a-z0-9-]{12,}',\n/g) || []).length).toBe(GUIDES.length + POSTS.length);
   });
 });
 
 describe('llms.txt and llms-full.txt', () => {
   const llms = read('public', 'llms.txt');
 
-  it('links to about, planner, guides index and every guide', () => {
-    ['/about', '/wedding-planner', '/guides', ...GUIDES.map((g) => g.path)].forEach((r) =>
+  it('links to about, planner, guides index, every guide, the blog index and every post', () => {
+    ['/about', '/wedding-planner', '/guides', ...GUIDES.map((g) => g.path), BLOG_PATH, ...POSTS.map((p) => p.path)].forEach((r) =>
       expect(llms).toContain(`(${SITE_URL}${r})`)
     );
     expect(llms).toContain(`${SITE_URL}/llms-full.txt`);
@@ -113,7 +116,9 @@ describe('llms.txt and llms-full.txt', () => {
       site: require('./siteProfile'),
       about: require('./aboutContent'),
       guides: require('./guides/content'),
+      blog: require('./blog/content'),
     });
+    POSTS.forEach((p) => expect(read('public', 'llms-full.txt')).toContain(`URL: ${p.url}`));
     expect(read('public', 'llms-full.txt')).toBe(out);
   });
 });
@@ -169,6 +174,8 @@ describe('public pages never mention the private app', () => {
     ['src', 'siteProfile.js'],
     ['src', 'About.js'],
     ['src', 'guides', 'Guides.js'],
+    ['src', 'blog', 'content.js'],
+    ['src', 'blog', 'Blog.js'],
   ];
   it.each(files.map((f) => [f.join('/'), f]))('%s has no /hq', (_, f) => {
     expect(read(...f)).not.toMatch(/\/hq\b|Wedding HQ/i);

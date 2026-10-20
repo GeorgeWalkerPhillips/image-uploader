@@ -1,5 +1,6 @@
 // Shared assertions for the About and Guides page tests.
 import { GUIDES } from '../guides/content';
+import { POSTS } from '../blog/content';
 import { TIERS, WEDDING_PLANNER } from '../services/pricingTiers';
 import { ORG_ID, WEBSITE_ID } from '../siteProfile';
 
@@ -7,12 +8,14 @@ export const KNOWN_ROUTES = new Set([
   '/',
   '/about',
   '/guides',
+  '/blog',
   '/wedding-planner',
   '/privacy',
   '/terms',
   '/refund-policy',
   '/login',
   ...GUIDES.map((g) => g.path),
+  ...POSTS.map((p) => p.path),
 ]);
 
 export const BANNED = /\brated\b|\bstars?\b|testimonial|trusted by|\baward|#1|best in South Africa|thousands of|\breviews?\b|\d+\s?(\+\s?)?(couples|users|weddings|customers)\b/i;

@@ -199,7 +199,7 @@ Page claims must stay true: no ratings, reviews, user counts or awards.
 ## SEO and AI visibility (public pages)
 
 Public, indexable pages: `/`, `/wedding-planner`, `/about`, `/guides` and five `/guides/<slug>` pages,
-plus the policies. Entity data lives in `src/siteProfile.js` (Organization, WebSite, `SOCIAL_PROFILES`
+`/blog` and its posts (`src/blog/content.js`; a new post is a content-only change plus the prerender/sitemap/llms lists), plus the policies. Entity data lives in `src/siteProfile.js` (Organization, WebSite, `SOCIAL_PROFILES`
 (empty until the owner supplies real URLs), `CONTACT_EMAIL`); `public/index.html` carries a static copy of
 the home `@graph` and `src/seoFiles.test.js` fails if the two drift. Copy for About is
 `src/aboutContent.js`, for guides `src/guides/content.js` (prices derived from `pricingTiers.js`; the

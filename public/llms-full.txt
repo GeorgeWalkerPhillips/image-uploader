@@ -1,6 +1,6 @@
 # Valere: full text for language models
 
-Valere is a South African wedding and event photo-sharing app and wedding planner. Site: https://www.valere.co.za/ . This file repeats the text of the About page and the guides in plain markdown. The short version is https://www.valere.co.za/llms.txt . Last updated 2026-10-20.
+Valere is a South African wedding and event photo-sharing app and wedding planner. Site: https://www.valere.co.za/ . This file repeats the text of the About page, the guides and the blog posts in plain markdown. The short version is https://www.valere.co.za/llms.txt . Last updated 2026-10-20.
 
 ## About Valere (https://www.valere.co.za/about)
 
@@ -534,3 +534,237 @@ Check in a couple of weeks ahead, have a backup for critical jobs, and take a ta
 
 **Should I hire a coordinator instead?**
 It depends on budget and complexity. A coordinator or venue manager on the day takes a lot off the wedding party, even if you plan everything else yourselves.
+
+## What to write on your wedding QR code sign: 12 wording ideas and where to put them
+
+URL: https://www.valere.co.za/blog/wedding-qr-code-sign-wording
+Updated: 2026-10-20
+
+The words on your sign decide whether guests scan the code. Say what to do, that there is no app, where the photos go, and ask them to scan now, in two lines a guest can read in five seconds. Here are 12 wordings to copy, and where to put them.
+
+### Key takeaways
+
+- A good sign says what to do, that no app is needed, where the photos go, and to scan now.
+- Keep it to two short lines: guests read signs with a drink in their hand.
+- Change the wording to suit the spot: the bar, the kids’ table and the welcome table each suit a different tone.
+- Print the code at least 3 to 4 cm wide, test it on two phones first, and print the web link underneath.
+
+### Why the words matter
+
+Guests glance at signs. A bare QR code looks like an advert or a menu, so many people walk past it. A line such as “Scan to share your photos with us” tells them what happens next and why it is worth ten seconds.
+
+### What every good sign includes
+
+- What to do: “Scan to add your photos.”
+- No app: “No app, no sign-up.”
+- Where the photos go: “to our wedding gallery.”
+- A nudge: “Scan now”, or “Scan before the cake”.
+
+### 12 wording ideas
+
+#### Short and sweet
+
+- “Scan to share your photos with us.”
+- “Got photos? Scan and add them to our gallery. No app needed.”
+- “Our day, your photos. Scan here.”
+
+#### Funny
+
+- “We will forget half of today. Scan and upload your photos so we don’t.”
+- “Be our paparazzi. Scan, snap, send. No app, no forms.”
+- “What happens on the dance floor stays in the gallery. Scan to add yours.”
+
+#### Traditional
+
+- “Help us remember today. Scan the code with your phone camera to add your photos to our wedding gallery. There is nothing to download.”
+- “[Name] and [Name] would love to see the day through your eyes. Please scan and share your photos.”
+- “Skandeer en deel jou foto’s met ons. Scan and share your photos with us.”
+
+#### For the bar
+
+- “Waiting for your drink? Scan and add a photo while you wait. No app.”
+- “Had a lekker time so far? Scan and add your photos to the gallery.”
+
+#### For the kids’ table
+
+- “Little photographers: ask a grown-up to help you scan and add your best pictures.”
+
+There is no isiZulu line above because it should be written, or at least checked, by a first-language speaker. Ask a relative to do that for any language you add.
+
+### Where to put the signs
+
+- Welcome table: one larger sign, so guests see it on arrival.
+- Each guest table: a small standing card. Most scans happen when people sit down.
+- The bar: guests queue here with their phones out.
+- Toilets or powder room: a small card at eye level.
+- Photo corner or dance floor.
+- Order of service: one line and the code.
+- A small card at each place setting, if the budget allows.
+
+### Size and format that scan
+
+These are rules of thumb. Test your own print.
+
+- Print the code at least 3 to 4 cm per side on table cards, and larger on signs people read from a metre or more away.
+- Use dark ink on a plain light background, with an empty margin around the code.
+- Choose matt paper. Glossy card and candle glare make scanning harder.
+- Scan a printed test with two different phones, ideally an iPhone and an Android, before you order the full run.
+- Print the web link under the code in case scanning fails. Valere’s event link is long, so make a short link with a shortener you trust and check that it opens the upload page.
+
+### What guests do with Valere
+
+1. They point the phone camera at the code and tap the link that appears.
+2. The upload page opens in the browser. There is no app to install and no account to create.
+3. They take a photo with the built-in camera, or choose photos from their camera roll.
+4. The photos go to your shared gallery. Each guest has a photo limit, a bit like a disposable camera.
+
+### A checklist for the print shop
+
+- Send the QR code as a PDF or high-resolution file, not a screenshot.
+- Ask for a proof, and scan the proof.
+- Ask for a matt finish with no foil or gloss over the code.
+- Ask them not to crop, stretch or recolour the code.
+- Order a few extra cards for the bar, the toilets and breakages.
+
+### Where Valere fits (our product)
+
+Our product: Valere is one way to do this
+
+Valere gives you a printable QR code (download it as a PDF from your event) that opens an upload page with no app or account. Your first event is free for up to 5 guests, and bigger events are a one-time price by guest count, from R179 to R999, with no subscription. See [pricing](https://www.valere.co.za/#pricing). For more on setting it up, read the [guide to collecting guest photos with a QR code](https://www.valere.co.za/guides/collect-wedding-guest-photos-qr-code).
+
+### Frequently asked questions
+
+**How big should a wedding QR code be?**
+As a rule of thumb, at least 3 to 4 cm per side on a table card, and larger on signs read from further away. Test your own print on two phones, because paper, ink and lighting all matter.
+
+**How many QR code signs do I need?**
+One per guest table, plus the welcome table, the bar and the toilets, and a larger sign wherever guests queue. Add a line and the code to the order of service too.
+
+**Should the sign say that no app is needed?**
+Yes. Many guests assume they must install something, and that stops them. With Valere it is true: the page opens in the phone browser.
+
+**What if a guest cannot scan the code?**
+Print the web link under the code so it can be typed in, and ask your photo helper to assist anyone who struggles. Test the printed link before the print run.
+
+**Can the sign be in more than one language?**
+Yes. Keep each line short, put the languages on separate lines, and have a first-language speaker check anything you did not write yourself.
+
+**Do guests get unlimited photos?**
+No. Each guest has a photo limit that depends on the plan, from 5 on the free plan to 50 on the largest, a bit like a disposable camera.
+
+## The wedding-day guest photo plan: when to remind guests to upload, from ceremony to last dance
+
+URL: https://www.valere.co.za/blog/wedding-day-guest-photo-plan
+Updated: 2026-10-20
+
+More guests are likely to upload their photos if someone reminds them at set moments, not once at the start. Brief your MC and one helper before the day, then remind guests as they arrive, at the speeches, after the first dance and with the last song. The plan below has a line to say at each step.
+
+### Key takeaways
+
+- Remind guests at set moments: one announcement is rarely enough.
+- Give your MC and one photo helper the lines in writing before the day.
+- Decide on ceremony wording first: phones away or phones up.
+- If the signal drops, photos wait on the phone and try again.
+- The day after, send a thank-you with the link, then download everything and back it up.
+
+### Before the day
+
+- Print the signs and cards (see [what to write on the sign](https://www.valere.co.za/blog/wedding-qr-code-sign-wording)), and scan one printed test.
+- Upload a test photo from your own phone and check it reaches the gallery.
+- Give your MC and one photo helper a page with the lines below.
+
+### From arrival to the last song
+
+#### Guests arriving
+
+Say: “Welcome! Scan the code on your table to add your photos. No app needed.”
+
+#### The ceremony
+
+Choose one. Phones away: “We would love you to be present. Please keep phones away for the ceremony. The code on your table is waiting afterwards.” Phones up: “Take as many photos as you like, quietly, from your seat.” Either way, have the officiant say it once, and put a sign at the entrance.
+
+#### Cocktail hour
+
+People are standing with phones in hand. Your helper walks around and says: “Got any photos so far? Scan and add them.”
+
+#### Speeches
+
+MC: “Before we begin: if you have taken photos today, scan the code on your table and add them. It takes a minute, there is no app, and the couple will see every one.”
+
+#### Dinner
+
+Do: nothing loud. The table card does the work, and your helper checks that quiet tables have noticed it.
+
+#### First dance and cake cutting
+
+MC: “Phones up for the first dance, then scan to add your clips.” Repeat it before the cake.
+
+#### The party and the last song
+
+MC, as the last song starts: “Last call for photos. Scan before you leave and add tonight’s. Thank you for celebrating with us.”
+
+#### The day after
+
+Send a thank-you message with the event link, for guests who missed the reminders. Then download every photo as a ZIP and keep two copies.
+
+### Getting the quiet guests to join
+
+Elders, children and people without a smartphone are often left out. Name a friend as “photo helper” who offers to take a table’s photos on their own phone. Children can use a parent’s phone. Because each guest has a photo limit, a helper who uploads for others uses their own allowance, so check your plan.
+
+### Patchy signal at the venue
+
+Tell guests that uploads need a connection. If a photo does not finish uploading, Valere keeps it on the phone and tries again when the connection returns or the guest comes back to the page. If the page was closed, opening the event link again resumes it. This may not work in private browsing, so guests can also upload from the accommodation Wi-Fi.
+
+### Privacy and permissions
+
+Tell guests where the photos go: to your wedding gallery, which you control. Anyone with the link can add photos, so share it with guests only. Guests keep ownership of their own photos, and the organizer can view and download them (see the [terms](https://www.valere.co.za/terms) and [privacy policy](https://www.valere.co.za/privacy)). Respect anyone who prefers not to be photographed.
+
+### How long to keep the gallery
+
+Valere keeps your gallery available for at least 30 days after your event ends, but its terms advise against relying on it as permanent storage. Download the ZIP in the first week and keep a second copy elsewhere.
+
+### Alongside your photographer
+
+Guest photos complement your photographer; they do not replace one. Guests catch the candid moments and the angles a photographer cannot be in two places for. Tell your photographer about the QR code so nothing surprises them.
+
+### The one-page plan
+
+A printable one-page plan for guest photo reminders
+
+| Moment | Who | Do or say |
+| --- | --- | --- |
+| Before the day | You | Print, test two phones, brief the MC and helper |
+| Arrival | Usher | Welcome, point to the table code |
+| Ceremony | Officiant | Phones away or up, then say it once |
+| Cocktails | Helper | Walk around, remind guests |
+| Speeches | MC | Read the speeches line |
+| Dinner | Helper | Check quiet tables |
+| First dance and cake | MC | Phones up, then scan |
+| Last song | MC | Last call for photos |
+| Day after | You | Thank-you message, download, back up |
+
+### Where Valere fits (our product)
+
+Our product: Valere is one way to do this
+
+Guests scan a QR code and upload from their phone browser with no app or account, and you download every photo as one ZIP. Your first event is free for up to 5 guests, and bigger events are a one-time price by guest count, from R179 to R999, with no subscription. See [pricing](https://www.valere.co.za/#pricing).
+
+### Frequently asked questions
+
+**When is the best time to remind wedding guests to upload photos?**
+There is no single best moment, so use several: at arrival, during the speeches, after the first dance or cake, and with the last song. The speeches work well because everyone is seated and listening.
+
+**Should we ask guests to put their phones away at the ceremony?**
+It is your choice. Many couples ask guests to keep phones away during the ceremony and then point them to the QR code afterwards. If you want phones up, ask for quiet photos taken from a seat.
+
+**Who should be the photo helper?**
+A relaxed, sociable friend or cousin who is not in the wedding party’s busiest roles. Give them the lines and the job of checking quiet tables.
+
+**What if the venue has no signal?**
+Tell guests early that uploads need a connection. On Valere a photo that has not finished uploading stays on the phone and is retried when the connection returns or the guest comes back to the page.
+
+**How long can we keep the gallery?**
+Valere keeps your gallery available for at least 30 days after your event ends. Download the ZIP early and keep a second copy.
+
+**Do guest photos replace a professional photographer?**
+No. They complement a photographer by adding candid moments and different angles. Your photographer still covers portraits and the formal shots.

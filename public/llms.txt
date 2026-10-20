@@ -35,6 +35,14 @@ Plain-English guides for South African couples. Valere is mentioned as one optio
 - [How to delegate wedding tasks to your wedding party](https://www.valere.co.za/guides/delegate-wedding-tasks-wedding-party)
 - [All guides](https://www.valere.co.za/guides)
 
+## Blog
+
+Short, practical posts on getting wedding guests to share their photos. Valere is mentioned as one option and labelled as our product.
+
+- [What to write on your wedding QR code sign: 12 wording ideas and where to put them](https://www.valere.co.za/blog/wedding-qr-code-sign-wording)
+- [The wedding-day guest photo plan: when to remind guests to upload, from ceremony to last dance](https://www.valere.co.za/blog/wedding-day-guest-photo-plan)
+- [All posts](https://www.valere.co.za/blog)
+
 ## Policies
 
 - [Privacy policy](https://www.valere.co.za/privacy)
@@ -43,4 +51,4 @@ Plain-English guides for South African couples. Valere is mentioned as one optio
 
 ## Optional
 
-- [Full text of the About page and guides in markdown](https://www.valere.co.za/llms-full.txt)
+- [Full text of the About page, guides and blog posts in markdown](https://www.valere.co.za/llms-full.txt)

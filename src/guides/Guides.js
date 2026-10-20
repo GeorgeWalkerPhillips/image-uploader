@@ -15,12 +15,13 @@ import {
 } from './content';
 import { Sections, FaqSection } from './GuideBody';
 import { Breadcrumb, ContentFooter, ContentHeader, RichText } from '../components/ContentChrome';
+import { postsForGuide } from '../blog/content';
 import { JsonLd } from '../seo/JsonLd';
 import { usePageMeta } from '../seo/usePageMeta';
 import { ORG_ID, SITE_URL, WEBSITE_ID, siteGraph } from '../siteProfile';
 import styles from '../components/ContentChrome.module.css';
 
-const breadcrumbLd = (items) => ({
+export const breadcrumbLd = (items) => ({
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: items.map((it, i) => ({
@@ -143,6 +144,7 @@ function GuideArticle({ guide }) {
     mainEntityOfPage: { '@type': 'WebPage', '@id': guide.url },
     image: OG_IMAGE.url,
   };
+  const relatedPosts = postsForGuide(guide.slug);
   const crumbs = breadcrumbLd([
     { name: 'Home', url: `${SITE_URL}/` },
     { name: 'Guides', url: GUIDES_URL },
@@ -197,6 +199,17 @@ function GuideArticle({ guide }) {
               <a href="/#pricing">Photo sharing pricing</a>
             </li>
           </ul>
+          {relatedPosts.length > 0 && (
+            <p>
+              Related reading:{' '}
+              {relatedPosts.map((p, i) => (
+                <React.Fragment key={p.slug}>
+                  {i > 0 && ' · '}
+                  <Link to={p.path}>{p.h1}</Link>
+                </React.Fragment>
+              ))}
+            </p>
+          )}
         </section>
       </main>
       <ContentFooter />
