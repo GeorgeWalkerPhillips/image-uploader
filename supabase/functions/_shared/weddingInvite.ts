@@ -15,7 +15,8 @@ import { escapeHtml, redactEmails } from "./weddingReminders.ts";
 export const INVITE_TTL_DAYS = 14;
 export const MAX_COLLABORATORS = 10;
 export const MAX_COUPLE = 2;
-export const MAX_INVITES_PER_DAY = 20; // per wedding AND per inviting user, rolling 24h (revoked rows still count)
+export const MAX_INVITES_PER_DAY = 20; // invite EMAILS sent (create + resend), per wedding AND per inviting user, rolling 24h
+export const RESEND_COOLDOWN_MS = 60_000; // minimum gap between two sends of the SAME invite
 const DAY_MS = 86_400_000;
 
 export type InviteKind = "partner" | "collaborator";
@@ -41,16 +42,26 @@ export interface InviteStore {
   memberEmails(weddingId: string): Promise<string[]>;
   /** Invites that are neither accepted nor revoked (expired ones included). */
   listOpenInvites(weddingId: string): Promise<InviteRow[]>;
-  countInvitesCreatedSince(weddingId: string, sinceIso: string): Promise<number>;
-  /** Invites created by this user (any wedding, any state incl. revoked) since the instant. */
-  countInvitesByUserSince(userId: string, sinceIso: string): Promise<number>;
+  /** Invite emails actually sent (create AND resend; wedding_invite_sends) for this wedding since the instant. */
+  countSendsByWeddingSince(weddingId: string, sinceIso: string): Promise<number>;
+  /** Invite emails actually sent by this user (any wedding) since the instant. */
+  countSendsByUserSince(userId: string, sinceIso: string): Promise<number>;
+  /** sent_at (ISO) of the most recent send of this invite, or null if none recorded. */
+  lastSendAt(inviteId: string): Promise<string | null>;
+  /** Records one row per email actually sent. */
+  recordSend(row: { weddingId: string; inviteId: string; sentBy: string }): Promise<void>;
   getInvite(inviteId: string): Promise<InviteRow | null>;
   /** Throws an error with code "23505" when the open-invite unique index is hit. */
   insertInvite(row: {
     weddingId: string; email: string; kind: InviteKind; displayName: string | null;
     tokenHash: string; invitedBy: string; expiresAt: string;
   }): Promise<{ id: string }>;
-  setToken(inviteId: string, tokenHash: string, expiresAt: string): Promise<void>;
+  /**
+   * Rewrites token + expiry ONLY while the invite is still pending (accepted_at
+   * and revoked_at both null). Resolves false when no row was updated (it was
+   * accepted or revoked in the meantime).
+   */
+  setToken(inviteId: string, tokenHash: string, expiresAt: string): Promise<boolean>;
   revokeInvite(inviteId: string): Promise<void>;
   sendEmail(m: { to: string; subject: string; html: string }): Promise<unknown>;
   logError(source: string, message: string): Promise<void>;
@@ -165,6 +176,24 @@ async function checkSlots(
   return null;
 }
 
+/** Shared daily brake for creates AND resends: emails sent per wedding and per inviting user, rolling 24h. */
+async function overDailyCap(store: InviteStore, weddingId: string, userId: string, now: Date): Promise<boolean> {
+  const sinceIso = new Date(now.getTime() - DAY_MS).toISOString();
+  return (await store.countSendsByWeddingSince(weddingId, sinceIso)) >= MAX_INVITES_PER_DAY
+    || (await store.countSendsByUserSince(userId, sinceIso)) >= MAX_INVITES_PER_DAY;
+}
+
+const CAP_MESSAGE = "You've sent a lot of invitations today. Please try again tomorrow.";
+
+/** Logging the send must never undo an email that already went out. */
+async function recordSendSafe(store: InviteStore, weddingId: string, inviteId: string, sentBy: string) {
+  try {
+    await store.recordSend({ weddingId, inviteId, sentBy });
+  } catch (err) {
+    await store.logError("wedding-invite:recordSend", redactEmails(String((err as Error)?.message ?? err)).slice(0, 500));
+  }
+}
+
 async function deliver(
   store: InviteStore, deps: InviteDeps, inviterName: string, inv: {
     email: string; kind: InviteKind; displayName: string | null; expiresAt: string;
@@ -195,7 +224,7 @@ export async function handleInvite(
 
   switch (b.action) {
     case "create": return create(store, deps, caller, couple, b, now);
-    case "resend": return resend(store, deps, couple, b, now);
+    case "resend": return resend(store, deps, caller, couple, b, now);
     case "revoke": return revoke(store, couple, b);
     default: return fail(400, "Unknown action.");
   }
@@ -219,11 +248,7 @@ async function create(
   const members = (await store.memberEmails(couple.weddingId)).map((e) => e.trim().toLowerCase());
   if (members.includes(email)) return fail(409, "That person is already part of this wedding.");
 
-  const sinceIso = new Date(now.getTime() - DAY_MS).toISOString();
-  if ((await store.countInvitesCreatedSince(couple.weddingId, sinceIso)) >= MAX_INVITES_PER_DAY
-      || (await store.countInvitesByUserSince(caller.id, sinceIso)) >= MAX_INVITES_PER_DAY) {
-    return fail(429, "You've sent a lot of invitations today. Please try again tomorrow.");
-  }
+  if (await overDailyCap(store, couple.weddingId, caller.id, now)) return fail(429, CAP_MESSAGE);
 
   // Same-email handling: a live open invite blocks; a stale (expired) one is revoked first.
   const open = await store.listOpenInvites(couple.weddingId);
@@ -259,6 +284,7 @@ async function create(
     try { await store.revokeInvite(inserted.id); } catch { /* best effort */ }
     return fail(502, "We could not send the invitation email. Please try again.");
   }
+  await recordSendSafe(store, couple.weddingId, inserted.id, caller.id);
   return reply(200, { ok: true, inviteId: inserted.id });
 }
 
@@ -271,12 +297,20 @@ async function ownInvite(store: InviteStore, couple: Couple, b: Record<string, u
 }
 
 async function resend(
-  store: InviteStore, deps: InviteDeps, couple: Couple, b: Record<string, unknown>, now: Date
+  store: InviteStore, deps: InviteDeps, caller: Caller, couple: Couple, b: Record<string, unknown>, now: Date
 ): Promise<Reply> {
   const inv = await ownInvite(store, couple, b);
   if (!inv) return fail(404, "Invite not found.");
   if (inv.acceptedAt) return fail(409, "This invitation has already been accepted.");
   if (inv.revokedAt) return fail(404, "Invite not found.");
+
+  // Email-bomb brakes: one send per invite per minute, and resends share the
+  // rolling-24h cap with creates.
+  const last = await store.lastSendAt(inv.id);
+  if (last && now.getTime() - Date.parse(last) < RESEND_COOLDOWN_MS) {
+    return fail(429, "This invitation was just sent. Please wait a minute before resending.");
+  }
+  if (await overDailyCap(store, couple.weddingId, caller.id, now)) return fail(429, CAP_MESSAGE);
 
   if (isExpired(inv, now)) {
     // Reviving an expired invite re-occupies a slot: re-check it.
@@ -287,7 +321,8 @@ async function resend(
   const previous = { tokenHash: inv.tokenHash, expiresAt: inv.expiresAt };
   const token = generateToken();
   const expiresAt = new Date(now.getTime() + INVITE_TTL_DAYS * DAY_MS).toISOString();
-  await store.setToken(inv.id, await hashToken(token), expiresAt);
+  const updated = await store.setToken(inv.id, await hashToken(token), expiresAt);
+  if (!updated) return fail(409, "This invitation is no longer pending.");
 
   const sent = await deliver(store, deps, couple.displayName,
     { email: inv.email, kind: inv.kind, displayName: inv.displayName, expiresAt }, token);
@@ -296,6 +331,7 @@ async function resend(
     try { await store.setToken(inv.id, previous.tokenHash, previous.expiresAt); } catch { /* best effort */ }
     return fail(502, "We could not send the invitation email. Please try again.");
   }
+  await recordSendSafe(store, couple.weddingId, inv.id, caller.id);
   return reply(200, { ok: true, inviteId: inv.id });
 }
 

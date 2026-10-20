@@ -45,6 +45,9 @@ export const TIERS = {
     photosPerGuest: 50,
     amountCents: 99900, // R999
     display: 'R999',
+    // The Wedding Planner is included free with this tier. Display only: the
+    // server grants the entitlement when the event is paid, not the client.
+    includesWeddingPlanner: true,
   },
 };
 
@@ -69,6 +72,17 @@ export const formatPrice = (amountCents, currency = 'ZAR') => {
 // with the server constant in supabase/functions/_shared/weddingPlanner.ts.
 export const WEDDING_PLANNER = {
   name: 'Wedding Planner',
-  amountCents: 49900, // R499, one-time
+  amountCents: 19900, // R199, one-time
   currency: 'ZAR',
 };
+
+// Does this tier include the Wedding Planner at no extra cost?
+export const tierIncludesWeddingPlanner = (tierKey) =>
+  TIERS[tierKey]?.includesWeddingPlanner === true;
+
+// Feature-list line for tiers that include the planner, e.g.
+// "Wedding Planner included (worth R199)". Null for all other tiers.
+export const weddingPlannerIncludedLine = (tierKey) =>
+  tierIncludesWeddingPlanner(tierKey)
+    ? `${WEDDING_PLANNER.name} included (worth ${formatPrice(WEDDING_PLANNER.amountCents, WEDDING_PLANNER.currency).replace(/[\s\u00a0]/g, '').replace(/[,.]00$/, '')})`
+    : null;

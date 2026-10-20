@@ -508,6 +508,16 @@
   margin: 4px 0 0;
 }
 
+.pricingCard p.pricingExtra {
+  color: #111;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.plannerPrice span a {
+  color: #111;
+}
+
 /* FAQ */
 .faqList {
   max-width: 720px;

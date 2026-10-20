@@ -10,6 +10,7 @@ always rejected. Errors arrive as `error.message`; the strings below are safe to
 |---|---|---|
 | `wedding_planner_entitlements` | service role only (Paystack function), or SQL | user: own row |
 | `wedding_invites` (insert, expiry, stale-revoke) | invite Edge Function (service role) | couple, non-secret columns only |
+| `wedding_invite_sends` (one row per invite email sent) | invite Edge Function (service role) | nobody (RLS on, no policies; `wedding-hq-2026-10f-invite-sends.sql`) |
 | `wedding_invites.revoked_at` | `revoke_wedding_invite` RPC | couple |
 | `wedding_invites.accepted_*` | `accept_wedding_invite` RPC | couple |
 | `wedding_collaborators` insert | `accept_wedding_invite` only | couple (their wedding); collaborator (own row) |
@@ -70,7 +71,7 @@ A collaborator is not in `wedding_members`, so every existing policy (all `weddi
 All are POST with `Authorization: Bearer <user JWT>` (`verify_jwt` true; `supabase.functions.invoke(name, { body })` does this). Errors are `{ error: string }` with the HTTP status shown. Anonymous sessions are refused with 403.
 
 ### `wedding-planner-checkout`
-- Request: no body. Amount is the server constant (R499, 49900 ZAR cents), never from the client.
+- Request: no body. Amount is the server constant (R199, 19900 ZAR cents), never from the client.
 - 200 `{ checkoutUrl, reference }`: redirect the browser to `checkoutUrl`. Paystack returns to `<origin>/wedding-planner?payment=success&reference=<ref>&trxref=<ref>` (origin = request Origin if allow-listed, else the first allowed).
 - 401 not signed in; 403 anonymous; 409 `{ error: "You already have the Wedding Planner." }`; 400/502 Paystack or config problem.
 
@@ -79,12 +80,12 @@ All are POST with `Authorization: Bearer <user JWT>` (`verify_jwt` true; `supaba
 - 200 `{ status }` where status is `paid` (this call granted it) | `already_paid` | `pending` (keep polling) | `failed` | `not_found`.
 - 400 malformed reference; 403 reference belongs to another account; 409 payment already applied to another account; 502 Paystack unreachable.
 - The webhook may grant the entitlement first; either way, afterwards `my_wedding_planner_status().entitled` is true.
-- Server checks: re-fetched from Paystack, status success, ZAR, amount exactly 49900, `metadata.product = wedding_planner`, reference `wp-<caller uuid>-<12 chars>`.
+- Server checks: re-fetched from Paystack, status success, ZAR, amount exactly 19900, `metadata.product = wedding_planner`, reference `wp-<caller uuid>-<12 chars>`.
 
 ### `wedding-invite`
 - `{ action: "create", email, kind: "partner" | "collaborator", displayName? }` -> 200 `{ ok: true, inviteId }`
-- `{ action: "resend", inviteId }` -> 200 `{ ok: true, inviteId }` (new link, new 14-day expiry; the old link stops working)
+- `{ action: "resend", inviteId }` -> 200 `{ ok: true, inviteId }` (new link, new 14-day expiry; the old link stops working; at most one send per invite per 60 seconds, and only while the invite is still pending)
 - `{ action: "revoke", inviteId }` -> 200 `{ ok: true, inviteId }`
 - Responses never contain the token or hash. After a successful create, refetch the invite list (non-secret columns).
-- Errors: 400 invalid email/kind/name/action; 403 not a couple member (collaborators cannot invite); 404 `Invite not found.`; 409 limit or duplicate (partner slot full/pending, 10 helper cap incl. pending invites, already a member, already pending, already accepted); 429 daily brake (20 invites per wedding and 20 per inviting user per rolling 24h; revoked invites still count); 502 `We could not send the invitation email.` (a just-created invite is revoked, nothing pending is left).
+- Errors: 400 invalid email/kind/name/action; 403 not a couple member (collaborators cannot invite); 404 `Invite not found.`; 409 limit or duplicate (partner slot full/pending, 10 helper cap incl. pending invites, already a member, already pending, already accepted, `This invitation is no longer pending.` when a resend races an accept/revoke); 429 brake: either the daily cap (20 invitation emails per wedding and 20 per inviting user per rolling 24h, counting creates AND resends from `wedding_invite_sends`) or a resend within 60 seconds of the last send of that invite; 502 `We could not send the invitation email.` (a just-created invite is revoked, nothing pending is left).
 - Accepting is the client calling RPC `accept_wedding_invite(p_token)` with the token from `location.hash` (`#token=...`).

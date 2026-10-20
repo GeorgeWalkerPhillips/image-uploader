@@ -12,7 +12,7 @@ import {
   FaCheck,
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { WEDDING_PLANNER, formatPrice } from './services/pricingTiers';
+import { WEDDING_PLANNER, TIERS, formatPrice } from './services/pricingTiers';
 import { startCheckout, verifyPurchase } from './services/weddingPlannerService';
 import { useAuth } from './context/AuthContext';
 import { useWeddingPlannerStatus, hasPlannerAccess } from './hooks/useWeddingPlannerStatus';
@@ -29,7 +29,7 @@ const TITLE = 'Wedding Planner: budget, tasks, guest list & honeymoon in one app
 const DESCRIPTION =
   'A private wedding planner for you, your partner and your wedding party. Budget, quotes, tasks, calendar, guest list with RSVPs and honeymoon planning. One-time payment, works offline on your phone.';
 
-// Price text for copy, e.g. "R499" (no cents).
+// Price text for copy, e.g. "R199" (no cents).
 export const plannerPriceText = () =>
   formatPrice(WEDDING_PLANNER.amountCents, WEDDING_PLANNER.currency)
     .replace(/[\s ]/g, '')
@@ -527,6 +527,10 @@ function WeddingPlanner() {
                 {checkoutError}
               </p>
             )}
+            <p className={styles.fine}>
+              Included free with {TIERS.unlimited.name} for Capture by Val events.{' '}
+              <a href="/#pricing">See event pricing</a>
+            </p>
             <p className={styles.fine}>
               Secure payment by Paystack. See our <Link to="/refund-policy">refund policy</Link>.
             </p>

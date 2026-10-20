@@ -83,6 +83,17 @@ Deno.serve(async (req) => {
       const planned = await applyPlannerPaymentServer(supabaseAdmin, route.userId, data);
       if (!planned.ok) {
         console.error(`Planner payment not applied: ${planned.error}`);
+        // Every refusal is recorded (reference + reason + status only; no email
+        // or other personal data) so a paid-but-ungranted customer is findable.
+        try {
+          await supabaseAdmin.from("error_logs").insert({
+            severity: "error",
+            source: "wedding-planner:webhook",
+            message: `charge.success ${data?.reference} not applied (status ${planned.status}): ${planned.error}`.slice(0, 500),
+          });
+        } catch {
+          // diagnostics only; never change the response over a logging failure
+        }
         return new Response(planned.error, { status: planned.status === 500 ? 500 : 200 });
       }
       return new Response(JSON.stringify({ received: true }), {

@@ -1,5 +1,6 @@
 // Integration test for paystack-webhook routing. Builds the REAL index.ts of
-// the working tree AND the committed (git HEAD) version with esbuild, runs both
+// the working tree AND the frozen pre-planner snapshot
+// (_shared/fixtures/paystack-webhook.baseline.ts) with esbuild, runs both
 // handlers in Node against an in-memory recording fake of Supabase + stubbed
 // fetch, and asserts:
 //   * event payments behave identically before/after (responses AND every DB
@@ -10,13 +11,14 @@
 //
 // Run from the repo root:
 //   node --test supabase/functions/_shared/paystackWebhookRouting.test.mjs
-// (needs `npx esbuild` available; git for the baseline comparison)
+// (needs `npx esbuild` available). The baseline is a checked-in file, not git
+// history; the suite FAILS if it is missing.
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHmac } from "node:crypto";
-import { readFileSync, writeFileSync, rmSync, mkdtempSync } from "node:fs";
+import { readFileSync, writeFileSync, rmSync, mkdtempSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -66,7 +68,7 @@ function from(table) {
 
 const admin = {
   from,
-  auth: { admin: { getUserById: async (id) => { calls.push(["getUserById", id]); return { data: { user: { id, email: "buyer@example.com" } }, error: null }; } } },
+  auth: { admin: { getUserById: async (id) => { calls.push(["getUserById", id]); if (state.userError) return { data: { user: null }, error: state.userError }; return { data: { user: { id, email: "buyer@example.com" } }, error: null }; } } },
 };
 
 globalThis.__admin = admin;
@@ -98,16 +100,18 @@ function buildAndLoad(entry, name) {
 }
 
 let current, baseline;
-const baselineFile = join(webhookDir, ".baseline.tmp.ts");
+const baselineFile = join(here, "fixtures/paystack-webhook.baseline.ts");
 before(async () => {
+  assert.ok(existsSync(baselineFile), `baseline snapshot missing: ${baselineFile}`);
+  const snap = readFileSync(baselineFile, "utf8");
+  // Guard against someone "refreshing" the snapshot from the current handler.
+  assert.ok(!/planner/i.test(snap.replace(/^\/\/.*$/gm, "")), "baseline must be the pre-planner handler");
   current = await buildAndLoad(join(webhookDir, "index.ts"), "current");
-  const head = spawnSync("git", ["show", "HEAD:supabase/functions/paystack-webhook/index.ts"], { encoding: "utf8", cwd: repo });
-  if (head.status === 0) {
-    writeFileSync(baselineFile, head.stdout);
-    try { baseline = await buildAndLoad(baselineFile, "baseline"); } finally { rmSync(baselineFile, { force: true }); }
-  }
+  baseline = await buildAndLoad(baselineFile, "baseline");
+  assert.equal(typeof baseline, "function");
+  assert.notEqual(baseline, current, "baseline and current must be distinct handlers");
 });
-after(() => { rmSync(baselineFile, { force: true }); rmSync(out, { recursive: true, force: true }); });
+after(() => { rmSync(out, { recursive: true, force: true }); });
 
 // ---- helpers -------------------------------------------------------------------------
 const sign = (body) => createHmac("sha512", SECRET).update(body).digest("hex");
@@ -130,7 +134,7 @@ const touched = (r, table) => r.calls.some((c) => c[1] === table);
 
 const evtTxn = (over = {}) => ({ reference: `cbv-${EVT}-abcdefabcdef`, status: "success", currency: "ZAR", amount: 39900, metadata: { eventId: EVT, userId: U1, tier: "growth", eventName: "Test Event" }, ...over });
 const planRef = (u = U1) => `wp-${u}-abcdefabcdef`;
-const planTxn = (over = {}) => ({ reference: planRef(), status: "success", currency: "ZAR", amount: 49900, metadata: { product: "wedding_planner", userId: U1 }, ...over });
+const planTxn = (over = {}) => ({ reference: planRef(), status: "success", currency: "ZAR", amount: 19900, metadata: { product: "wedding_planner", userId: U1 }, ...over });
 
 // ---- 1. existing event behaviour is unchanged ------------------------------------------
 const EVENT_CASES = {
@@ -148,8 +152,7 @@ const EVENT_CASES = {
 };
 
 for (const [name, payload] of Object.entries(EVENT_CASES)) {
-  test(`event flow unchanged vs git HEAD: ${name}`, async (t) => {
-    if (!baseline) return t.skip("git HEAD baseline unavailable");
+  test(`event flow unchanged vs pre-planner snapshot: ${name}`, async () => {
     const before_ = await run(baseline, payload);
     const after_ = await run(current, payload);
     assert.deepEqual(after_, before_);
@@ -216,6 +219,45 @@ test("event-priced event reference replayed with planner reference text: never g
   // A planner-format reference with an event-tier amount cannot unlock the planner
   const r = await run(current, charge(planTxn({ amount: 17900, metadata: { product: "wedding_planner", userId: U1 } })));
   assert.equal(touched(r, "wedding_planner_entitlements"), false);
+});
+
+// ---- 2b. every refused planner charge is logged (reference + reason, no PII) --------------
+const plannerLogs = (r) => r.calls.filter((c) => c[0] === "insert" && c[1] === "error_logs").map((c) => c[2]);
+
+test("planner amount mismatch: 200, error_logs row with reference + reason and no email", async () => {
+  const r = await run(current, charge(planTxn({ amount: 39900 })));
+  assert.equal(r.status, 200);
+  const logs = plannerLogs(r);
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].source, "wedding-planner:webhook");
+  assert.match(logs[0].message, new RegExp(planRef()));
+  assert.match(logs[0].message, /Amount mismatch/);
+  assert.doesNotMatch(JSON.stringify(logs), /@/);
+});
+
+test("planner with wrong product metadata (reference only): logged as refused", async () => {
+  const r = await run(current, charge(planTxn({ metadata: { product: "wedding_planner", userId: U1 }, status: "failed" })));
+  assert.equal(r.status, 200);
+  assert.equal(plannerLogs(r)[0].source, "wedding-planner:webhook");
+});
+
+test("transient auth lookup failure: 500 (Paystack retries), nothing granted, failure logged", async () => {
+  const r = await run(current, charge(planTxn()), undefined, { userError: { message: "fetch failed" } });
+  assert.equal(r.status, 500);
+  assert.equal(touched(r, "wedding_planner_entitlements"), false);
+  assert.equal(plannerLogs(r)[0].source, "wedding-planner:webhook");
+  assert.match(plannerLogs(r)[0].message, /status 500/);
+});
+
+test("genuine user-not-found: acknowledged 200 (not retried) and logged", async () => {
+  const r = await run(current, charge(planTxn()), undefined, { userError: { message: "User not found", status: 404, code: "user_not_found" } });
+  assert.equal(r.status, 200);
+  assert.match(plannerLogs(r)[0].message, /status 404/);
+});
+
+test("successful planner purchase writes no error_logs row", async () => {
+  const r = await run(current, charge(planTxn()));
+  assert.equal(plannerLogs(r).length, 0);
 });
 
 // ---- 3. signature ------------------------------------------------------------------------

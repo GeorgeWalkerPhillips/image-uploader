@@ -18,7 +18,7 @@ import { wrapEmail, emailHeading, emailButton, emailFootnote } from "./emailTemp
 import { escapeHtml, formatZar, redactEmails } from "./weddingReminders.ts";
 import { parseMetadata } from "./paystackPayment.ts";
 
-export const WEDDING_PLANNER = { amountCents: 49900, currency: "ZAR" } as const; // R499
+export const WEDDING_PLANNER = { amountCents: 19900, currency: "ZAR" } as const; // R199
 export const PLANNER_PRODUCT = "wedding_planner";
 export const DEFAULT_SITE_ORIGIN = "https://valere.co.za";
 
@@ -98,19 +98,23 @@ export function routeTransaction(txn: { reference?: unknown; metadata?: unknown 
 // Origins
 // ---------------------------------------------------------------------------
 
+const HTTPS_ORIGIN_RE = /^https:\/\/[^\s*/]+$/;
+
 function originList(allowedOriginEnv: string | undefined): string[] {
   return (allowedOriginEnv || "").split(",").map((o) => o.trim()).filter(Boolean);
 }
 
 /** Origin for links in emails: first https ALLOWED_ORIGIN, else the default site. */
 export function siteOriginFrom(allowedOriginEnv: string | undefined): string {
-  const first = originList(allowedOriginEnv).find((o) => /^https:\/\/[^\s*/]+$/.test(o));
+  const first = originList(allowedOriginEnv).find((o) => HTTPS_ORIGIN_RE.test(o));
   return first ?? DEFAULT_SITE_ORIGIN;
 }
 
 /** Checkout return origin: the request Origin only if allow-listed, else the first allowed. */
 export function checkoutOriginFrom(requestOrigin: string | null | undefined, allowedOriginEnv: string | undefined): string {
-  const list = originList(allowedOriginEnv);
+  // Same https-only rule as siteOriginFrom (paystack-initialize has no
+  // localhost carve-out either): non-https entries are never used.
+  const list = originList(allowedOriginEnv).filter((o) => HTTPS_ORIGIN_RE.test(o));
   if (requestOrigin && list.includes(requestOrigin)) return requestOrigin;
   return list[0] ?? DEFAULT_SITE_ORIGIN;
 }
@@ -186,6 +190,13 @@ async function logError(admin: AdminClient, source: string, message: string) {
   }
 }
 
+/** A genuine "no such user" from auth.admin.getUserById (404 / user_not_found), as opposed to a transient failure. */
+function isNotFoundError(err: unknown): boolean {
+  const e = err as { status?: unknown; code?: unknown; name?: unknown } | null;
+  if (!e) return false;
+  return e.status === 404 || e.code === "user_not_found" || e.code === 404;
+}
+
 /**
  * Grants the Wedding Planner to `userId` for an already-authenticated
  * successful Paystack transaction. Idempotent and race-safe: the UNIQUE
@@ -206,7 +217,12 @@ export async function applyPlannerPayment(
 
   const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);
   const user = userData?.user;
-  if (userError || !user) return { ok: false, status: 404, error: "User not found" };
+  if (userError && !isNotFoundError(userError)) {
+    // Transient lookup failure (network, 5xx, rate limit): 500 so Paystack retries.
+    console.error("Planner user lookup failed:", String((userError as { status?: unknown }).status ?? (userError as { code?: unknown }).code ?? "unknown"));
+    return { ok: false, status: 500, error: "User lookup failed" };
+  }
+  if (!user) return { ok: false, status: 404, error: "User not found" };
   if (user.is_anonymous) return { ok: false, status: 400, error: "Anonymous users cannot own the planner" };
 
   const { error: insertError } = await admin.from("wedding_planner_entitlements").insert({

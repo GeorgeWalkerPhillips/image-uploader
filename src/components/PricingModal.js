@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaCheck } from 'react-icons/fa';
-import { TIERS, TIER_ORDER, formatGuestCap, formatPhotoCap } from '../services/pricingTiers';
+import { TIERS, TIER_ORDER, formatGuestCap, formatPhotoCap, weddingPlannerIncludedLine } from '../services/pricingTiers';
 import './PricingModal.css';
 
 const FEATURES = [
@@ -65,7 +65,7 @@ export function PricingModal({ isOpen, onClose, onSelectPlan, freeTierUsed }) {
                 </p>
 
                 <ul className="features">
-                  {FEATURES.map((feature) => (
+                  {[...FEATURES, weddingPlannerIncludedLine(tierKey)].filter(Boolean).map((feature) => (
                     <li key={feature}>
                       <FaCheck className="check" />
                       {feature}

@@ -20,6 +20,7 @@ import {
 import {
   TIERS,
   TIER_ORDER,
+  weddingPlannerIncludedLine,
   WEDDING_PLANNER,
   formatGuestCap,
   formatPhotoCap,
@@ -31,7 +32,7 @@ import styles from './LandingPage.module.css';
 
 const POPULAR_TIER = 'growth';
 
-// "R499", no cents — formatted from the one price constant.
+// "R199", no cents — formatted from the one price constant.
 const PLANNER_PRICE = formatPrice(WEDDING_PLANNER.amountCents, WEDDING_PLANNER.currency)
   .replace(/[\s\u00a0]/g, '')
   .replace(/[,.]00$/, '');
@@ -370,6 +371,9 @@ function LandingPage() {
                   <p>{formatGuestCap(tier.guestCap)}</p>
                   <p>{formatPhotoCap(tier.photosPerGuest)}</p>
                   {isFree && <p>One per account</p>}
+                  {weddingPlannerIncludedLine(tierKey) && (
+                    <p className={styles.pricingExtra}>{weddingPlannerIncludedLine(tierKey)}</p>
+                  )}
                 </div>
               );
             })}
@@ -394,6 +398,9 @@ function LandingPage() {
             <p className={styles.plannerPrice}>
               One-time {PLANNER_PRICE} per wedding
               <span> Partner and helpers included. No subscription.</span>
+              <span>
+                Included free with {TIERS.unlimited.name}. <a href="#pricing">See pricing</a>
+              </span>
             </p>
             <Link to="/wedding-planner" className={styles.btnPrimaryLink}>
               Explore the Wedding Planner

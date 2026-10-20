@@ -359,13 +359,15 @@ that's what actually determines what Paystack charges.
 
 ## Wedding Planner purchase
 
-A one-time R499 purchase (separate product from event tiers) that lets a user create their own Wedding HQ wedding. DB side: `wedding-hq-2026-10e-planner-product.sql` (`wedding_planner_entitlements`); API shapes: `WEDDING_PLANNER_CONTRACT.md`.
+A one-time R199 purchase (separate product from event tiers) that lets a user create their own Wedding HQ wedding. DB side: `wedding-hq-2026-10e-planner-product.sql` (`wedding_planner_entitlements`); API shapes: `WEDDING_PLANNER_CONTRACT.md`.
 
 Flow:
 1. `wedding-planner-checkout` (user JWT; anonymous refused; 409 if already entitled) calls Paystack `transaction/initialize` with the amount from the server constant, reference `wp-<userId>-<12 random chars>`, metadata `{ product: "wedding_planner", userId }`, callback `<origin>/wedding-planner?payment=success`.
 2. Paystack redirects back; the browser calls `wedding-planner-verify { reference }`, which re-fetches the charge from Paystack and requires: status success, ZAR, amount exactly the planner price, `metadata.product = wedding_planner`, and a planner reference whose embedded user id is the authenticated caller. A Capture by Val event reference (`cbv-...`) can never be turned into an entitlement.
-3. `paystack-webhook` (same endpoint and HMAC check as event payments) diverts charges that carry a planner signal (planner reference or `metadata.product`) to the same `applyPlannerPayment` in `_shared/weddingPlanner.ts`. Everything else runs the unchanged event flow. A charge mixing event and planner signals is refused (200) and logged to `error_logs` (`paystack-webhook:planner-conflict`).
+3. `paystack-webhook` (same endpoint and HMAC check as event payments) diverts charges that carry a planner signal (planner reference or `metadata.product`) to the same `applyPlannerPayment` in `_shared/weddingPlanner.ts`. Everything else runs the unchanged event flow. A charge mixing event and planner signals is refused (200) and logged to `error_logs` (`paystack-webhook:planner-conflict`). Every other refusal of a planner charge (amount mismatch, wrong product, 409, 5xx) is also written to `error_logs` with source `wedding-planner:webhook` (reference, status and reason only, no email). If the auth user lookup fails transiently the webhook returns 500 so Paystack retries; only a genuine "user not found" is acknowledged (200). Return/email origins are https-only: non-https `ALLOWED_ORIGIN` entries are ignored (fallback `https://valere.co.za`).
 4. `applyPlannerPayment` inserts into `wedding_planner_entitlements` (service role, `source = 'paystack'`, `payment_reference` unique). Replays are idempotent; a reference owned by another user is refused; the receipt email is sent only by the call that inserted the row.
+
+Bundle: the Wedding Planner is included free with the `unlimited` event tier ("The Whole Reel", R999). In `applyPaystackPayment` (`_shared/paystackPayment.ts`, shared by `paystack-webhook` and `paystack-verify`), only the call that flips the event to paid inserts `{ user_id: event.created_by, payment_reference: 'bundle-<event id>', amount_cents: 0, source: 'admin' }` into `wedding_planner_entitlements` (`source` has to be `admin`; the CHECK is not altered, and a `bundle-` reference means included-with-tier). Unique violations (already entitled / already granted) are ignored; any other failure is logged to `error_logs` (`wedding-planner:bundle`, event and user id only) and never changes the payment result or the receipt. The unlimited receipt also says the planner is included, with a link to `<origin>/hq/`. Existing paid unlimited events are covered by `wedding-hq-2026-10g-planner-bundle-backfill.sql`. Deploying this means redeploying BOTH `paystack-webhook` and `paystack-verify`.
 
 Secrets: reuses `PAYSTACK_SECRET_KEY`, `ALLOWED_ORIGIN`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. None new.
 
@@ -384,7 +386,7 @@ Inspect / refund:
 - Entitlements: `select user_id, payment_reference, amount_cents, source, paid_at from wedding_planner_entitlements order by paid_at desc;` (SQL editor, service role).
 - Duplicate or stray charges: `select created_at, source, message from error_logs where source like 'wedding-planner%' or source = 'paystack-webhook:planner-conflict' order by created_at desc;`. A `duplicate-charge` row means the user already had the planner; refund that reference in the Paystack dashboard (Transactions -> Refund). The code never refunds automatically.
 - To remove access after a refund: `delete from wedding_planner_entitlements where payment_reference = '<ref>';` (does not delete any wedding already created).
-- Logic tests (no Deno): see the top of `supabase/functions/_shared/weddingPlanner.test.ts` and `paystackWebhookRouting.test.mjs`.
+- Logic tests (no Deno): see the top of `supabase/functions/_shared/weddingPlanner.test.ts` and `paystackWebhookRouting.test.mjs` (its "event flow unchanged" baseline is the frozen pre-planner handler in `supabase/functions/_shared/fixtures/paystack-webhook.baseline.ts`; the suite fails if it is missing; do not edit it).
 
 ## Troubleshooting
 

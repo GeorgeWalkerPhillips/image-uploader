@@ -32,7 +32,7 @@ const W2 = "00000000-0000-4000-8000-000000000002";
 // ---- references / routing -----------------------------------------------------
 
 test("price constant", () => {
-  assert.equal(WEDDING_PLANNER.amountCents, 49900);
+  assert.equal(WEDDING_PLANNER.amountCents, 19900);
   assert.equal(WEDDING_PLANNER.currency, "ZAR");
 });
 
@@ -106,11 +106,15 @@ test("origins", () => {
   assert.equal(checkoutOriginFrom("https://evil.example", allowed), "https://valere.co.za");
   assert.equal(checkoutOriginFrom(null, allowed), "https://valere.co.za");
   assert.equal(checkoutOriginFrom("https://evil.example", undefined), "https://valere.co.za");
+  // https-only, like siteOriginFrom: an http entry is never used, even if it matches the request origin
+  assert.equal(checkoutOriginFrom("http://localhost:3000", "http://localhost:3000,https://valere.co.za"), "https://valere.co.za");
+  assert.equal(checkoutOriginFrom("http://valere.co.za", "http://valere.co.za"), "https://valere.co.za");
+  assert.equal(checkoutOriginFrom("https://valere.co.za", "http://localhost:3000,https://valere.co.za"), "https://valere.co.za");
 });
 
 test("initialize payload: amount from the server constant only", () => {
   const p = buildInitializePayload({ id: U1, email: "a@example.com" }, "https://valere.co.za");
-  assert.equal(p.amount, 49900);
+  assert.equal(p.amount, 19900);
   assert.equal(p.currency, "ZAR");
   assert.equal(p.email, "a@example.com");
   assert.deepEqual(p.metadata, { product: "wedding_planner", userId: U1 });
@@ -121,7 +125,7 @@ test("initialize payload: amount from the server constant only", () => {
 // ---- transaction validation ---------------------------------------------------
 
 const goodTxn = (over: object = {}) => ({
-  reference: `wp-${U1}-abcdefabcdef`, status: "success", currency: "ZAR", amount: 49900,
+  reference: `wp-${U1}-abcdefabcdef`, status: "success", currency: "ZAR", amount: 19900,
   metadata: plannerMetadata(U1), ...over,
 });
 
@@ -133,9 +137,9 @@ test("validatePlannerTransaction", () => {
   assert.match(validatePlannerTransaction(U1, goodTxn({ status: undefined }))!, /status/);
   assert.match(validatePlannerTransaction(U1, goodTxn({ currency: "USD" }))!, /currency/);
   assert.match(validatePlannerTransaction(U1, goodTxn({ currency: undefined }))!, /currency/);
-  assert.match(validatePlannerTransaction(U1, goodTxn({ amount: 49899 }))!, /Amount mismatch/);
+  assert.match(validatePlannerTransaction(U1, goodTxn({ amount: 19899 }))!, /Amount mismatch/);
   assert.match(validatePlannerTransaction(U1, goodTxn({ amount: 99800 }))!, /Amount mismatch/);
-  assert.match(validatePlannerTransaction(U1, goodTxn({ amount: "49900" }))!, /Amount mismatch/);
+  assert.match(validatePlannerTransaction(U1, goodTxn({ amount: "19900" }))!, /Amount mismatch/);
   assert.match(validatePlannerTransaction(U1, goodTxn({ metadata: { product: "event" } }))!, /product/);
   assert.match(validatePlannerTransaction(U1, goodTxn({ metadata: plannerMetadata(U2) }))!, /different user/);
   assert.match(validatePlannerTransaction(U2, goodTxn())!, /different user/); // ref names U1
@@ -143,12 +147,12 @@ test("validatePlannerTransaction", () => {
 
 // ---- applyPlannerPayment with a fake admin client -------------------------------
 
-function fakeAdmin(opts: { users?: Record<string, { email?: string; is_anonymous?: boolean }>; seed?: { user_id: string; payment_reference: string }[]; insertError?: { code: string } } = {}) {
+function fakeAdmin(opts: { users?: Record<string, { email?: string; is_anonymous?: boolean }>; seed?: { user_id: string; payment_reference: string }[]; insertError?: { code: string }; userLookupError?: { message: string; status?: number; code?: string } } = {}) {
   const users = opts.users ?? { [U1]: { email: "bride@example.com" }, [U2]: { email: "other@example.com" } };
   const entitlements: Record<string, unknown>[] = [...(opts.seed ?? [])];
   const errorLogs: Record<string, unknown>[] = [];
   const admin = {
-    auth: { admin: { getUserById: async (id: string) => (users[id] ? { data: { user: { id, ...users[id] } }, error: null } : { data: { user: null }, error: { message: "nf" } }) } },
+    auth: { admin: { getUserById: async (id: string) => opts.userLookupError ? { data: { user: null }, error: opts.userLookupError } : (users[id] ? { data: { user: { id, ...users[id] } }, error: null } : { data: { user: null }, error: { message: "User not found", status: 404, code: "user_not_found" } }) } },
     from(table: string) {
       if (table === "error_logs") return { insert: async (row: Record<string, unknown>) => { errorLogs.push(row); return { error: null }; } };
       assert.equal(table, "wedding_planner_entitlements");
@@ -180,12 +184,12 @@ test("new purchase: entitlement inserted once, receipt sent once, idempotent on 
   assert.equal(entitlements.length, 1);
   assert.equal(entitlements[0].source, "paystack");
   assert.equal(entitlements[0].payment_reference, txn.reference);
-  assert.equal(entitlements[0].amount_cents, 49900);
+  assert.equal(entitlements[0].amount_cents, 19900);
   assert.equal(sent.length, 1);
   assert.equal(sent[0].to, "bride@example.com");
   assert.equal(sent[0].subject, "Wedding Planner purchase confirmed");
   assert.match(sent[0].html, /valere\.co\.za\/hq\//);
-  assert.match(sent[0].html, /R&nbsp;499,00|R 499,00/);
+  assert.match(sent[0].html, /R&nbsp;199,00|R\u00a0199,00|R 199,00/);
 
   const r2 = await applyPlannerPayment(admin, U1, txn, d);
   assert.deepEqual(r2, { ok: true, alreadyPaid: true, duplicateCharge: false });
@@ -233,10 +237,25 @@ test("anonymous / unknown user refused", async () => {
   const none = fakeAdmin({ users: {} });
   const r2 = await applyPlannerPayment(none.admin, U1, goodTxn(), deps().d);
   assert.deepEqual(r2, { ok: false, status: 404, error: "User not found" });
+  // null user with no error object is also a genuine not-found
+  const nullUser = fakeAdmin();
+  nullUser.admin.auth.admin.getUserById = async () => ({ data: { user: null }, error: null });
+  assert.equal((await applyPlannerPayment(nullUser.admin, U1, goodTxn(), deps().d)).status, 404);
+});
+
+test("transient user-lookup error -> 500 (webhook lets Paystack retry), nothing granted or sent", async () => {
+  for (const userLookupError of [{ message: "fetch failed" }, { message: "upstream", status: 503 }, { message: "rate", status: 429, code: "over_request_rate_limit" }]) {
+    const { admin, entitlements } = fakeAdmin({ userLookupError });
+    const { sent, d } = deps();
+    const r = await applyPlannerPayment(admin, U1, goodTxn(), d);
+    assert.deepEqual(r, { ok: false, status: 500, error: "User lookup failed" });
+    assert.equal(entitlements.length, 0);
+    assert.equal(sent.length, 0);
+  }
 });
 
 test("wrong amount, currency, status or product: refused, nothing written", async () => {
-  for (const over of [{ amount: 17900 }, { amount: 49901 }, { currency: "USD" }, { status: "abandoned" }, { metadata: { product: "event" } }]) {
+  for (const over of [{ amount: 17900 }, { amount: 19901 }, { currency: "USD" }, { status: "abandoned" }, { metadata: { product: "event" } }]) {
     const { admin, entitlements } = fakeAdmin();
     const r = await applyPlannerPayment(admin, U1, goodTxn(over), deps().d);
     assert.equal(r.ok, false, JSON.stringify(over));
@@ -263,7 +282,7 @@ test("receipt email failure never fails the payment; logged without the address"
 });
 
 test("receipt HTML escapes the reference", () => {
-  const { html } = receiptEmail({ amount: 49900, reference: `<img src=x onerror=1>` }, "https://valere.co.za");
+  const { html } = receiptEmail({ amount: 19900, reference: `<img src=x onerror=1>` }, "https://valere.co.za");
   assert.doesNotMatch(html, /<img src=x/);
   assert.match(html, /&lt;img/);
 });
@@ -272,14 +291,16 @@ test("receipt HTML escapes the reference", () => {
 
 const NOW = new Date("2026-11-10T08:00:00Z");
 
+let clock = () => NOW;
 function fakeStore(over: {
   couple?: Record<string, { weddingId: string; displayName: string }>;
   coupleCount?: number; collabCount?: number; emails?: string[]; invites?: InviteRow[];
-  createdToday?: number; createdByUser?: number; failEmail?: boolean; insertCode?: string;
+  createdToday?: number; createdByUser?: number; failEmail?: boolean; insertCode?: string; setTokenRows?: boolean; failRecord?: boolean;
 } = {}) {
   const invites: InviteRow[] = over.invites ? [...over.invites] : [];
   const sent: { to: string; subject: string; html: string }[] = [];
   const logs: { source: string; message: string }[] = [];
+  const sends: { weddingId: string; inviteId: string; sentBy: string; sentAt: string }[] = [];
   let seq = 0;
   const store: InviteStore = {
     getCoupleMembership: async (id) => (over.couple ?? { [U1]: { weddingId: W, displayName: "Alex <b>&" } })[id] ?? null,
@@ -287,8 +308,10 @@ function fakeStore(over: {
     countCollaborators: async () => over.collabCount ?? 0,
     memberEmails: async () => over.emails ?? ["alex@example.com"],
     listOpenInvites: async (w) => invites.filter((i) => i.weddingId === w && !i.acceptedAt && !i.revokedAt),
-    countInvitesCreatedSince: async () => over.createdToday ?? 0,
-    countInvitesByUserSince: async () => over.createdByUser ?? 0,
+    countSendsByWeddingSince: async (w, since) => (over.createdToday ?? 0) + sends.filter((x) => x.weddingId === w && x.sentAt >= since).length,
+    countSendsByUserSince: async (u, since) => (over.createdByUser ?? 0) + sends.filter((x) => x.sentBy === u && x.sentAt >= since).length,
+    lastSendAt: async (id) => sends.filter((x) => x.inviteId === id).map((x) => x.sentAt).sort().pop() ?? null,
+    recordSend: async (r) => { if (over.failRecord) throw new Error("db down"); sends.push({ ...r, sentAt: clock().toISOString() }); },
     getInvite: async (id) => invites.find((i) => i.id === id) ?? null,
     insertInvite: async (row) => {
       if (over.insertCode) throw Object.assign(new Error("dup"), { code: over.insertCode });
@@ -296,12 +319,12 @@ function fakeStore(over: {
       invites.push({ id, weddingId: row.weddingId, email: row.email, kind: row.kind, displayName: row.displayName, expiresAt: row.expiresAt, acceptedAt: null, revokedAt: null, tokenHash: row.tokenHash });
       return { id };
     },
-    setToken: async (id, tokenHash, expiresAt) => { const i = invites.find((x) => x.id === id)!; i.tokenHash = tokenHash; i.expiresAt = expiresAt; },
+    setToken: async (id, tokenHash, expiresAt) => { if (over.setTokenRows === false) return false; const i = invites.find((x) => x.id === id)!; i.tokenHash = tokenHash; i.expiresAt = expiresAt; return true; },
     revokeInvite: async (id) => { invites.find((x) => x.id === id)!.revokedAt = NOW.toISOString(); },
     sendEmail: async (m) => { if (over.failEmail) throw new Error("Resend failed for guest@example.com"); sent.push(m); return {}; },
     logError: async (source, message) => { logs.push({ source, message }); },
   };
-  return { store, invites, sent, logs };
+  return { store, invites, sent, logs, sends, setClock: (f: () => Date) => { clock = f; } };
 }
 
 const caller = { id: U1, email: "alex@example.com" };
@@ -481,6 +504,88 @@ test("resend of an expired invite re-checks slots", async () => {
   assert.equal((await handleInvite(fakeStore({ invites: [inv], collabCount: 3 }).store, idep, caller, { action: "resend", inviteId: inv.id })).status, 200);
 });
 
+const INV_ID = "00000000-0000-4000-8000-00000000f800";
+const pending = (o: object = {}): InviteRow => ({ id: INV_ID, weddingId: W, email: "g@example.com", kind: "collaborator", displayName: null, expiresAt: "2026-11-20T00:00:00Z", acceptedAt: null, revokedAt: null, tokenHash: "h", ...o });
+const resendAt = (store: InviteStore, at: Date, id = INV_ID) => handleInvite(store, { ...idep, now: () => at }, caller, { action: "resend", inviteId: id });
+
+test("create records one send row; resend within 60s of the last send is refused (429), no email, token unchanged", async () => {
+  const f = fakeStore();
+  assert.equal((await create(f.store)).status, 200);
+  assert.equal(f.sends.length, 1);
+  const id = f.invites[0].id;
+  const hash = f.invites[0].tokenHash;
+  const r = await resendAt(f.store, new Date(NOW.getTime() + 59_000), id);
+  assert.equal(r.status, 429);
+  assert.equal(f.sent.length, 1);
+  assert.equal(f.sends.length, 1);
+  assert.equal(f.invites[0].tokenHash, hash);
+});
+
+test("resend after 60s works, is recorded, and a second immediate resend is refused again", async () => {
+  const f = fakeStore();
+  await create(f.store);
+  const id = f.invites[0].id;
+  const t1 = new Date(NOW.getTime() + 60_000);
+  f.setClock(() => t1);
+  assert.equal((await resendAt(f.store, t1, id)).status, 200);
+  assert.equal(f.sent.length, 2);
+  assert.equal(f.sends.length, 2);
+  const t2 = new Date(t1.getTime() + 30_000);
+  f.setClock(() => t2);
+  assert.equal((await resendAt(f.store, t2, id)).status, 429);
+  assert.equal(f.sent.length, 2);
+});
+
+test("a failed send is not recorded and does not start the 60s cooldown", async () => {
+  const f = fakeStore({ failEmail: true, invites: [pending()] });
+  assert.equal((await resendAt(f.store, NOW)).status, 502);
+  assert.equal(f.sends.length, 0);
+});
+
+test("resends share the daily cap with creates (per wedding and per user)", async () => {
+  const byWedding = fakeStore({ invites: [pending()], createdToday: 20 });
+  assert.equal((await resendAt(byWedding.store, NOW)).status, 429);
+  assert.equal(byWedding.sent.length, 0);
+  assert.equal(byWedding.invites[0].tokenHash, "h");
+  const byUser = fakeStore({ invites: [pending()], createdByUser: 20 });
+  assert.equal((await resendAt(byUser.store, NOW)).status, 429);
+  const under = fakeStore({ invites: [pending()], createdToday: 19, createdByUser: 19 });
+  assert.equal((await resendAt(under.store, NOW)).status, 200);
+  // and the other direction: resends consume the budget that blocks creates
+  assert.equal((await create(fakeStore({ createdToday: 20 }).store)).status, 429);
+  assert.equal((await create(fakeStore({ createdByUser: 20 }).store)).status, 429);
+  const f = fakeStore({ createdToday: 19 });
+  assert.equal((await create(f.store)).status, 200);          // 20th send
+  const t = new Date(NOW.getTime() + 61_000);
+  f.setClock(() => t);
+  assert.equal((await resendAt(f.store, t, f.invites[0].id)).status, 429); // 21st refused
+});
+
+test("sends older than 24h do not count toward the cap", async () => {
+  const f = fakeStore({ invites: [pending()] });
+  await f.store.recordSend({ weddingId: W, inviteId: INV_ID, sentBy: U1 }); // recorded "now" (NOW)
+  const later = new Date(NOW.getTime() + 25 * 3_600_000);
+  f.setClock(() => later);
+  const old = fakeStore({ invites: [pending()], createdToday: 0 });
+  assert.equal((await resendAt(old.store, later)).status, 200);
+  assert.equal(await f.store.countSendsByWeddingSince(W, new Date(later.getTime() - 86_400_000).toISOString()), 0);
+});
+
+test("resend losing a race with accept/revoke (setToken updates 0 rows): 409 'no longer pending', no email", async () => {
+  const f = fakeStore({ invites: [pending()], setTokenRows: false });
+  const r = await resendAt(f.store, NOW);
+  assert.deepEqual(r, { status: 409, body: { error: "This invitation is no longer pending." } });
+  assert.equal(f.sent.length, 0);
+  assert.equal(f.sends.length, 0);
+});
+
+test("a failure to record a send is logged but does not fail the (already sent) invite", async () => {
+  const f = fakeStore({ failRecord: true });
+  assert.equal((await create(f.store)).status, 200);
+  assert.equal(f.sent.length, 1);
+  assert.equal(f.logs[0].source, "wedding-invite:recordSend");
+});
+
 test("revoke: sets revoked_at, idempotent, collaborators cannot invite", async () => {
   const { store, invites } = fakeStore();
   await create(store);
@@ -499,4 +604,10 @@ test("invite email: role wording, link, escaping", () => {
   const p = inviteEmail({ inviterName: "A", kind: "partner", displayName: "Sam", token: "t".repeat(43), expiresAt: "2026-11-24T08:00:00Z", siteOrigin: "https://valere.co.za" });
   assert.match(p.html, /full access/);
   assert.match(p.html, /Hi Sam,/);
+});
+
+test("planner price is R199 (19900 cents); the old R499 (49900) charge is rejected", () => {
+  assert.equal(WEDDING_PLANNER.amountCents, 19900);
+  assert.equal(validatePlannerTransaction(U1, goodTxn()), null);
+  assert.match(validatePlannerTransaction(U1, goodTxn({ amount: 49900 }))!, /Amount mismatch/);
 });

@@ -1,12 +1,13 @@
 // Wedding invitations: create / resend / revoke. POST JSON, verify_jwt = true.
 //
 //   { action: "create", email, kind: "partner" | "collaborator", displayName? }
-//   { action: "resend", inviteId }       (rotates the token + expiry, re-sends)
+//   { action: "resend", inviteId }       (rotates the token + expiry, re-sends; max 1 per invite per 60s)
 //   { action: "revoke", inviteId }
 //
 // Response: 200 { ok: true, inviteId }  (never contains the token or its hash)
 //           400 invalid input | 401 not signed in | 403 not a couple member
-//           404 invite not found | 409 limit / duplicate | 429 daily brake
+//           404 invite not found | 409 limit / duplicate / no longer pending
+//           429 daily brake (sends, create+resend) or resend within 60s of last send
 //           502 email could not be sent (a just-created invite is revoked)
 //
 // The caller is authenticated with their JWT; authority is then checked in the
@@ -15,6 +16,9 @@
 // emailed link /hq/join#token=... (URL fragment: never sent to servers); only its sha256 hex is stored
 // (wedding_invites.token_hash). Accepting is the client calling the
 // accept_wedding_invite RPC directly. Logic: _shared/weddingInvite.ts.
+// Every email actually sent (create and resend) is logged in wedding_invite_sends
+// (wedding-hq-2026-10f-invite-sends.sql, must be applied BEFORE deploying this
+// version) and counted for the rolling-24h caps.
 //
 // Deploy: supabase functions deploy wedding-invite --project-ref <ref>
 // Secrets required: ALLOWED_ORIGIN (CORS + email link; first https value,
@@ -90,20 +94,35 @@ const store: InviteStore = {
     return (data ?? []).map(toRow);
   },
 
-  async countInvitesCreatedSince(weddingId, sinceIso) {
+  async countSendsByWeddingSince(weddingId, sinceIso) {
     const { count, error } = await supabaseAdmin
-      .from("wedding_invites").select("id", { count: "exact", head: true })
-      .eq("wedding_id", weddingId).gte("created_at", sinceIso);
+      .from("wedding_invite_sends").select("id", { count: "exact", head: true })
+      .eq("wedding_id", weddingId).gte("sent_at", sinceIso);
     check(error);
     return count ?? 0;
   },
 
-  async countInvitesByUserSince(userId, sinceIso) {
+  async countSendsByUserSince(userId, sinceIso) {
     const { count, error } = await supabaseAdmin
-      .from("wedding_invites").select("id", { count: "exact", head: true })
-      .eq("invited_by", userId).gte("created_at", sinceIso);
+      .from("wedding_invite_sends").select("id", { count: "exact", head: true })
+      .eq("sent_by", userId).gte("sent_at", sinceIso);
     check(error);
     return count ?? 0;
+  },
+
+  async lastSendAt(inviteId) {
+    const { data, error } = await supabaseAdmin
+      .from("wedding_invite_sends").select("sent_at").eq("invite_id", inviteId)
+      .order("sent_at", { ascending: false }).limit(1).maybeSingle();
+    check(error);
+    return data?.sent_at ?? null;
+  },
+
+  async recordSend(row) {
+    const { error } = await supabaseAdmin.from("wedding_invite_sends").insert({
+      wedding_id: row.weddingId, invite_id: row.inviteId, sent_by: row.sentBy,
+    });
+    check(error);
   },
 
   async getInvite(inviteId) {
@@ -123,9 +142,12 @@ const store: InviteStore = {
   },
 
   async setToken(inviteId, tokenHash, expiresAt) {
-    const { error } = await supabaseAdmin
-      .from("wedding_invites").update({ token_hash: tokenHash, expires_at: expiresAt }).eq("id", inviteId);
+    // Only while still pending, so a resend racing an accept/revoke cannot rewrite it.
+    const { data, error } = await supabaseAdmin
+      .from("wedding_invites").update({ token_hash: tokenHash, expires_at: expiresAt })
+      .eq("id", inviteId).is("accepted_at", null).is("revoked_at", null).select("id");
     check(error);
+    return (data ?? []).length > 0;
   },
 
   async revokeInvite(inviteId) {

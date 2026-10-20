@@ -53,9 +53,15 @@ describe('marketing page', () => {
       .replace(/[\s ]/g, '')
       .replace(/[,.]00$/, '');
     expect(plannerPriceText()).toBe(expected);
-    expect(expected).toMatch(/499/);
+    expect(expected).toMatch(/199/);
     expect(screen.getAllByText(new RegExp(expected)).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /refund policy/i })[0]).toHaveAttribute('href', '/refund-policy');
+  });
+
+  it('notes it is included free with The Whole Reel, linking to event pricing', () => {
+    renderAt('/wedding-planner');
+    expect(screen.getByText(/Included free with The Whole Reel/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'See event pricing' })).toHaveAttribute('href', '/#pricing');
   });
 
   it('sets the document title', () => {
@@ -65,7 +71,7 @@ describe('marketing page', () => {
 
   it('does not mention photo tier pricing', () => {
     const { container } = renderAt('/wedding-planner');
-    expect(container.textContent).not.toMatch(/Gathering|Big Day|Whole Reel|R179|R399|R999/);
+    expect(container.textContent).not.toMatch(/Gathering|Big Day|R179|R399|R999/);
   });
 });
 
@@ -280,9 +286,21 @@ describe('landing page section', () => {
         <LandingPage />
       </MemoryRouter>
     );
-    expect(screen.getByText(/One-time R\s?499 per wedding/)).toBeInTheDocument();
+    expect(screen.getByText(/One-time R\s?199 per wedding/)).toBeInTheDocument();
     const cta = screen.getByRole('link', { name: 'Explore the Wedding Planner' });
     expect(cta).toHaveAttribute('href', '/wedding-planner');
     expect(screen.getAllByRole('link', { name: /Wedding Planner/ }).length).toBeGreaterThan(1);
+  });
+
+  it('lists the planner as included only on The Whole Reel card', () => {
+    render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+    const cards = screen.getAllByText(/^Wedding Planner included \(worth R\s?199\)$/);
+    expect(cards).toHaveLength(1);
+    expect(cards[0].closest('div')).toHaveTextContent('The Whole Reel');
+    expect(screen.getByRole('link', { name: 'See pricing' })).toHaveAttribute('href', '#pricing');
   });
 });

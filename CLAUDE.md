@@ -67,7 +67,7 @@ check can be bypassed via DevTools:
   verify the charge against the tier price), and the billing-integrity
   trigger `enforce_event_billing_integrity()` — last redefined in
   `pricing-rework-2026-09.sql` (originally `security-hardening.sql`).
-  It also holds `WEDDING_PLANNER` (the one-time R499 add-on price), which must
+  It also holds `WEDDING_PLANNER` (the one-time R199 add-on price, included free with the `unlimited` tier), which must
   match the server constant in `supabase/functions/_shared/weddingPlanner.ts`.
 
 **Payments (Paystack, hosted-checkout flow, not the Inline/client SDK

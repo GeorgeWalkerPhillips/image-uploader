@@ -22,6 +22,9 @@ export const TIER_CONFIG: Record<
   unlimited: { guestCap: 500, photoCap: 50, amountCents: 99900 }, // R999
 };
 
+// The tier that includes the Wedding Planner add-on for free.
+export const BUNDLE_TIER = "unlimited";
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Paystack references may only contain alphanumerics, "-", "." and "=" (no
@@ -174,10 +177,51 @@ export async function applyPaystackPayment(
 
   const didFlip = Array.isArray(flipped) && flipped.length > 0;
   if (didFlip) {
+    // Bundle: "The Whole Reel" includes the Wedding Planner. Never throws and
+    // never affects the payment result.
+    if (event.tier === BUNDLE_TIER) await grantPlannerBundle(supabaseAdmin, event);
     await sendReceipt(supabaseAdmin, event, txn, currency);
   }
 
   return { ok: true, alreadyPaid: !didFlip, tier: event.tier };
+}
+
+// Grants the event owner a wedding_planner_entitlements row. Called only by the
+// call that flipped the event to paid. `source` must be 'admin' (the table's
+// CHECK allows only paystack|grandfathered|admin); a payment_reference starting
+// with 'bundle-' means "included with the unlimited tier". Unique violations
+// (23505: user already entitled, or bundle already granted) are success.
+// Every failure is swallowed and logged: payment must never fail over this.
+async function grantPlannerBundle(
+  supabaseAdmin: AdminClient,
+  // deno-lint-ignore no-explicit-any
+  event: any
+) {
+  try {
+    if (!event.created_by) return;
+    const { error } = await supabaseAdmin.from("wedding_planner_entitlements").insert({
+      user_id: event.created_by,
+      payment_reference: `bundle-${event.id}`,
+      amount_cents: 0,
+      source: "admin",
+    });
+    if (error && error.code !== "23505") throw error;
+  } catch (err) {
+    // Ids and error code only; no PII.
+    const code = (err as { code?: string })?.code ?? "unknown";
+    console.error("Planner bundle grant failed", { eventId: event.id, code });
+    try {
+      await supabaseAdmin.from("error_logs").insert({
+        event_id: event.id,
+        user_id: event.created_by ?? null,
+        severity: "error",
+        source: "wedding-planner:bundle",
+        message: `Bundle entitlement grant failed (code ${code})`,
+      });
+    } catch {
+      // nothing more we can do
+    }
+  }
 }
 
 async function sendReceipt(
@@ -216,7 +260,11 @@ async function sendReceipt(
         <p style="margin-top:28px;">Scan or share this to let guests join:</p>
         ${qrCodeImage(joinUrl)}
         <p style="text-align:center;word-break:break-all;font-size:13px;color:#666666;">${joinUrl}</p>
-        ${emailButton(`${siteOrigin}/admin`, "Open event dashboard")}
+        ${emailButton(`${siteOrigin}/admin`, "Open event dashboard")}${
+          event.tier === BUNDLE_TIER
+            ? `<p>Your Wedding Planner is included &mdash; open it at ${siteOrigin}/hq/</p>`
+            : ""
+        }
         ${emailFootnote(
           "Photos stay available for 30 days after your event ends. 30 days after that, we'll email you a zip download link and remove the originals to free up storage. That zip is then kept for a further 90 days before it's permanently deleted, so be sure to save it somewhere safe once you get it."
         )}

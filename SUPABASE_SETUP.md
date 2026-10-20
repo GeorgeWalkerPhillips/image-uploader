@@ -133,6 +133,18 @@ file):
     (hashed tokens), `wedding_tasks.assigned_to`, and the RPCs `create_my_wedding`,
     `accept_wedding_invite`, etc. Create-only; run after file 22, in the 8 batches
     marked in the file, in order. Contract: `WEDDING_PLANNER_CONTRACT.md`.
+24. `wedding-hq-2026-10f-invite-sends.sql` — Wedding HQ only: service-role-only
+    `wedding_invite_sends` (one row per invitation email sent, create and
+    resend). Powers the 60-second resend guard and the shared rolling-24h invite
+    cap in the `wedding-invite` Edge Function. Create-only; run after file 23 and
+    BEFORE deploying the updated `wedding-invite` function.
+25. `wedding-hq-2026-10g-planner-bundle-backfill.sql` — Wedding HQ only: the
+    Wedding Planner is included free with the `unlimited` tier. Grants a
+    `wedding_planner_entitlements` row (`payment_reference = 'bundle-<event id>'`,
+    `amount_cents = 0`, `source = 'admin'`) to owners of events that are already
+    paid on that tier. Create-only, idempotent (`on conflict do nothing`); run
+    after file 23. New payments are covered in code (`paystackPayment.ts`), so
+    deploy `paystack-webhook` and `paystack-verify` too.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
