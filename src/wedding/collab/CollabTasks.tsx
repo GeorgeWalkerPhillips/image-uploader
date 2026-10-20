@@ -13,6 +13,7 @@ import { TaskCard } from '../components/TaskCard';
 import { PRIORITY_LABELS, STATUS_LABELS } from '../components/TaskForm';
 import { changeStatus, isDone, sortTasks, taskUrgency } from '../lib/tasks';
 import { STATUSES } from '../lib/taskForms';
+import { ROW_ORDER } from '../lib/rowOrder';
 import { forLabel } from '../lib/assignment';
 import { rpcErrorMessage } from '../lib/planner';
 import { formatDateJhb, todayJhbISO } from '../lib/time';
@@ -33,7 +34,7 @@ export function CollabTasks({ weddingId }: { weddingId: string }) {
 
   const tasksQuery = useQuery({
     queryKey: ['wedding_tasks', weddingId],
-    queryFn: () => fetchRows<Task>('wedding_tasks', weddingId, { column: 'due_on' }),
+    queryFn: () => fetchRows<Task>('wedding_tasks', weddingId, ROW_ORDER.wedding_tasks),
     // No realtime for helpers: pick up changes whenever they come back to the app.
     refetchOnWindowFocus: true,
   });

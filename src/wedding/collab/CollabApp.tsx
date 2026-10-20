@@ -7,6 +7,7 @@ import { useAuthUser } from '../useAuthUser';
 import { useSignOut } from '../useSignOut';
 import { useCollabWedding, usePlannerStatus } from '../teamHooks';
 import { formatDateJhb } from '../lib/time';
+import { GetTheApp } from '../components/GetTheApp';
 import { CollabTasks } from './CollabTasks';
 import styles from '../wedding.module.css';
 
@@ -52,7 +53,15 @@ export function CollabApp() {
   return (
     <Shell title={title} subtitle={subtitle} homeTo="/hq/" homeLabel="Wedding HQ home" nav={nav}>
       <Routes>
-        <Route index element={<CollabTasks weddingId={weddingId} />} />
+        <Route
+          index
+          element={
+            <>
+              <CollabTasks weddingId={weddingId} />
+              <GetTheApp weddingId={weddingId} variant="helper" />
+            </>
+          }
+        />
         <Route path="*" element={<Navigate to="/hq/" replace />} />
       </Routes>
     </Shell>

@@ -1,4 +1,4 @@
-import { installHqHead, loadedStaticUrls, registerHqServiceWorker } from './pwa';
+import { installHqHead, loadedStaticUrls, registerHqServiceWorker, requestShellCache } from './pwa';
 
 function seedHead() {
   document.head.innerHTML =
@@ -87,4 +87,25 @@ test('first install (no controller) offers no update; failures are swallowed', a
   const dispose = await registerHqServiceWorker({ container: f.container, onUpdate });
   expect(typeof dispose).toBe('function');
   expect(() => dispose()).not.toThrow();
+});
+
+describe('requestShellCache', () => {
+  it('asks the active HQ worker to cache the loaded app files (the existing CACHE_URLS message)', async () => {
+    const postMessage = jest.fn();
+    const getRegistration = jest.fn(async () => ({ active: { postMessage } }));
+    const ok = await requestShellCache({
+      container: { getRegistration } as unknown as ServiceWorkerContainer,
+      urls: () => ['/static/js/main.abc.js'],
+    });
+    expect(ok).toBe(true);
+    expect(getRegistration).toHaveBeenCalledWith('/hq/');
+    expect(postMessage).toHaveBeenCalledWith({ type: 'CACHE_URLS', urls: ['/static/js/main.abc.js'] });
+  });
+
+  it('is false without a worker, without an active one, or when the lookup throws', async () => {
+    expect(await requestShellCache({ container: undefined as unknown as ServiceWorkerContainer })).toBe(false);
+    expect(await requestShellCache({ container: { getRegistration: async () => undefined } as unknown as ServiceWorkerContainer })).toBe(false);
+    expect(await requestShellCache({ container: { getRegistration: async () => ({ active: null }) } as unknown as ServiceWorkerContainer })).toBe(false);
+    expect(await requestShellCache({ container: { getRegistration: async () => { throw new Error('x'); } } as unknown as ServiceWorkerContainer })).toBe(false);
+  });
 });

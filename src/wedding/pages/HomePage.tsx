@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useWedding } from '../WeddingContext';
 import { useBudgetData, useTargets, useTasks } from '../hooks';
+import { InstallAppCard } from '../components/InstallAppCard';
 import { Countdown } from '../components/Countdown';
 import { BudgetRing } from '../components/BudgetRing';
 import { TargetCard } from '../components/TargetCard';
@@ -31,6 +32,7 @@ export function HomePage() {
 
   return (
     <>
+      <InstallAppCard variant="banner" />
       <Countdown label="Until the wedding" target={new Date(wedding.wedding_date)} />
       {wedding.honeymoon_start && (
         <Countdown label="Until the honeymoon" target={jhbInstant(wedding.honeymoon_start)} compact

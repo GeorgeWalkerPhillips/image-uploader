@@ -408,7 +408,7 @@ function WeddingPlanner() {
             <ul className={styles.trustBar}>
               <li>One-time payment</li>
               <li>Partner and helpers included</li>
-              <li>Works offline on your phone</li>
+              <li>View your plan offline</li>
             </ul>
           </div>
           <Phone image={HERO_IMAGE} eager className={styles.heroPhone} />
@@ -563,7 +563,7 @@ function WeddingPlanner() {
               <li><FaCheck aria-hidden="true" /> Your partner, with full access</li>
               <li><FaCheck aria-hidden="true" /> Up to 10 helpers on assigned tasks</li>
               <li><FaCheck aria-hidden="true" /> Budget, tasks, calendar, guests, honeymoon</li>
-              <li><FaCheck aria-hidden="true" /> Offline reading and phone install</li>
+              <li><FaCheck aria-hidden="true" /> Offline viewing once saved, and phone install</li>
               <li><FaCheck aria-hidden="true" /> No subscription</li>
             </ul>
             {entitled ? (

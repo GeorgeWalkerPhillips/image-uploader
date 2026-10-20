@@ -38,6 +38,14 @@ interface Snapshot {
 
 export const storageKey = (userId: string): string => `${CACHE_PREFIX}${userId}`;
 
+// When this user last tapped "Save for offline" (a plain timestamp, no data).
+export const LAST_SAVE_PREFIX = `${PREFIX}last-offline-save:`;
+export const lastSaveKey = (userId: string): string => `${LAST_SAVE_PREFIX}${userId}`;
+// Device-level (not per user) keys: the install-suggestion dismissal. They go on
+// sign-out with everything else under the prefix, but another account signing in
+// does not need them wiped.
+const isPerUserKey = (k: string): boolean => k.startsWith(CACHE_PREFIX) || k.startsWith(LAST_SAVE_PREFIX);
+
 export function isPersistableKey(queryKey: readonly unknown[]): boolean {
   return typeof queryKey[0] === 'string' && ALLOWED_ROOTS.includes(queryKey[0]);
 }
@@ -57,6 +65,7 @@ export function defaultStorage(): Storage | null {
 export function clearUser(userId: string, storage: Storage | null = defaultStorage()): void {
   try {
     storage?.removeItem(storageKey(userId));
+    storage?.removeItem(lastSaveKey(userId));
   } catch {
     /* ignore */
   }
@@ -81,11 +90,11 @@ export function clearAll(storage: Storage | null = defaultStorage()): void {
 export function clearOthers(userId: string, storage: Storage | null = defaultStorage()): void {
   if (!storage) return;
   try {
-    const keep = storageKey(userId);
+    const keep = [storageKey(userId), lastSaveKey(userId)];
     const keys: string[] = [];
     for (let i = 0; i < storage.length; i += 1) {
       const k = storage.key(i);
-      if (k && k.startsWith(PREFIX) && k !== keep) keys.push(k);
+      if (k && isPerUserKey(k) && !keep.includes(k)) keys.push(k);
     }
     keys.forEach((k) => storage.removeItem(k));
   } catch {
@@ -101,17 +110,42 @@ export function snapshotOf(client: QueryClient): StoredQuery[] {
     .map((q) => ({ queryKey: [...q.queryKey], data: q.state.data, updatedAt: q.state.dataUpdatedAt }));
 }
 
-// Writes the current cache. An empty cache is not written (it would erase the
-// last good copy before the first fetch lands). Quota errors are ignored.
-export function save(client: QueryClient, userId: string, storage: Storage | null = defaultStorage(), now = Date.now()): void {
-  if (!storage || !userId) return;
+// Writes the current cache and says whether it landed. An empty cache is not
+// written (it would erase the last good copy before the first fetch lands).
+// Quota errors are swallowed (the cache is a nicety) but reported as `false`.
+export function flushNow(client: QueryClient, userId: string, storage: Storage | null = defaultStorage(), now = Date.now()): boolean {
+  if (!storage || !userId) return false;
   const queries = snapshotOf(client);
-  if (queries.length === 0) return;
+  if (queries.length === 0) return false;
   const snap: Snapshot = { v: VERSION, userId, savedAt: now, queries };
   try {
     storage.setItem(storageKey(userId), JSON.stringify(snap));
+    return true;
   } catch {
-    /* quota or blocked storage: the cache is a nicety */
+    return false;
+  }
+}
+
+export function save(client: QueryClient, userId: string, storage: Storage | null = defaultStorage(), now = Date.now()): void {
+  flushNow(client, userId, storage, now);
+}
+
+export function readLastSave(userId: string, storage: Storage | null = defaultStorage()): number | null {
+  if (!storage || !userId) return null;
+  try {
+    const n = Number(storage.getItem(lastSaveKey(userId)));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeLastSave(userId: string, storage: Storage | null = defaultStorage(), now = Date.now()): void {
+  if (!storage || !userId) return;
+  try {
+    storage.setItem(lastSaveKey(userId), String(now));
+  } catch {
+    /* ignore */
   }
 }
 

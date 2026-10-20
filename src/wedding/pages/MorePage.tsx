@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useWedding } from '../WeddingContext';
 import { useSignOut } from '../useSignOut';
+import { GetTheApp } from '../components/GetTheApp';
 import styles from '../wedding.module.css';
 
 const LINKS: ReadonlyArray<{ to: string; label: string }> = [
@@ -22,7 +23,7 @@ const LINKS: ReadonlyArray<{ to: string; label: string }> = [
 ];
 
 export function MorePage() {
-  const { member } = useWedding();
+  const { member, wedding } = useWedding();
   const signOut = useSignOut();
   const out = () => void signOut();
 
@@ -36,6 +37,7 @@ export function MorePage() {
           Sign out
         </button>
       </section>
+      <GetTheApp weddingId={wedding.id} variant="partner" />
       <ul className={styles.menu}>
         {LINKS.map((l) => (
           <li key={l.to}>

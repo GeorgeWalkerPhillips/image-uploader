@@ -295,6 +295,16 @@ describe('landing page section', () => {
     expect(screen.getAllByRole('link', { name: /Wedding Planner/ }).length).toBeGreaterThan(1);
   });
 
+  it('describes offline use precisely in the planner features list', () => {
+    render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('View your plan offline: install it on your phone and save it for offline')).toBeInTheDocument();
+    expect(screen.queryByText(/works offline/i)).not.toBeInTheDocument();
+  });
+
   it('lists the planner as included only on The Whole Reel card', () => {
     render(
       <MemoryRouter>
@@ -409,6 +419,23 @@ describe('SEO and content', () => {
     const { container } = renderAt('/wedding-planner');
     const all = container.textContent + JSON.stringify(ldBlocks(container)) + FAQ_ITEMS.map((i) => i.a).join(' ');
     expect(all).not.toMatch(/\brated\b|\bstars?\b|testimonial|trusted by|\breviews?\b|award|\d+\s?(\+\s?)?(couples|users|weddings)\b/i);
+  });
+
+  it('describes offline use precisely: viewing a saved plan, not full offline working', () => {
+    const { container } = renderAt('/wedding-planner');
+    const all = container.textContent + JSON.stringify(ldBlocks(container)) + FAQ_ITEMS.map((i) => i.a).join(' ') + DESCRIPTION;
+    expect(all).not.toMatch(/works? offline/i);
+    expect(container.textContent).toMatch(/View your plan offline/);
+    expect(container.textContent).toMatch(/Save for offline/);
+    expect(container.textContent).toMatch(/Changes, and receipt files, need a connection/);
+  });
+
+  it('the FAQ says how installing works on iPhone and Android, honestly', () => {
+    const item = FAQ_ITEMS.find((i) => /offline/i.test(i.q));
+    expect(item.a).toMatch(/iPhone, install through Safari: tap Share, then Add to Home Screen/);
+    expect(item.a).toMatch(/Android shows an Install button/);
+    expect(item.a).toMatch(/Save for offline/);
+    expect(item.a).toMatch(/need a connection/);
   });
 
   it('links to the key internal pages', () => {

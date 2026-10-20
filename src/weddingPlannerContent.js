@@ -11,7 +11,7 @@ export const IMAGE_DIR = '/wedding-planner';
 
 export const TITLE = 'Wedding Planner App for South African Couples | Valere';
 export const DESCRIPTION =
-  'Plan your wedding together: budget tracker, vendor quotes, tasks for your wedding party, guest list and honeymoon. One payment, works offline.';
+  'Plan your wedding together: budget tracker, vendor quotes, tasks for your wedding party, guest list and honeymoon. One payment, view it offline.';
 export const H1 = 'Wedding planner app for South African couples';
 
 export const OG_IMAGE = {
@@ -155,12 +155,13 @@ export const DEEP_DIVES = [
   },
   {
     id: 'offline',
-    title: 'Works offline and installs on your phone',
-    text: 'Open the planner on your phone and add it to your home screen. After it has loaded once you can read your plan without signal, at the venue or in a shop. When you are back online, changes sync live between you and your partner.',
+    title: 'View your plan offline: install it on your phone and save it for offline',
+    text: 'Add the planner to your phone’s home screen, then tap Save for offline while you have signal. After that you can view your plan without a connection, at the venue or in a shop. Changes, and receipt files, need a connection; when you are back online, changes sync live between you and your partner.',
     bullets: [
-      'Install from Safari on iPhone or Chrome on Android, with no app store',
-      'Read your last saved plan offline',
-      'Live sync between partners when you are connected',
+      'iPhone: install from Safari with Share, then Add to Home Screen',
+      'Android: tap the Install button, or use the browser menu',
+      'Tap Save for offline to keep your plan on your phone',
+      'Viewing only: changes and receipts need a connection',
       'An obvious banner tells you when you are offline',
     ],
     images: ['offline'],
@@ -287,7 +288,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'What is included in the Wedding Planner?',
-    a: 'The budget tracker with quotes, invoices and payments, vendor quote comparison, tasks you can assign, a calendar with optional email reminders, a guest list with RSVPs and CSV import, a honeymoon planner, a purchase checklist with receipts, data export, and offline use on your phone.',
+    a: 'The budget tracker with quotes, invoices and payments, vendor quote comparison, tasks you can assign, a calendar with optional email reminders, a guest list with RSVPs and CSV import, a honeymoon planner, a purchase checklist with receipts, data export, and viewing your saved plan offline on your phone.',
   },
   {
     q: 'Who can I invite, and do they have to pay?',
@@ -298,8 +299,8 @@ export const FAQ_ITEMS = [
     a: 'No. Helpers see only the tasks assigned to them. Your budget, quotes, payments, files, guest list and calendar stay private to you and your partner.',
   },
   {
-    q: 'Does it work offline, and on iPhone and Android?',
-    a: 'Yes. It runs in your phone browser, so there is no app store. On iPhone open it in Safari and use Share, then Add to Home Screen. On Android use the browser menu and choose Install app or Add to Home screen. Once loaded it can be read without signal, and it syncs again when you are back online.',
+    q: 'Can I view it offline, and does it work on iPhone and Android?',
+    a: 'You can view your plan offline: install it on your phone, then tap Save for offline while you are connected. Changes and receipt files need a connection, and everything syncs again when you are back online. There is no app store. On iPhone, install through Safari: tap Share, then Add to Home Screen. Android shows an Install button, or use the browser menu and choose Install app or Add to Home screen. If you opened the link inside Instagram or Facebook, open it in your browser first.',
   },
   {
     q: 'Is my data private?',

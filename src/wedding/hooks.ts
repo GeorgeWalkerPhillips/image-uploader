@@ -5,6 +5,7 @@ import { deleteRow, fetchMemberNames, fetchRows, saveRow, updateWedding } from '
 import type { OrderBy, WeddingTable } from './api';
 import { useWedding } from './WeddingContext';
 import { assertOnline } from './useOnline';
+import { ROW_ORDER } from './lib/rowOrder';
 import { computeMetrics } from './lib/budget';
 import type { Metrics } from './lib/budget';
 import type { CalendarEventRow, ItineraryDayRow } from './lib/calendar';
@@ -99,9 +100,9 @@ export interface BudgetData {
 
 // Everything the dashboard and targets need to roll up money.
 export function useBudgetData(weddingId: string): BudgetData {
-  const categories = useRows<Category>('wedding_categories', weddingId, { column: 'sort_order' });
+  const categories = useRows<Category>('wedding_categories', weddingId, ROW_ORDER.wedding_categories);
   const lines = useRows<BudgetLine>('wedding_budget_lines', weddingId);
-  const invoices = useRows<Invoice>('wedding_invoices', weddingId, { column: 'due_on' });
+  const invoices = useRows<Invoice>('wedding_invoices', weddingId, ROW_ORDER.wedding_invoices);
   const payments = useRows<Payment>('wedding_payments', weddingId);
   const savings = useRows<Saving>('wedding_savings', weddingId);
 
@@ -142,27 +143,27 @@ export function useBudgetData(weddingId: string): BudgetData {
 }
 
 export const useTargets = (weddingId: string) =>
-  useRows<Target>('wedding_targets', weddingId, { column: 'sort_order' });
-export const useTasks = (weddingId: string) => useRows<Task>('wedding_tasks', weddingId, { column: 'due_on' });
+  useRows<Target>('wedding_targets', weddingId, ROW_ORDER.wedding_targets);
+export const useTasks = (weddingId: string) => useRows<Task>('wedding_tasks', weddingId, ROW_ORDER.wedding_tasks);
 export const useEvents = (weddingId: string) =>
-  useRows<CalendarEventRow>('wedding_events', weddingId, { column: 'starts_at' });
+  useRows<CalendarEventRow>('wedding_events', weddingId, ROW_ORDER.wedding_events);
 export const useItinerary = (weddingId: string) =>
-  useRows<ItineraryDayRow>('wedding_itinerary_days', weddingId, { column: 'day_number' });
+  useRows<ItineraryDayRow>('wedding_itinerary_days', weddingId, ROW_ORDER.wedding_itinerary_days);
 // The editable itinerary (every column), as opposed to the calendar's slimmer view.
 export const useItineraryDays = (weddingId: string) =>
-  useRows<ItineraryDay>('wedding_itinerary_days', weddingId, { column: 'day_number' });
+  useRows<ItineraryDay>('wedding_itinerary_days', weddingId, ROW_ORDER.wedding_itinerary_days);
 export const useBookings = (weddingId: string) =>
-  useRows<Booking>('wedding_bookings', weddingId, { column: 'starts_on' });
+  useRows<Booking>('wedding_bookings', weddingId, ROW_ORDER.wedding_bookings);
 export const usePackingItems = (weddingId: string) =>
-  useRows<PackingItem>('wedding_packing_items', weddingId, { column: 'created_at' });
+  useRows<PackingItem>('wedding_packing_items', weddingId, ROW_ORDER.wedding_packing_items);
 export const useTravelDocs = (weddingId: string) =>
-  useRows<TravelDoc>('wedding_travel_docs', weddingId, { column: 'created_at' });
+  useRows<TravelDoc>('wedding_travel_docs', weddingId, ROW_ORDER.wedding_travel_docs);
 export const usePurchaseItems = (weddingId: string) =>
-  useRows<PurchaseItem>('wedding_purchase_items', weddingId, { column: 'created_at' });
+  useRows<PurchaseItem>('wedding_purchase_items', weddingId, ROW_ORDER.wedding_purchase_items);
 export const useQuotes = (weddingId: string) =>
-  useRows<Quote>('wedding_quotes', weddingId, { column: 'created_at', ascending: false });
+  useRows<Quote>('wedding_quotes', weddingId, ROW_ORDER.wedding_quotes);
 export const useVendors = (weddingId: string) =>
-  useRows<Vendor>('wedding_vendors', weddingId, { column: 'name' });
+  useRows<Vendor>('wedding_vendors', weddingId, ROW_ORDER.wedding_vendors);
 
 export type PayerLabels = Record<Payer, string>;
 

@@ -146,12 +146,49 @@ HQ always lives at `/hq/` (with the trailing slash) because the worker's scope i
 `/hq/`. When a new version is deployed you get an "Update available" toast with a
 Reload button. The worker is registered in production builds only.
 
-**Install on iPhone (Safari)**: open the HQ address, sign in, tap Share, then
-"Add to Home Screen". Open it from the new icon. (In-app browsers such as Instagram
-cannot install; open the link in Safari first.)
+### Install button and Save for offline (`useInstallApp.ts`, `components/InstallAppCard.tsx`, `OfflineSaveCard.tsx`)
 
-**Install on Android (Chrome)**: open the HQ address, sign in, menu, then "Install app"
-or "Add to Home screen".
+**Install.** `installStore.ts` listens for `beforeinstallprompt` from the moment the HQ
+chunk loads (before the manifest is injected and before the gate resolves; `usePwa`
+also calls it, idempotently), calls `preventDefault()` and keeps the event, because
+the browser fires it once per page load. `useInstallApp()` returns the platform
+(`lib/installPlatform.ts`, pure and unit-tested over a table of user agents), whether a
+prompt is ready, and whether the app is already installed (`display-mode: standalone`,
+iOS `navigator.standalone` or the `appinstalled` event). Installed means no install UI
+at all. `InstallAppCard` shows: a dismissible banner at the top of Home (couple only), a
+permanent "Get the app" section in More, and the same section in the helper app. If the
+user dismisses the browser's prompt or the banner, that is remembered for 7 days under
+`wedding-hq:install-dismissed` (cleared on sign-out with the other `wedding-hq:` keys);
+the banner stays away and the More card softens but keeps an install route.
+
+**Save for offline.** The "Save everything for offline" button (More; helpers get
+"Save my tasks for offline") fetches, three at a time, every query in the persisted
+allowlist (`lib/offlineSave.ts`: the `REALTIME_TABLES`, membership, member names, team
+and planner status for a couple member; only status, wedding header, team names and
+assigned tasks for a helper) using the same keys and sort order as the screens
+(`lib/rowOrder.ts`), shows "Saving 7 of 21...", tolerates single failures ("Saved 20 of
+21 - couldn't save Guest list, try again"), then writes the offline copy immediately
+(`persist.flushNow`, instead of waiting for the debounced save), stores the time under
+`wedding-hq:last-offline-save:<user id>` and asks the worker to cache the app files
+(the existing `CACHE_URLS` message; `sw.js` is unchanged and still never caches API
+responses). It is disabled while offline. Attachments (receipts, PDFs) are never saved.
+The copy is the same 7 day localStorage copy as above: opening the app online
+refreshes it, and it is removed on sign-out like the rest.
+
+**What is and is not possible**
+
+| | iPhone / iPad Safari | Chrome / Firefox on iOS 16.4+ | In-app browsers (Instagram, Facebook, WhatsApp) | Android Chrome / Samsung / Edge | Desktop Chrome / Edge |
+|---|---|---|---|---|---|
+| One-tap install button | No (Apple allows none) | No | No | Yes, when the browser offers it | Yes |
+| Install | Share, then Add to Home Screen | Share or the menu, then Add to Home Screen | Not possible: open in Safari or the browser first | Install button, or menu then Install app | Install button or address bar icon |
+| Save for offline | Yes | Yes | Not useful (cannot install) | Yes | Yes |
+
+Notes. The browser decides whether to fire the install prompt (criteria, engagement,
+and not shortly after a dismissal), so the button appears only when it has; otherwise the
+card says "Use your browser menu: Install app / Add to Home screen". On iPhone the Home
+Screen app keeps its own storage, separate from Safari: sign in again there, then tap
+Save for offline inside it. Firefox on Android has no install prompt (menu only).
+Offline is read-only: writes are never queued.
 
 ## Testing
 
@@ -164,7 +201,8 @@ REACT_APP_SUPABASE_URL=https://example.supabase.co REACT_APP_SUPABASE_ANON_KEY=d
 Notable suites: `lib/realtime.test.ts` (event to key mapping, debounce, cleanup),
 `lib/persist.test.ts` and `Persistence.test.tsx` (per-user keys, expiry, clear on
 sign-out), `lib/swRules.test.ts` (runs the real `sw.js` in a `vm` sandbox),
-`pwa.test.ts`. After a build, confirm `build/hq/sw.js` and
+`pwa.test.ts`, `lib/installPlatform.test.ts`, `useInstallApp.test.tsx`,
+`components/InstallAppCard.test.tsx`, `components/OfflineSaveCard.test.tsx`. After a build, confirm `build/hq/sw.js` and
 `build/hq/manifest.webmanifest` exist and that `build/static/js/main.*.js` has no HQ
 code (HQ is a lazy chunk).
 
@@ -179,8 +217,10 @@ code (HQ is a lazy chunk).
   says Live.
 - **Offline shows "Could not load"**: that screen was never opened online on this
   device, or the 7 day copy expired.
-- **No "Install" option**: it must be a production build on HTTPS, signed in as a
-  member, at `/hq/`. In dev (`npm start`) the worker is intentionally not registered.
+- **No "Install" button**: it must be a production build on HTTPS, signed in as a
+  member, at `/hq/`; the browser may also withhold it (use its menu instead). On iPhone
+  there is never a button: use Safari's Share, then Add to Home Screen. In dev
+  (`npm start`) the worker is intentionally not registered.
 - **Stuck on an old version**: close all HQ windows and reopen, or use the Update
   toast. To reset, clear site data for the domain (also removes the offline copy).
 - **Service worker file served wrong**: `/hq/sw.js` must be JavaScript with

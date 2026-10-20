@@ -127,3 +127,21 @@ export async function registerHqServiceWorker(opts: RegisterOptions): Promise<()
   }
   return () => disposers.forEach((d) => d());
 }
+
+// Asks the already-registered HQ worker to cache the app files the page has
+// loaded (reusing its CACHE_URLS message; the worker's own allowlist decides
+// what is stored, and it never caches API or Supabase responses). Resolves
+// false when there is no active worker (dev build, unsupported browser, first
+// visit before the worker took over); it has no way to confirm the copy landed.
+export async function requestShellCache(opts: { container?: ServiceWorkerContainer; urls?: () => string[] } = {}): Promise<boolean> {
+  const container = opts.container ?? (typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined);
+  if (!container || typeof container.getRegistration !== 'function') return false;
+  try {
+    const reg = await container.getRegistration(HQ_SCOPE);
+    if (!reg?.active) return false;
+    reg.active.postMessage({ type: 'CACHE_URLS', urls: (opts.urls ?? (() => loadedStaticUrls()))() });
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -182,7 +182,9 @@ backfill).
 Realtime sync (`lib/realtime.ts`), a per-user offline read cache in localStorage
 (`wedding-hq:` prefix, cleared on sign-out) and a `/hq/`-scoped PWA
 (`public/hq/sw.js`, registered only from inside `WeddingApp`; `vercel.json` sets its
-headers) live in the lazy chunk and must never touch the main app. Full guide:
+headers) live in the lazy chunk and must never touch the main app. The "Install app" /
+"Save for offline" cards live there too (`installStore.ts` captures `beforeinstallprompt` early;
+offline save reuses `persist.ALLOWED_ROOTS` as its only allowlist; offline is view-only). Full guide:
 `WEDDING_HQ.md`.
 
 The `/wedding-planner` marketing page is SEO-driven: copy, FAQ, images and JSON-LD

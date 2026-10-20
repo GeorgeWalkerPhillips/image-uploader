@@ -6,14 +6,15 @@ import { fetchReminderSettings, insertRows, saveReminderSettings } from './api';
 import { useRows } from './hooks';
 import { useWedding } from './WeddingContext';
 import { assertOnline } from './useOnline';
+import { ROW_ORDER } from './lib/rowOrder';
 import { logActivity } from './lib/activity';
 import type { ActivityEntry, Guest } from './types';
 
-export const useGuests = (weddingId: string) => useRows<Guest>('wedding_guests', weddingId, { column: 'name' });
+export const useGuests = (weddingId: string) => useRows<Guest>('wedding_guests', weddingId, ROW_ORDER.wedding_guests);
 
 export const ACTIVITY_PAGE = 20;
 export const useActivity = (weddingId: string) =>
-  useRows<ActivityEntry>('wedding_activity', weddingId, { column: 'created_at', ascending: false, limit: ACTIVITY_PAGE });
+  useRows<ActivityEntry>('wedding_activity', weddingId, ROW_ORDER.wedding_activity);
 
 // Returns a function that records "<me> <action> <subject>" in the feed after a
 // successful action. Fire and forget: it never throws, never blocks, never

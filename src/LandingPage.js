@@ -43,7 +43,7 @@ const PLANNER_FEATURES = [
   { icon: FaCalendarAlt, text: 'Calendar with email reminders' },
   { icon: FaUserFriends, text: 'Guest list with RSVPs and CSV import' },
   { icon: FaPlane, text: 'A honeymoon planner for the trip after' },
-  { icon: FaMobileAlt, text: 'Works offline on your phone, and installs to your home screen' },
+  { icon: FaMobileAlt, text: 'View your plan offline: install it on your phone and save it for offline' },
   { icon: FaLock, text: 'Private by design: only the people you invite' },
 ];
 

@@ -6,6 +6,7 @@ import { Skeleton } from '../components/Skeleton';
 import { ErrorRetry } from '../components/ErrorRetry';
 import { VendorForm } from '../components/VendorForm';
 import { ContactLinks } from '../components/ContactLinks';
+import { ROW_ORDER } from '../lib/rowOrder';
 import { quoteCountsByVendor } from '../lib/vendorForm';
 import type { VendorPayload } from '../lib/vendorForm';
 import type { Category, Vendor } from '../types';
@@ -17,7 +18,7 @@ type Mode = { kind: 'closed' } | { kind: 'new' } | { kind: 'edit'; vendor: Vendo
 export function VendorsPage() {
   const { wedding } = useWedding();
   const vendorsQuery = useVendors(wedding.id);
-  const categoriesQuery = useRows<Category>('wedding_categories', wedding.id, { column: 'sort_order' });
+  const categoriesQuery = useRows<Category>('wedding_categories', wedding.id, ROW_ORDER.wedding_categories);
   const quotesQuery = useQuotes(wedding.id);
   // Deleting a vendor detaches it from quotes, invoices and budget lines, so those screens refetch.
   const save = useSaveRow<Vendor>('wedding_vendors', wedding.id, ['wedding_quotes', 'wedding_invoices', 'wedding_budget_lines']);
