@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthUser } from '../useAuthUser';
+import { statusKey } from '../teamHooks';
 import { useOnline } from '../useOnline';
 import { requestShellCache } from '../pwa';
 import { flushNow, PERSIST_MAX_AGE_MS, readLastSave, writeLastSave } from '../lib/persist';
@@ -30,6 +31,8 @@ export function OfflineSaveCard({ weddingId, variant }: Props) {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [lastSaved, setLastSaved] = useState<number | null>(() => readLastSave(userId));
   const busy = useRef(false);
+  const currentUser = useRef(userId);
+  currentUser.current = userId;
   const helper = variant === 'helper';
 
   const save = async () => {
@@ -41,6 +44,13 @@ export function OfflineSaveCard({ weddingId, variant }: Props) {
       const result = await runOfflineSave(qc, jobs, {
         onProgress: (done, total) => setPhase({ kind: 'saving', done, total }),
       });
+      // Signed out, switched account, or lost access while the fetches ran: do
+      // not write anything (the sign-out / access wipe must stay final).
+      const access = (qc.getQueryData(statusKey(userId)) as { access?: string | null } | undefined)?.access;
+      if (currentUser.current !== userId || (access !== 'partner' && access !== 'collaborator')) {
+        setPhase({ kind: 'idle' });
+        return;
+      }
       // Write the copy now instead of waiting for the debounced save.
       const stored = result.saved > 0 && flushNow(qc, userId);
       if (stored) {

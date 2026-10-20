@@ -121,6 +121,19 @@ describe('partner', () => {
   });
 });
 
+describe('lost access mid-save', () => {
+  it('writes nothing and records no time when the user no longer has access', async () => {
+    db.status = { entitled: true, wedding_id: null, access: null, role: null };
+    renderPage(<OfflineSaveCard weddingId={WID} variant="partner" />);
+    await userEvent.click(screen.getByRole('button', { name: 'Save everything for offline' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save everything for offline' })).toBeEnabled());
+    expect(localStorage.getItem(storageKey('u-ada'))).toBeNull();
+    expect(localStorage.getItem(lastSaveKey('u-ada'))).toBeNull();
+    expect(screen.queryByText(/Saved \d+ of \d+/)).not.toBeInTheDocument();
+    expect(requestShellCache).not.toHaveBeenCalled();
+  });
+});
+
 describe('helper', () => {
   it('refreshes only what a helper may hold', async () => {
     db.status = { entitled: false, wedding_id: WID, access: 'collaborator', role: null };
