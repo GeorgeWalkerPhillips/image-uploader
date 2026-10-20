@@ -13,6 +13,16 @@ const FEATURES = [
 
 const POPULAR_TIER = 'growth';
 
+// Display-only taglines; pricing data itself lives in pricingTiers.js.
+const EYEBROWS = {
+  free: 'Try it out',
+  starter: 'Small gatherings',
+  growth: 'The classic wedding',
+  unlimited: 'Every last guest',
+};
+
+const HEADING_WORDS = 'Create Your Event'.split(' ');
+
 export function PricingModal({ isOpen, onClose, onSelectPlan, freeTierUsed }) {
   const [loadingTier, setLoadingTier] = useState(null);
 
@@ -36,11 +46,19 @@ export function PricingModal({ isOpen, onClose, onSelectPlan, freeTierUsed }) {
           ✕
         </button>
 
-        <h1>Create Your Event</h1>
+        <h1 aria-label="Create Your Event">
+          {HEADING_WORDS.map((word, i) => (
+            <span className="word-mask" key={word} aria-hidden="true">
+              <span className="word" style={{ '--i': i }}>
+                {word}
+              </span>
+            </span>
+          ))}
+        </h1>
         <p className="subtitle">Priced by guest count, pay once, no subscription</p>
 
         <div className="pricing-grid">
-          {TIER_ORDER.map((tierKey) => {
+          {TIER_ORDER.map((tierKey, index) => {
             const tier = TIERS[tierKey];
             const isFree = tierKey === 'free';
             const isPopular = tierKey === POPULAR_TIER;
@@ -50,9 +68,11 @@ export function PricingModal({ isOpen, onClose, onSelectPlan, freeTierUsed }) {
               <div
                 key={tierKey}
                 className={`pricing-card${isPopular ? ' featured' : ''}`}
+                style={{ '--i': index }}
               >
                 {isPopular && <div className="badge">MOST POPULAR</div>}
 
+                <p className="eyebrow">{EYEBROWS[tierKey]}</p>
                 <h2>{tier.name}</h2>
                 <div className="price">
                   {tier.display}
@@ -67,7 +87,9 @@ export function PricingModal({ isOpen, onClose, onSelectPlan, freeTierUsed }) {
                 <ul className="features">
                   {[...FEATURES, weddingPlannerIncludedLine(tierKey)].filter(Boolean).map((feature) => (
                     <li key={feature}>
-                      <FaCheck className="check" />
+                      <span className="check-badge">
+                        <FaCheck className="check" />
+                      </span>
                       {feature}
                     </li>
                   ))}

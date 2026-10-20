@@ -739,3 +739,134 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+/* Hero photo stack — two real table-card photos, fanned like prints */
+.heroPhotos {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 44px auto 0;
+  height: clamp(250px, 56vw, 420px);
+}
+
+.heroPhoto {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border: 6px solid #fff;
+  border-radius: 6px;
+  box-shadow: 0 24px 48px rgba(17, 17, 17, 0.18);
+  animation: photoFloat 7s ease-in-out infinite;
+}
+
+.heroPhotoLeft {
+  transform: translateX(-52%) rotate(-6deg);
+  --rot: -6deg;
+  --shift: -52%;
+}
+
+.heroPhotoRight {
+  transform: translateX(52%) rotate(5deg);
+  --rot: 5deg;
+  --shift: 52%;
+  animation-delay: -3.5s;
+}
+
+@keyframes photoFloat {
+  0%,
+  100% {
+    transform: translate(var(--shift), 0) rotate(var(--rot));
+  }
+  50% {
+    transform: translate(var(--shift), -10px) rotate(var(--rot));
+  }
+}
+
+/* Scroll reveal — see useScrollReveal in LandingPage.js */
+.landing [data-reveal]:not([data-revealed]) {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+.landing [data-reveal] {
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Cards and steps stagger in once their section is revealed */
+.landing [data-revealed] .featureCard,
+.landing [data-revealed] .steps li,
+.landing [data-revealed] .pricingCard {
+  animation: riseIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing [data-revealed] .featureCard:nth-child(2n),
+.landing [data-revealed] .steps li:nth-child(2),
+.landing [data-revealed] .pricingCard:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.landing [data-revealed] .featureCard:nth-child(3n),
+.landing [data-revealed] .steps li:nth-child(3),
+.landing [data-revealed] .pricingCard:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.landing [data-revealed] .pricingCard:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+/* Mobile sticky CTA */
+.stickyCta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  display: flex;
+  justify-content: center;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  transform: translateY(110%);
+  transition: transform 0.35s ease;
+}
+
+.stickyCtaVisible {
+  transform: translateY(0);
+}
+
+.stickyCta .btnPrimary {
+  width: 100%;
+  max-width: 420px;
+}
+
+@media (min-width: 760px) {
+  .stickyCta {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroPhoto,
+  .landing [data-revealed] .featureCard,
+  .landing [data-revealed] .steps li,
+  .landing [data-revealed] .pricingCard {
+    animation: none;
+  }
+  .landing [data-reveal],
+  .stickyCta {
+    transition: none;
+  }
+}
