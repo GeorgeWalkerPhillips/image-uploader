@@ -13,23 +13,24 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-    <title>Wedding &amp; Event Photo Sharing App - No App Required | Valere</title>
+    <title>Valere: wedding &amp; event photo sharing app (South Africa)</title>
     <meta
       name="description"
-      content="Every guest's photos, one shared gallery. Guests scan a QR code and upload straight from their phone. No app download, no account needed. Free to start. Perfect for weddings, parties, and corporate events."
+      content="Valere is a South African wedding and event photo-sharing app. Guests scan a QR code and upload from their phone: no app, no account. First event free."
     />
     <meta name="keywords" content="wedding photo sharing app, wedding guest photos, shared photo gallery, QR code photo upload, event photo app, disposable camera app alternative" />
     <link rel="canonical" href="https://www.valere.co.za/" />
 
-    <meta property="og:title" content="Valere - Every Guest's Photos, One Wedding Gallery" />
-    <meta property="og:description" content="Guests scan a QR code and upload photos straight from their phone. No app, no account needed. Watch your shared gallery fill up live, then download everything as one ZIP." />
+    <meta property="og:title" content="Valere: wedding &amp; event photo sharing app (South Africa)" />
+    <meta property="og:description" content="Valere is a South African wedding photo-sharing app. Guests scan a QR code and upload photos from their phone. No app, no account. Watch your shared gallery fill up live, then download everything as one ZIP." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.valere.co.za/" />
     <meta property="og:image" content="https://www.valere.co.za/logo512.png" />
     <meta property="og:site_name" content="Valere" />
+    <meta property="og:locale" content="en_ZA" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Valere - Every Guest's Photos, One Wedding Gallery" />
+    <meta name="twitter:title" content="Valere: wedding &amp; event photo sharing app (South Africa)" />
     <meta name="twitter:description" content="No app to download, no account needed. Guests scan a QR code and upload photos straight into your shared event gallery." />
     <meta name="twitter:image" content="https://www.valere.co.za/logo512.png" />
 
@@ -52,18 +53,79 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "Valere",
-        "url": "https://www.valere.co.za/",
-        "applicationCategory": "PhotographyApplication",
-        "operatingSystem": "Any (Web-based)",
-        "description": "A shared photo gallery for weddings, parties, and events. Guests scan a QR code and upload photos straight from their phone with no app download or account required.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "ZAR",
-          "description": "First event free; additional events R50 flat, no subscription."
-        }
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://www.valere.co.za/#organization",
+            "name": "Valere",
+            "url": "https://www.valere.co.za/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://www.valere.co.za/logo512.png",
+              "width": 512,
+              "height": 512
+            },
+            "description": "Valere is a South African wedding and event photo-sharing app and wedding planner.",
+            "areaServed": "ZA",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "customer support",
+              "email": "georgewalkerphillips5@gmail.com",
+              "availableLanguage": "en"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://www.valere.co.za/#website",
+            "url": "https://www.valere.co.za/",
+            "name": "Valere",
+            "description": "Valere is a South African wedding and event photo-sharing app and wedding planner.",
+            "inLanguage": "en-ZA",
+            "publisher": { "@id": "https://www.valere.co.za/#organization" }
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://www.valere.co.za/#photo-app",
+            "name": "Valere",
+            "url": "https://www.valere.co.za/",
+            "applicationCategory": "PhotographyApplication",
+            "operatingSystem": "Any (Web-based)",
+            "description": "A shared photo gallery for weddings, parties and events. Guests scan a QR code and upload photos straight from their phone with no app download or account required.",
+            "inLanguage": "en-ZA",
+            "publisher": { "@id": "https://www.valere.co.za/#organization" },
+            "isPartOf": { "@id": "https://www.valere.co.za/#website" },
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "Taster",
+                "price": "0.00",
+                "priceCurrency": "ZAR",
+                "description": "One-time price per event, no subscription. Up to 5 guests, 5 photos per guest."
+              },
+              {
+                "@type": "Offer",
+                "name": "Gathering",
+                "price": "179.00",
+                "priceCurrency": "ZAR",
+                "description": "One-time price per event, no subscription. Up to 25 guests, 15 photos per guest."
+              },
+              {
+                "@type": "Offer",
+                "name": "Big Day",
+                "price": "399.00",
+                "priceCurrency": "ZAR",
+                "description": "One-time price per event, no subscription. Up to 50 guests, 25 photos per guest."
+              },
+              {
+                "@type": "Offer",
+                "name": "The Whole Reel",
+                "price": "999.00",
+                "priceCurrency": "ZAR",
+                "description": "One-time price per event, no subscription. Up to 500 guests, 50 photos per guest."
+              }
+            ]
+          }
+        ]
       }
     </script>
   </head>

@@ -162,7 +162,7 @@ async function makePlaceholderImage({ color, label }) {
       <text x="50%" y="50%" font-size="64" font-family="sans-serif" fill="white"
             text-anchor="middle" dominant-baseline="middle">${label}</text>
       <text x="50%" y="60%" font-size="28" font-family="sans-serif" fill="white" opacity="0.7"
-            text-anchor="middle">Capture by Val — demo photo</text>
+            text-anchor="middle">Valere — demo photo</text>
     </svg>`;
   return sharp(Buffer.from(svg)).jpeg({ quality: 82 }).toBuffer();
 }

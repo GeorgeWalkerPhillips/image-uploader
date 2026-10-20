@@ -195,3 +195,17 @@ from `scripts/generate-planner-screenshots.js` (mocked Supabase + entirely
 fictional fixtures in `scripts/planner-screenshot-fixtures.js`; run by hand, never
 in build/tests). Never put real couple, guest or supplier data in those fixtures.
 Page claims must stay true: no ratings, reviews, user counts or awards.
+
+## SEO and AI visibility (public pages)
+
+Public, indexable pages: `/`, `/wedding-planner`, `/about`, `/guides` and five `/guides/<slug>` pages,
+plus the policies. Entity data lives in `src/siteProfile.js` (Organization, WebSite, `SOCIAL_PROFILES`
+(empty until the owner supplies real URLs), `CONTACT_EMAIL`); `public/index.html` carries a static copy of
+the home `@graph` and `src/seoFiles.test.js` fails if the two drift. Copy for About is
+`src/aboutContent.js`, for guides `src/guides/content.js` (prices derived from `pricingTiers.js`; the
+FAQ JSON-LD is generated from the same data). Each page sets its head via `src/seo/usePageMeta.js`
+(restored on unmount) and emits JSON-LD blocks that reference the Organization by `@id`. New indexable routes
+must be added to `scripts/prerender.js`, `public/sitemap.xml`, `public/llms.txt`, and (after editing content)
+`node scripts/generate-llms-full.js` must be re-run. `scripts/indexnow.js` is run by hand after each deploy.
+Never add `/hq` to any public file. Brand in public copy is "Valere". Details and the owner checklist:
+`SEO_AND_AI_VISIBILITY.md`.

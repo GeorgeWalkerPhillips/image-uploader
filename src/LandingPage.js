@@ -191,6 +191,7 @@ function LandingPage() {
           <a href="#how-it-works">How it works</a>
           <a href="#pricing">Pricing</a>
           <Link to="/wedding-planner">Wedding Planner</Link>
+          <Link to="/guides">Guides</Link>
           <a href="#faq">FAQ</a>
         </nav>
         <div className={styles.landingNavActions}>
@@ -210,6 +211,7 @@ function LandingPage() {
       </header>
       <p className={styles.mobileSubNav}>
         <Link to="/wedding-planner">Wedding Planner &rarr;</Link>
+        <Link to="/guides">Guides &rarr;</Link>
       </p>
 
       <main>
@@ -511,6 +513,8 @@ function LandingPage() {
       <footer className={styles.landingFooter}>
         <p>&copy; {new Date().getFullYear()} Valere. All rights reserved.</p>
         <nav className={styles.landingFooterLinks}>
+          <Link to="/guides">Guides</Link>
+          <Link to="/about">About Valere</Link>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms and Conditions</Link>
           <Link to="/refund-policy">Refund Policy</Link>

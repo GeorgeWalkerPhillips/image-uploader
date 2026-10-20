@@ -16,6 +16,8 @@ import PrivacyPolicy from './PrivacyPolicy';
 import Terms from './Terms';
 import RefundPolicy from './RefundPolicy';
 import WeddingPlanner from './WeddingPlanner';
+import About from './About';
+import { GuidesIndex, GuidePage } from './guides/Guides';
 import './App.css';
 
 const WeddingApp = React.lazy(() => import('./wedding/WeddingApp'));
@@ -42,6 +44,9 @@ function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
         <Route path="/wedding-planner" element={<WeddingPlanner />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/guides" element={<GuidesIndex />} />
+        <Route path="/guides/:slug" element={<GuidePage />} />
         <Route
           path="/hq/*"
           element={

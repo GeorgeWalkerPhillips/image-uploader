@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './LegalPage.module.css';
+import { CONTACT_EMAIL } from './siteProfile';
 
 // TODO before launch: confirm the contact email, trading name, and the
 // 7-day/24-hour refund windows below match what you actually want to honor.
-const CONTACT_EMAIL = 'georgewalkerphillips5@gmail.com';
 const TRADING_NAME = 'Valere';
 
 function RefundPolicy() {

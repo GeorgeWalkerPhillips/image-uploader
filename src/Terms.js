@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './LegalPage.module.css';
+import { CONTACT_EMAIL } from './siteProfile';
 
 // TODO before launch: confirm the contact email and legal/trading name
 // below are correct for your business.
-const CONTACT_EMAIL = 'georgewalkerphillips5@gmail.com';
 const TRADING_NAME = 'Valere';
 
 function Terms() {

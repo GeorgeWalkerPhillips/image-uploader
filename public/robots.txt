@@ -1,4 +1,138 @@
+# Valere (https://www.valere.co.za)
+# Public pages are open to search engines and AI assistants. The signed-in
+# areas below are not meant to be indexed. (Other private routes are kept out
+# of search with noindex headers/tags rather than listed here.)
+
 User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Explicit groups for the major search and AI crawlers. A crawler that matches
+# a named group ignores the "*" group, so each group repeats the same Disallows.
+
+# Google Search
+User-agent: Googlebot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Bing Search (also feeds ChatGPT search and Copilot)
+User-agent: Bingbot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# OpenAI model training/crawling
+User-agent: GPTBot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# OpenAI search results (ChatGPT search)
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# OpenAI, fetches pages when a ChatGPT user asks
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Anthropic crawler
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Anthropic search results
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Anthropic, fetches pages when a Claude user asks
+User-agent: Claude-User
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Anthropic (legacy agent name)
+User-agent: anthropic-ai
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Perplexity search index
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Perplexity, fetches pages when a user asks
+User-agent: Perplexity-User
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Google AI (Gemini) usage control token
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Apple search and Siri
+User-agent: Applebot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Apple AI usage control token
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Common Crawl (open web dataset)
+User-agent: CCBot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Amazon / Alexa
+User-agent: Amazonbot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# DuckDuckGo AI answers
+User-agent: DuckAssistBot
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /unauthorized
+
+# Mistral, fetches pages when a Le Chat user asks
+User-agent: MistralAI-User
 Allow: /
 Disallow: /admin
 Disallow: /login

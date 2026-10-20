@@ -3,8 +3,9 @@
 // JSON-LD and the tests all read the same data. Claims here must stay true to
 // what the app does: no ratings, reviews, user counts or awards.
 import { WEDDING_PLANNER, TIERS, formatPrice } from './services/pricingTiers';
+import { SITE_URL, WEBSITE_ID, organizationNode } from './siteProfile';
 
-export const SITE_URL = 'https://www.valere.co.za';
+export { SITE_URL };
 export const PAGE_PATH = '/wedding-planner';
 export const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 export const IMAGE_DIR = '/wedding-planner';
@@ -351,13 +352,16 @@ export const APPLICATION_JSON_LD = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: `Valere ${WEDDING_PLANNER.name}`,
+  '@id': `${PAGE_URL}#app`,
   url: PAGE_URL,
   description: DESCRIPTION,
   applicationCategory: 'LifestyleApplication',
   operatingSystem: 'Web, iOS, Android (PWA)',
   image: OG_IMAGE.url,
   inLanguage: 'en-ZA',
-  publisher: { '@type': 'Organization', name: 'Valere', url: `${SITE_URL}/` },
+  isPartOf: { '@id': WEBSITE_ID },
+  // Full Organization node (same @id as everywhere else on the site).
+  publisher: organizationNode(),
   offers: {
     '@type': 'Offer',
     price: OFFER_PRICE,

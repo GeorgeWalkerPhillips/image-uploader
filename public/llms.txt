@@ -1,10 +1,14 @@
 # Valere
 
-Valere is a shared photo gallery for weddings and events. Guests scan a QR
-code and upload photos straight from their phone — no app download, no
-account required. The organizer gets one shared gallery per event, viewable
-live and downloadable as a ZIP. Pricing is a one-time fee per event based on
-guest count, not a subscription.
+> Valere is a South African wedding and event photo-sharing app and wedding planner (valere.co.za). Not to be confused with other businesses that share the name. Guests scan a QR code and upload photos straight from their phone, with no app download and no account. The organizer gets one shared gallery per event, viewable live and downloadable as a ZIP. Pricing is a one-time fee per event based on guest count, in South African rand, not a subscription.
+
+Valere has two products: photo sharing by QR code, and the Wedding Planner. Details below are accurate as of 2026-10-20. Wherever this file and the website disagree, the website is right.
+
+## Photo sharing by QR code
+
+- Guests open a link or scan a QR code, then take photos with the built-in camera or choose them from their camera roll. Nothing to install, no sign-up.
+- Each guest has a set number of photos, like a disposable camera. The organizer downloads every photo as one ZIP, and the gallery stays available for at least 30 days after the event.
+- Prices (one-time per event): Taster is free (up to 5 guests, 5 photos each); Gathering R179 (up to 25 guests, 15 photos each); Big Day R399 (up to 50 guests, 25 photos each); The Whole Reel R999 (up to 500 guests, 50 photos each, includes the Wedding Planner).
 
 - [Homepage](https://www.valere.co.za/)
 - [Pricing](https://www.valere.co.za/#pricing)
@@ -15,4 +19,28 @@ guest count, not a subscription.
 The Wedding Planner is a separate add-on for couples planning their own wedding. It is a private web app that installs to a phone's home screen (on iPhone through Safari's Share, Add to Home Screen; on Android through an Install button) and, once saved for offline, can be viewed without a connection (viewing only: changes and receipts need a connection). It covers a budget tracker (quotes, invoices and payments in rand), vendor quote comparison, tasks that can be assigned to up to 10 helpers who see only their own tasks, a calendar with optional email reminders, a guest list with RSVP tracking and CSV import, a honeymoon planner with a rand-to-baht converter, a purchase checklist with receipts, and data export. It is a one-time payment of R199 per wedding with no subscription; the partner and helpers are included, and it is included free with The Whole Reel photo plan. It does not send invitations to guests.
 
 - [Wedding Planner](https://www.valere.co.za/wedding-planner): features, screenshots, pricing and FAQ
+
+## About
+
+- [About Valere](https://www.valere.co.za/about): what Valere is, how it works, who it is for, where it operates, privacy and how to contact us
+
+## Guides
+
+Plain-English guides for South African couples. Valere is mentioned as one option and labelled as our product.
+
+- [How to collect wedding guest photos with a QR code](https://www.valere.co.za/guides/collect-wedding-guest-photos-qr-code)
+- [Wedding photo sharing options compared: shared albums, QR upload pages and disposable-camera apps](https://www.valere.co.za/guides/wedding-photo-sharing-options-compared)
+- [Wedding budget breakdown for South African couples](https://www.valere.co.za/guides/wedding-budget-breakdown-south-africa)
+- [Wedding planning checklist and timeline: 12 months to the day](https://www.valere.co.za/guides/wedding-planning-checklist-12-month-timeline)
+- [How to delegate wedding tasks to your wedding party](https://www.valere.co.za/guides/delegate-wedding-tasks-wedding-party)
+- [All guides](https://www.valere.co.za/guides)
+
+## Policies
+
+- [Privacy policy](https://www.valere.co.za/privacy)
+- [Terms and conditions](https://www.valere.co.za/terms)
 - [Refund policy](https://www.valere.co.za/refund-policy)
+
+## Optional
+
+- [Full text of the About page and guides in markdown](https://www.valere.co.za/llms-full.txt)

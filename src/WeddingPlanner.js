@@ -31,6 +31,7 @@ import {
   includedWith,
   plannerPriceText,
 } from './weddingPlannerContent';
+import { usePageMeta } from './seo/usePageMeta';
 import styles from './WeddingPlanner.module.css';
 
 export { plannerPriceText };
@@ -40,64 +41,14 @@ export { plannerPriceText };
 export const VERIFY_ATTEMPTS = 5;
 export const VERIFY_DELAY_MS = 3000;
 
-// Head tags this page owns. Existing tags from index.html are updated in place
-// and restored on the way out; missing ones are created and removed again.
-const META_TAGS = [
-  { sel: 'meta[name="description"]', tag: 'meta', key: { name: 'description' }, attr: 'content', value: DESCRIPTION },
-  { sel: 'meta[name="keywords"]', tag: 'meta', key: { name: 'keywords' }, attr: 'content', value: 'wedding planner app, wedding budget tracker, wedding planner South Africa, wedding checklist, wedding guest list RSVP, honeymoon planner' },
-  { sel: 'meta[name="robots"]', tag: 'meta', key: { name: 'robots' }, attr: 'content', value: 'index,follow,max-image-preview:large' },
-  { sel: 'link[rel="canonical"]', tag: 'link', key: { rel: 'canonical' }, attr: 'href', value: PAGE_URL },
-  { sel: 'meta[property="og:title"]', tag: 'meta', key: { property: 'og:title' }, attr: 'content', value: TITLE },
-  { sel: 'meta[property="og:description"]', tag: 'meta', key: { property: 'og:description' }, attr: 'content', value: DESCRIPTION },
-  { sel: 'meta[property="og:type"]', tag: 'meta', key: { property: 'og:type' }, attr: 'content', value: 'website' },
-  { sel: 'meta[property="og:url"]', tag: 'meta', key: { property: 'og:url' }, attr: 'content', value: PAGE_URL },
-  { sel: 'meta[property="og:locale"]', tag: 'meta', key: { property: 'og:locale' }, attr: 'content', value: 'en_ZA' },
-  { sel: 'meta[property="og:image"]', tag: 'meta', key: { property: 'og:image' }, attr: 'content', value: OG_IMAGE.url },
-  { sel: 'meta[property="og:image:width"]', tag: 'meta', key: { property: 'og:image:width' }, attr: 'content', value: String(OG_IMAGE.width) },
-  { sel: 'meta[property="og:image:height"]', tag: 'meta', key: { property: 'og:image:height' }, attr: 'content', value: String(OG_IMAGE.height) },
-  { sel: 'meta[property="og:image:alt"]', tag: 'meta', key: { property: 'og:image:alt' }, attr: 'content', value: OG_IMAGE.alt },
-  { sel: 'meta[name="twitter:card"]', tag: 'meta', key: { name: 'twitter:card' }, attr: 'content', value: 'summary_large_image' },
-  { sel: 'meta[name="twitter:title"]', tag: 'meta', key: { name: 'twitter:title' }, attr: 'content', value: TITLE },
-  { sel: 'meta[name="twitter:description"]', tag: 'meta', key: { name: 'twitter:description' }, attr: 'content', value: DESCRIPTION },
-  { sel: 'meta[name="twitter:image"]', tag: 'meta', key: { name: 'twitter:image' }, attr: 'content', value: OG_IMAGE.url },
-  { sel: 'meta[name="twitter:image:alt"]', tag: 'meta', key: { name: 'twitter:image:alt' }, attr: 'content', value: OG_IMAGE.alt },
-];
-
-// Sets document title and head meta for this route.
-function usePageMeta() {
-  useEffect(() => {
-    const prevTitle = document.title;
-    const restores = META_TAGS.map(({ sel, tag, key, attr, value }) => {
-      let el = document.head.querySelector(sel);
-      const created = !el;
-      if (!el) {
-        el = document.createElement(tag);
-        Object.entries(key).forEach(([k, v]) => el.setAttribute(k, v));
-        document.head.appendChild(el);
-      }
-      const prev = el.getAttribute(attr);
-      el.setAttribute(attr, value);
-      return () => {
-        if (created) el.remove();
-        else el.setAttribute(attr, prev ?? '');
-      };
-    });
-    // index.html carries the photo product's JSON-LD; it does not describe this
-    // page, so park it while the planner page is open.
-    const parked = Array.from(document.head.querySelectorAll('script[type="application/ld+json"]')).map((el) => {
-      const parent = el.parentNode;
-      const next = el.nextSibling;
-      el.remove();
-      return () => parent.insertBefore(el, next && next.parentNode === parent ? next : null);
-    });
-    document.title = TITLE;
-    return () => {
-      document.title = prevTitle;
-      restores.forEach((r) => r());
-      parked.forEach((r) => r());
-    };
-  }, []);
-}
+// Head tags this page owns (see seo/usePageMeta.js).
+const PAGE_META = {
+  title: TITLE,
+  description: DESCRIPTION,
+  url: PAGE_URL,
+  keywords: 'wedding planner app, wedding budget tracker, wedding planner South Africa, wedding checklist, wedding guest list RSVP, honeymoon planner',
+  image: OG_IMAGE,
+};
 
 // Fades sections in as they scroll into view (same pattern as the landing
 // page). Nothing stays hidden without IntersectionObserver or with reduced motion.
@@ -145,7 +96,7 @@ function Phone({ image, eager = false, className = '' }) {
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function WeddingPlanner() {
-  usePageMeta();
+  usePageMeta(PAGE_META);
   useScrollReveal();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -580,7 +531,7 @@ function WeddingPlanner() {
               </p>
             )}
             <p className={styles.fine}>
-              Included free with {includedWith} for Capture by Val events.{' '}
+              Included free with {includedWith} for Valere photo events.{' '}
               <a href="/#pricing">See event pricing</a>
             </p>
             <p className={styles.fine}>
@@ -622,7 +573,7 @@ function WeddingPlanner() {
             )}
           </div>
           <p className={styles.fine}>
-            Also planning the photos? <a href="/#how-it-works">See how Capture by Val works</a>, where guests upload
+            Also planning the photos? <a href="/#how-it-works">See how Valere photo sharing works</a>, where guests upload
             photos straight from their phones.
           </p>
         </section>
@@ -633,6 +584,8 @@ function WeddingPlanner() {
         <nav className={styles.footerLinks} aria-label="Footer">
           <Link to="/">Home</Link>
           <a href="/#how-it-works">Wedding photo gallery</a>
+          <Link to="/guides">Guides</Link>
+          <Link to="/about">About Valere</Link>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms and Conditions</Link>
           <Link to="/refund-policy">Refund Policy</Link>
