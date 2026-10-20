@@ -113,7 +113,19 @@ describe('assign to', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Edit task' }));
     const select = await screen.findByLabelText('Assign to');
     expect(select).toHaveValue('u-gone');
-    expect(within(select).getByRole('option', { name: /former helper/ })).toBeInTheDocument();
+    expect(within(select).getByRole('option', { name: /former helper/i })).toBeInTheDocument();
+  });
+
+  it('does not re-send a removed helper\'s id: it saves as unassigned', async () => {
+    resetDb({ wedding_tasks: [task('z', { title: 'Old job', assigned_to: 'u-gone' })] });
+    db.people = PEOPLE;
+    renderPage(<TasksPage />, '/?task=z');
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit task' }));
+    expect(within(await screen.findByLabelText('Assign to')).getByRole('option', { name: 'Former helper (unassigned on save)' }))
+      .toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Save task' }));
+    await waitFor(() => expect(saveRow).toHaveBeenCalled());
+    expect(saveRow.mock.calls[0]?.[2]).toMatchObject({ assigned_to: null });
   });
 });
 

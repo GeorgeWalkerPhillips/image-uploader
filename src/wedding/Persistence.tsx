@@ -36,20 +36,52 @@ export function Persistence({ children }: { children: ReactNode }) {
     setReadyFor(userId);
 
     let timer: ReturnType<typeof setTimeout> | null = null;
+    // Whether this user may keep an offline copy right now: a couple member
+    // (membership row), or a status that says partner/collaborator. Anything
+    // else (no access at all, or a non-member with no helper status) keeps nothing.
+    let allowed = true;
+    let purging = false;
     const flush = () => {
       if (timer !== null) clearTimeout(timer);
       timer = null;
-      persist.save(qc, userId);
+      if (allowed) persist.save(qc, userId);
     };
-    const unsubscribe = qc.getQueryCache().subscribe((event) => {
-      const q = event.query;
-      if (q.queryKey[0] === 'wedding-membership' && q.state.status === 'success' && q.state.data === null) {
-        // Signed in but not a member: keep nothing.
+    const evaluate = () => {
+      const membership = qc.getQueryState(['wedding-membership', userId]);
+      const status = qc.getQueryState(['wedding-planner-status', userId]);
+      const statusAccess = (status?.data as { access?: unknown } | undefined)?.access;
+      if (membership?.data) {
+        allowed = true;
+      } else if (statusAccess === 'partner' || statusAccess === 'collaborator') {
+        allowed = true;
+      } else if (status?.status === 'success' && status.data !== undefined) {
+        // Access was removed (or never existed): forget the copy on disk AND in
+        // memory, or the next save would write it back and renew its expiry.
+        allowed = false;
+        if (!purging) {
+          purging = true;
+          for (const root of persist.ALLOWED_ROOTS) {
+            if (root === 'wedding-membership' || root === 'wedding-planner-status') continue;
+            qc.removeQueries({ queryKey: [root] });
+          }
+          purging = false;
+        }
+      } else if (membership?.status === 'success') {
+        // Not a member and no helper status known: keep nothing.
+        allowed = false;
+      } else {
+        return;
+      }
+      if (!allowed) {
         if (timer !== null) clearTimeout(timer);
         timer = null;
         persist.clearAll();
-        return;
       }
+    };
+    const unsubscribe = qc.getQueryCache().subscribe((event) => {
+      if (purging) return;
+      evaluate();
+      if (!allowed) return;
       if (event.type === 'updated' || event.type === 'added') {
         if (timer === null) timer = setTimeout(flush, SAVE_DELAY_MS);
       }

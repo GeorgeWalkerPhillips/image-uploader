@@ -161,16 +161,24 @@ entry in the signed-in menu and "Open" instead of Buy; the client never grants
 access, the server does. The main bundle must not import anything from
 `src/wedding/`. **The app itself is hidden, not secret-by-obscurity:** the
 real protection is RLS — all `wedding_*` tables and the `wedding-files` storage
-bucket are readable only by the accounts in `wedding_members`
-(`wedding_is_member()`; anonymous guest sessions are rejected). The route is
-lazy-loaded, unlinked, absent from `sitemap.xml`/`robots.txt`, and sets
-`noindex`; a non-member who visits `/hq` is silently sent to `/`. Membership is
-added only by the owner via SQL, by auth user id (never by email — sign-up is
-open and unconfirmed). Code is strict TypeScript (CRA `allowJs`); all money is
-integer cents formatted `R 15 000,00`; dates are shown in Africa/Johannesburg.
-**This repo is public: never commit the couple's personal seed data** — apply it
-directly to the database. Any change touching `wedding_*` policies or storage
-needs `reviewer-security`. Schema: `wedding-hq-2026-10.sql` (+ `-10b`, `-10c`).
+bucket are readable only by couple members (`wedding_members`,
+`wedding_is_member()`) and, for assigned tasks only, helpers; anonymous guest
+sessions are rejected. The route is lazy-loaded, unlinked, absent from
+`sitemap.xml`/`robots.txt`, and sets `noindex`. `Gate.tsx` decides what a visitor
+sees: signed out or anonymous → login with `next`; signed in but not entitled →
+"Get the Wedding Planner"; entitled without a wedding → setup; a partner (max 2,
+a `wedding_members` row) or a helper (max 10, `wedding_collaborators`) → the app.
+Partners and helpers join through invites (Edge Function `wedding-invite` + RPC
+`accept_wedding_invite`); the token travels in the URL fragment (`#token=`, never
+sent to a server in a request line) and only its sha256 hash is stored. `/hq/join`
+sits outside the gate. Owners of paid `unlimited` events get the entitlement free
+(`bundle-<eventId>` references, source `admin`). Code is strict TypeScript (CRA
+`allowJs`); all money is integer cents formatted `R 15 000,00`; dates are shown in
+Africa/Johannesburg. **This repo is public: never commit the couple's personal
+seed data** — apply it directly to the database. Any change touching `wedding_*`
+policies or storage needs `reviewer-security`. Schema: `wedding-hq-2026-10.sql`
+(+ `-10b`, `-10c`, `-10e` planner product, `-10f` invite sends, `-10g` bundle
+backfill).
 Realtime sync (`lib/realtime.ts`), a per-user offline read cache in localStorage
 (`wedding-hq:` prefix, cleared on sign-out) and a `/hq/`-scoped PWA
 (`public/hq/sw.js`, registered only from inside `WeddingApp`; `vercel.json` sets its

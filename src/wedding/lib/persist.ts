@@ -3,7 +3,9 @@
 //   - an ALLOWLIST of query keys (rows, membership, member names); signed URLs,
 //     storage and auth data are never in the React Query cache and could not
 //     be persisted even by mistake
-//   - expired after 7 days, and removed on sign-out / user change / non-member.
+//   - expired after 7 days, and removed on sign-out / user change / when the
+//     user has no access (Persistence also drops the in-memory copy and stops
+//     saving, so a removed helper's data is not written back).
 import type { Query, QueryClient } from '@tanstack/react-query';
 import { REALTIME_TABLES } from './realtime';
 
@@ -16,7 +18,7 @@ const VERSION = 1;
 // helper's wedding header. Invites (email addresses) and reminder settings are
 // intentionally absent. A helper's wedding_tasks only ever holds the rows the
 // database lets them read.
-const ALLOWED_ROOTS: readonly string[] = [
+export const ALLOWED_ROOTS: readonly string[] = [
   ...REALTIME_TABLES, 'wedding-membership', 'wedding-member-names',
   'wedding-planner-status', 'wedding-people', 'wedding-collab-wedding',
 ];

@@ -58,7 +58,7 @@ export function TaskForm({ initial, assigneeLabels, categories, people, saving =
       return;
     }
     setErrors({});
-    onSubmit(canAssign ? { ...r.value, assigned_to: assignedTo || null } : r.value, catchUp);
+    onSubmit(canAssign ? { ...r.value, assigned_to: knownPerson ? assignedTo || null : null } : r.value, catchUp);
   };
 
   return (
@@ -79,7 +79,7 @@ export function TaskForm({ initial, assigneeLabels, categories, people, saving =
         <SelectField label="Assign to" value={assignedTo} onChange={setAssignedTo}>
           <option value={NOBODY}>Nobody in particular</option>
           {(people ?? []).map((p) => <option key={p.user_id} value={p.user_id}>{personLabel(p)}</option>)}
-          {!knownPerson && <option value={assignedTo}>A former helper (no longer on the team)</option>}
+          {!knownPerson && <option value={assignedTo}>Former helper (unassigned on save)</option>}
         </SelectField>
       )}
       <TextField label="Category (optional)" value={v.category} maxLength={60} error={errors.category}

@@ -188,6 +188,14 @@ export function AuthProvider({ children }) {
     } catch {
       /* storage blocked: nothing was cached */
     }
+    // A stashed invite token (sessionStorage) must not outlive the session either.
+    try {
+      Object.keys(sessionStorage)
+        .filter((k) => k.startsWith('wedding-hq:'))
+        .forEach((k) => sessionStorage.removeItem(k));
+    } catch {
+      /* storage blocked: nothing was stashed */
+    }
 
     try {
       const { error } = await supabase.auth.signOut();

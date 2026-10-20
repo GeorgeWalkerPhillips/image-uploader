@@ -13,13 +13,17 @@ strict TypeScript under `src/wedding/`.
   are rejected. Nothing in the client is a security boundary.
 - **Hidden, not secret-by-obscurity.** `/hq` is lazy-loaded, unlinked, absent from
   `sitemap.xml` and `robots.txt`, sets `<meta name="robots" content="noindex,nofollow">`
-  and (in production on Vercel) an `X-Robots-Tag: noindex, nofollow` header. A
-  signed-in non-member who opens it is silently sent to `/`.
+  and (in production on Vercel) an `X-Robots-Tag: noindex, nofollow` header. What a
+  visitor sees depends on who they are: signed out or anonymous goes to login (with
+  `next`); signed in without the planner sees "Get the Wedding Planner"; entitled
+  without a wedding sees setup; a partner or helper sees the app. `/hq/join` sits
+  outside this gate.
 - **No personal data in this repository** (it is public). Names, budgets, dates,
   guests and files are seeded straight into the database, never committed. Tests
   and screenshots use fictional data only.
-- **Membership is by auth user id, never by email** (sign-up is open and
-  unconfirmed, so an email match could be spoofed).
+- **Membership is by auth user id, never by a bare email match** (sign-up is open
+  and unconfirmed, so an email match could be spoofed). Invites are accepted only by
+  a signed-in account with a confirmed email equal to the invited address.
 - Files are only ever opened through 5 minute signed URLs. Those URLs are never
   cached by the app, the offline cache or the service worker.
 - Realtime does not widen access: Supabase Realtime applies the same RLS to what a
@@ -38,6 +42,9 @@ Apply the SQL files by hand in the Supabase SQL Editor, in this order:
 
 4. `wedding-hq-2026-10e-planner-product.sql` makes HQ multi-tenant (see "Planner product"
    below). Apply in its labelled batches, in order.
+5. `wedding-hq-2026-10f-invite-sends.sql` (invite send tracking) and
+   `wedding-hq-2026-10g-planner-bundle-backfill.sql` (grants the planner free to owners
+   of paid `unlimited` events: `bundle-<event id>` payment references, source `admin`).
 
 The `wedding-files` bucket is created by file 1 and must stay **private**.
 No new env vars are needed; HQ uses the same `REACT_APP_SUPABASE_URL` and
@@ -46,7 +53,8 @@ holds the headers for the HQ service worker and manifest.
 
 ### Adding a member
 
-Only the project owner can, in the SQL Editor, using the `id` of the account that
+Partners and helpers are normally added through invites (see "Planner product"). The
+manual route below remains for the project owner only: in the SQL Editor, using the `id` of the account that
 person actually logs in with (Dashboard, Authentication, Users), after the
 `wedding_weddings` row exists:
 
@@ -112,9 +120,11 @@ short blip can be missed and is only fixed by the catch-up refetch on reconnect.
 The query cache is saved to `localStorage` under `wedding-hq:cache:<user id>`
 (debounced, and on page hide). Only an allowlist of keys is saved (data rows,
 membership, member names); signed URLs, storage and auth data are never included.
-It expires after 7 days. It is wiped on sign-out (from HQ), when the signed-in user
-is not a member, when the user changes, and caches belonging to other users are
-removed on load. Offline, HQ shows the last saved data under the banner
+It expires after 7 days. It is kept only while the user is a couple member or the
+planner status says `partner` or `collaborator`. When access is removed (a helper is
+removed or leaves) the saved copy is wiped and the matching queries are dropped from
+memory so they cannot be saved again. It is also wiped on sign-out, when the user
+changes, and caches belonging to other users are removed on load. Offline, HQ shows the last saved data under the banner
 "You're offline - showing last saved data". **Writes are never queued**: while offline
 they fail immediately with "You're offline. Changes can't be saved until you're back
 online." and file links say files need a connection.
