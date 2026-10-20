@@ -19,7 +19,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeadersFor } from "../_shared/cors.ts";
 import { userIdFromPlannerReference } from "../_shared/weddingPlanner.ts";
-import { applyPlannerPaymentServer } from "../_shared/weddingPlannerServer.ts";
+import { applyPlannerPaymentServer, logPlannerRefusal } from "../_shared/weddingPlannerServer.ts";
 
 const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY")!;
 
@@ -88,7 +88,13 @@ Deno.serve(async (req) => {
     }
 
     const applied = await applyPlannerPaymentServer(supabaseAdmin, user.id, txn);
-    if (!applied.ok) return json({ error: applied.error }, applied.status);
+    if (!applied.ok) {
+      // Paystack says this charge succeeded but we refused it: record it
+      // (reference + reason, no PII) so the buyer can be refunded / granted.
+      console.error(`Planner payment not applied: ${reference} (status ${applied.status})`);
+      await logPlannerRefusal(supabaseAdmin, "wedding-planner:verify", reference, applied.status, applied.error);
+      return json({ error: applied.error }, applied.status);
+    }
     return json({ status: applied.alreadyPaid ? "already_paid" : "paid" });
   } catch (error) {
     console.error("wedding-planner-verify failed:", (error as Error).message);

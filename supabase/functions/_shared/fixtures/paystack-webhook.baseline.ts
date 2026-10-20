@@ -2,7 +2,8 @@
 // BEFORE the Wedding Planner branch (git 547fc77 / 73ed9dd). Used only by
 // paystackWebhookRouting.test.mjs as the fixed baseline for the "event flow is
 // unchanged" assertions. Do NOT edit and do NOT deploy. Only the import path
-// below was rewritten (../_shared/ -> ../) because the file lives in
+// below was rewritten (-> ./paystackPayment.baseline.ts, the equally frozen
+// pre-bundle copy of applyPaystackPayment) because the file lives in
 // _shared/fixtures/.
 // One of only two things allowed to mark an event as paid (the other is
 // paystack-verify, the browser-triggered fallback) — both run as the service
@@ -20,7 +21,7 @@
 //   https://<project-ref>.supabase.co/functions/v1/paystack-webhook
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { applyPaystackPayment, eventIdFromTransaction } from "../paystackPayment.ts";
+import { applyPaystackPayment, eventIdFromTransaction } from "./paystackPayment.baseline.ts";
 
 const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY")!;
 

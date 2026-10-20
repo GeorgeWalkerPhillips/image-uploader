@@ -4,7 +4,10 @@
 // handlers in Node against an in-memory recording fake of Supabase + stubbed
 // fetch, and asserts:
 //   * event payments behave identically before/after (responses AND every DB
-//     call and outgoing email),
+//     call and outgoing email) -- the baseline handler is paired with the frozen
+//     pre-bundle applyPaystackPayment (fixtures/paystackPayment.baseline.ts), so
+//     regressions inside applyPaystackPayment are caught too. The only allowed
+//     delta is the unlimited tier's bundle grant (asserted explicitly below),
 //   * planner charges are routed to the planner path only,
 //   * unsigned / badly signed requests are rejected.
 // No Deno, network or Supabase needed. Fictional data only.
@@ -106,6 +109,10 @@ before(async () => {
   const snap = readFileSync(baselineFile, "utf8");
   // Guard against someone "refreshing" the snapshot from the current handler.
   assert.ok(!/planner/i.test(snap.replace(/^\/\/.*$/gm, "")), "baseline must be the pre-planner handler");
+  assert.match(snap, /from "\.\/paystackPayment\.baseline\.ts"/, "baseline webhook must use the frozen applyPaystackPayment");
+  const frozenPay = join(here, "fixtures/paystackPayment.baseline.ts");
+  assert.ok(existsSync(frozenPay), `frozen paystackPayment snapshot missing: ${frozenPay}`);
+  assert.ok(!/planner|bundle/i.test(readFileSync(frozenPay, "utf8").replace(/^\s*\/\/.*$/gm, "")), "frozen paystackPayment must be the pre-bundle version");
   current = await buildAndLoad(join(webhookDir, "index.ts"), "current");
   baseline = await buildAndLoad(baselineFile, "baseline");
   assert.equal(typeof baseline, "function");
@@ -159,6 +166,27 @@ for (const [name, payload] of Object.entries(EVENT_CASES)) {
     assert.equal(touched(after_, "wedding_planner_entitlements"), false);
   });
 }
+
+// Unlimited tier: the ONLY differences vs the pre-bundle flow are one extra
+// bundle-entitlement insert and one extra receipt line. Nothing else.
+test("unlimited event payment: delta vs pre-bundle flow is exactly the entitlement insert + receipt line", async () => {
+  const world = { event: { id: EVT, name: "Test Event", tier: "unlimited", created_by: U1, is_paid: false, start_date: "2026-12-01T10:00:00Z", end_date: "2026-12-02T10:00:00Z" } };
+  const payload = charge(evtTxn({ amount: 99900, metadata: { eventId: EVT, tier: "unlimited" } }));
+  const old = await run(baseline, payload, undefined, world);
+  const cur = await run(current, payload, undefined, world);
+  assert.equal(touched(old, "wedding_planner_entitlements"), false);
+  const grant = cur.calls.filter((c) => c[1] === "wedding_planner_entitlements");
+  assert.deepEqual(grant, [["insert", "wedding_planner_entitlements", { user_id: U1, payment_reference: `bundle-${EVT}`, amount_cents: 0, source: "admin" }]]);
+  assert.deepEqual(cur.calls.filter((c) => c[1] !== "wedding_planner_entitlements"), old.calls);
+  assert.equal(cur.status, old.status);
+  assert.equal(cur.text, old.text);
+  assert.equal(cur.fetches.length, 1);
+  assert.equal(old.fetches.length, 1);
+  const line = /<p>Your Wedding Planner is included &mdash; open it at https:\/\/valere\.co\.za\/hq\/<\/p>/;
+  assert.match(cur.fetches[0][1].html, line);
+  const stripped = { ...cur.fetches[0][1], html: cur.fetches[0][1].html.replace(line, "") };
+  assert.deepEqual(stripped, old.fetches[0][1]);
+});
 
 test("event payment still marks the event paid and sends the event receipt", async () => {
   const r = await run(current, charge(evtTxn()));

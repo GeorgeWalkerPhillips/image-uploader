@@ -20,7 +20,6 @@ import { parseMetadata } from "./paystackPayment.ts";
 
 export const WEDDING_PLANNER = { amountCents: 19900, currency: "ZAR" } as const; // R199
 export const PLANNER_PRODUCT = "wedding_planner";
-export const DEFAULT_SITE_ORIGIN = "https://valere.co.za";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // wp-<uuid>-<12 alphanumerics>. Paystack allows only alphanumerics, "-", "." and "=".
@@ -98,26 +97,9 @@ export function routeTransaction(txn: { reference?: unknown; metadata?: unknown 
 // Origins
 // ---------------------------------------------------------------------------
 
-const HTTPS_ORIGIN_RE = /^https:\/\/[^\s*/]+$/;
-
-function originList(allowedOriginEnv: string | undefined): string[] {
-  return (allowedOriginEnv || "").split(",").map((o) => o.trim()).filter(Boolean);
-}
-
-/** Origin for links in emails: first https ALLOWED_ORIGIN, else the default site. */
-export function siteOriginFrom(allowedOriginEnv: string | undefined): string {
-  const first = originList(allowedOriginEnv).find((o) => HTTPS_ORIGIN_RE.test(o));
-  return first ?? DEFAULT_SITE_ORIGIN;
-}
-
-/** Checkout return origin: the request Origin only if allow-listed, else the first allowed. */
-export function checkoutOriginFrom(requestOrigin: string | null | undefined, allowedOriginEnv: string | undefined): string {
-  // Same https-only rule as siteOriginFrom (paystack-initialize has no
-  // localhost carve-out either): non-https entries are never used.
-  const list = originList(allowedOriginEnv).filter((o) => HTTPS_ORIGIN_RE.test(o));
-  if (requestOrigin && list.includes(requestOrigin)) return requestOrigin;
-  return list[0] ?? DEFAULT_SITE_ORIGIN;
-}
+// Origin helpers live in siteOrigin.ts (shared with paystackPayment.ts without a
+// circular import); re-exported here so existing imports keep working.
+export { DEFAULT_SITE_ORIGIN, siteOriginFrom, checkoutOriginFrom } from "./siteOrigin.ts";
 
 /** The body sent to Paystack's transaction/initialize. Amount is the server constant, never client input. */
 export function buildInitializePayload(user: { id: string; email: string }, origin: string, reference = buildPlannerReference(user.id)) {

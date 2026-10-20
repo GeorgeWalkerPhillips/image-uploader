@@ -144,7 +144,9 @@ file):
     `amount_cents = 0`, `source = 'admin'`) to owners of events that are already
     paid on that tier. Create-only, idempotent (`on conflict do nothing`); run
     after file 23. New payments are covered in code (`paystackPayment.ts`), so
-    deploy `paystack-webhook` and `paystack-verify` too.
+    deploy `paystack-webhook` and `paystack-verify` FIRST, then apply this file,
+    and re-run it once more a day later (idempotent) to catch anything paid in
+    between.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
