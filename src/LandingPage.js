@@ -27,7 +27,7 @@ import {
   formatPrice,
 } from './services/pricingTiers';
 import { useAuth } from './context/AuthContext';
-import { UserBadge } from './components/UserBadge';
+import { SiteNav } from './components/SiteNav';
 import styles from './LandingPage.module.css';
 
 const POPULAR_TIER = 'growth';
@@ -179,42 +179,13 @@ function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }}
       />
 
-      <header className={styles.landingNav}>
-        <img
-          className={styles.landingNavBrand}
-          src="/valere_logo.png"
-          alt="valere"
-          width="85"
-          height="28"
-        />
-        <nav className={styles.landingNavLinks}>
-          <a href="#how-it-works">How it works</a>
-          <a href="#pricing">Pricing</a>
-          <Link to="/wedding-planner">Wedding Planner</Link>
-          <Link to="/guides">Guides</Link>
-          <Link to="/blog">Blog</Link>
-          <a href="#faq">FAQ</a>
-        </nav>
-        <div className={styles.landingNavActions}>
-          {isLoggedIn ? (
-            <UserBadge />
-          ) : (
-            <>
-              <button className={styles.landingNavSignIn} onClick={() => navigate('/login?mode=signin')}>
-                Sign In
-              </button>
-              <button className={styles.landingNavCta} onClick={() => navigate('/login?mode=signup')}>
-                Create an Event
-              </button>
-            </>
-          )}
-        </div>
-      </header>
-      <p className={styles.mobileSubNav}>
-        <Link to="/wedding-planner">Wedding Planner &rarr;</Link>
-        <Link to="/guides">Guides &rarr;</Link>
-        <Link to="/blog">Blog &rarr;</Link>
-      </p>
+      <SiteNav
+        anchors={[
+          { href: '#how-it-works', label: 'How it works' },
+          { href: '#pricing', label: 'Pricing' },
+          { href: '#faq', label: 'FAQ' },
+        ]}
+      />
 
       <main>
         <section className={styles.hero} aria-labelledby="hero-heading">

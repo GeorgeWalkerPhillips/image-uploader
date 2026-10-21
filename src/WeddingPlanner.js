@@ -6,7 +6,7 @@ import { WEDDING_PLANNER } from './services/pricingTiers';
 import { startCheckout, verifyPurchase } from './services/weddingPlannerService';
 import { useAuth } from './context/AuthContext';
 import { useWeddingPlannerStatus, hasPlannerAccess } from './hooks/useWeddingPlannerStatus';
-import { UserBadge } from './components/UserBadge';
+import { SiteNav } from './components/SiteNav';
 import { Spinner } from './components/Spinner';
 import {
   APPLICATION_JSON_LD,
@@ -231,26 +231,16 @@ function WeddingPlanner() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_JSON_LD) }} />
 
-      <header className={styles.nav}>
-        <Link to="/" aria-label="Valere home" className={styles.navBrandLink}>
-          <img className={styles.navBrand} src="/valere_logo.png" alt="valere" width="85" height="28" />
-        </Link>
-        <nav className={styles.navLinks} aria-label="Page sections">
-          <a href="#features">Features</a>
-          <a href="#checklist">Checklist</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#faq">FAQ</a>
-        </nav>
-        <div className={styles.navActions}>
-          {signedIn ? (
-            <UserBadge />
-          ) : (
-            <button type="button" className={styles.navSignIn} onClick={() => navigate('/login?mode=signin&next=%2Fwedding-planner')}>
-              Sign In
-            </button>
-          )}
-        </div>
-      </header>
+      <SiteNav
+        primaryAction="signin"
+        signInTo="/login?mode=signin&next=%2Fwedding-planner"
+        anchors={[
+          { href: '#features', label: 'Features' },
+          { href: '#checklist', label: 'Checklist' },
+          { href: '#pricing', label: 'Pricing' },
+          { href: '#faq', label: 'FAQ' },
+        ]}
+      />
 
       <main>
         {reference && (

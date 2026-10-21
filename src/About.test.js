@@ -25,6 +25,9 @@ import {
   randAmounts,
 } from './testUtils/seoHelpers';
 
+jest.mock('./supabaseClient', () => ({ supabase: {} }));
+jest.mock('./context/AuthContext', () => ({ useAuth: () => ({ user: null, loading: false, signOut: jest.fn() }) }));
+
 const renderAbout = () =>
   render(
     <MemoryRouter initialEntries={['/about']}>

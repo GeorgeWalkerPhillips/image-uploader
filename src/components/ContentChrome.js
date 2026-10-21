@@ -1,34 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { SiteNav } from './SiteNav';
 import styles from './ContentChrome.module.css';
 
 // Header, footer and inline-link renderer shared by the About page and the
 // guides (the public, indexable content pages).
 export function ContentHeader() {
-  return (
-    <>
-      <header className={styles.nav}>
-        <Link to="/" aria-label="Valere home" className={styles.navBrandLink}>
-          <img className={styles.navBrand} src="/valere_logo.png" alt="valere" width="85" height="28" />
-        </Link>
-        <nav className={styles.navLinks} aria-label="Main">
-          <Link to="/wedding-planner">Wedding Planner</Link>
-          <Link to="/guides">Guides</Link>
-          <Link to="/blog">Blog</Link>
-          <Link to="/about">About</Link>
-        </nav>
-        <Link to="/login?mode=signup" className={styles.navCta}>
-          Create an event
-        </Link>
-      </header>
-      <nav className={styles.mobileSubNav} aria-label="Sections">
-        <Link to="/wedding-planner">Wedding Planner</Link>
-        <Link to="/guides">Guides</Link>
-        <Link to="/blog">Blog</Link>
-        <Link to="/about">About</Link>
-      </nav>
-    </>
-  );
+  return <SiteNav />;
 }
 
 export function ContentFooter() {

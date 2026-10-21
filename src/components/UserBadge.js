@@ -9,7 +9,9 @@ import styles from './UserBadge.module.css';
 // page (landing nav, admin dashboard, gallery) — standard in most apps,
 // and the only way an organizer could previously tell they were signed in
 // was the URL itself. Renders nothing for guests (anonymous sessions).
-export function UserBadge() {
+// `inline` lays the menu out in the flow (used inside the mobile site menu,
+// where an absolutely positioned dropdown would be clipped).
+export function UserBadge({ inline = false }) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -40,7 +42,7 @@ export function UserBadge() {
   };
 
   return (
-    <div className={styles.userBadge} ref={containerRef}>
+    <div className={`${styles.userBadge}${inline ? ` ${styles.inline}` : ''}`} ref={containerRef}>
       <button className={styles.badgeButton} onClick={() => setOpen((o) => !o)}>
         <span className={styles.avatar}>{initial}</span>
         <span className={styles.name}>{name}</span>

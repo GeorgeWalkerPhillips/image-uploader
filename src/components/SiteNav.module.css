@@ -1,0 +1,389 @@
+/* Shared header for the public pages. Mobile first: a glass pill that grows
+   downward over the page (the shell keeps the closed height, so nothing below
+   shifts when it opens or closes). From 960px it is a normal inline nav.
+   Keep the breakpoint in sync with DESKTOP_QUERY in SiteNav.js. */
+.shell {
+  position: sticky;
+  top: 12px;
+  z-index: 100;
+  height: 62px;
+  margin: 12px 12px 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Dims the page behind the open menu; tapping it closes the menu. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(17, 17, 17, 0.28);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+
+.shell[data-open='true'] .backdrop {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px 8px 8px 18px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 8px 32px rgba(17, 17, 17, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pillOpen {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 48px rgba(17, 17, 17, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.brandLink {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+
+.brand {
+  display: block;
+  height: 28px;
+  width: auto;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.desktopOnly {
+  display: none;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 30px;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: background 0.2s ease;
+}
+
+.cta:hover {
+  background: #333;
+}
+
+.signIn {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  color: #111;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signIn:hover {
+  color: #555;
+}
+
+/* Hamburger: three lines that turn into an X. */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #111;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toggle:active {
+  background: rgba(17, 17, 17, 0.06);
+}
+
+@media (hover: hover) {
+  .toggle:hover {
+    background: rgba(17, 17, 17, 0.06);
+  }
+}
+
+.bars {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 14px;
+}
+
+.bars span {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.28s ease, opacity 0.2s ease, top 0.28s ease;
+}
+
+.bars span:nth-child(1) {
+  top: 0;
+}
+
+.bars span:nth-child(2) {
+  top: 6px;
+}
+
+.bars span:nth-child(3) {
+  top: 12px;
+}
+
+.toggle[aria-expanded='true'] .bars span:nth-child(1) {
+  top: 6px;
+  transform: rotate(45deg);
+}
+
+.toggle[aria-expanded='true'] .bars span:nth-child(2) {
+  opacity: 0;
+}
+
+.toggle[aria-expanded='true'] .bars span:nth-child(3) {
+  top: 6px;
+  transform: rotate(-45deg);
+}
+
+.brandLink:focus-visible,
+.toggle:focus-visible,
+.cta:focus-visible,
+.signIn:focus-visible,
+.links a:focus-visible,
+.accountLink:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+/* Expanding panel. 0fr -> 1fr animates the height without measuring it. While
+   collapsed it is visibility:hidden, so its links are not focusable and are
+   hidden from assistive tech, yet still in the DOM for crawlers. */
+.panel {
+  flex: 0 0 100%;
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition: grid-template-rows 0.3s ease, opacity 0.22s ease, visibility 0s linear 0.3s;
+}
+
+.pillOpen .panel {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.panelInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panelBody {
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 4px 4px 0;
+}
+
+@supports (height: 100dvh) {
+  .panelBody {
+    max-height: calc(100dvh - 110px);
+  }
+}
+
+.links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.links li + li {
+  border-top: 1px solid rgba(17, 17, 17, 0.08);
+}
+
+.links a,
+.accountLink {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  color: #222;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.links a:active,
+.accountLink:active {
+  background: rgba(17, 17, 17, 0.05);
+}
+
+.links a[aria-current] {
+  color: #111;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.account {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(17, 17, 17, 0.08);
+}
+
+.account:empty {
+  display: none;
+}
+
+/* Desktop: a normal inline nav; the panel wrappers dissolve into the pill. */
+@media (min-width: 960px) {
+  .shell {
+    top: 16px;
+    height: auto;
+    width: calc(100% - 24px);
+    max-width: 1040px;
+    margin: 16px auto 0;
+  }
+
+  .backdrop {
+    display: none;
+  }
+
+  .pill {
+    position: static;
+    flex-wrap: nowrap;
+    gap: 16px;
+    padding: 10px 10px 10px 24px;
+    border-radius: 999px;
+  }
+
+  .pillOpen {
+    background: rgba(255, 255, 255, 0.74);
+    box-shadow: 0 8px 32px rgba(17, 17, 17, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .brandLink {
+    order: 0;
+  }
+
+  .actions {
+    order: 2;
+    gap: 4px;
+  }
+
+  .desktopOnly {
+    display: inline-flex;
+  }
+
+  .cta {
+    min-height: 44px;
+    padding: 0 20px;
+  }
+
+  .toggle {
+    display: none;
+  }
+
+  .panel,
+  .panelInner,
+  .panelBody {
+    display: contents;
+  }
+
+  .panel {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .links {
+    order: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 auto;
+  }
+
+  .links li + li,
+  .links li.groupStart {
+    border-top: none;
+  }
+
+  .links a {
+    min-height: 44px;
+    padding: 0 4px;
+    border-radius: 0;
+    color: #333;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .links a:hover {
+    background: none;
+    color: #111;
+  }
+
+  .links a[aria-current] {
+    text-underline-offset: 8px;
+  }
+
+  .account {
+    display: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  .links {
+    gap: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .pill,
+  .panel,
+  .bars span {
+    transition: none;
+  }
+}

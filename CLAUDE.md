@@ -203,7 +203,7 @@ Public, indexable pages: `/`, `/wedding-planner`, `/about`, `/guides` and five `
 (empty until the owner supplies real URLs), `CONTACT_EMAIL`); `public/index.html` carries a static copy of
 the home `@graph` and `src/seoFiles.test.js` fails if the two drift. Copy for About is
 `src/aboutContent.js`, for guides `src/guides/content.js` (prices derived from `pricingTiers.js`; the
-FAQ JSON-LD is generated from the same data). Each page sets its head via `src/seo/usePageMeta.js`
+FAQ JSON-LD is generated from the same data). Every public page's header is the shared `src/components/SiteNav.js` (mobile expanding hamburger pill; menu always in the DOM, collapsed with CSS `visibility:hidden`; breakpoint 960px mirrored in `DESKTOP_QUERY`); do not add per-page nav markup. Each page sets its head via `src/seo/usePageMeta.js`
 (restored on unmount) and emits JSON-LD blocks that reference the Organization by `@id`. New indexable routes
 must be added to `scripts/prerender.js`, `public/sitemap.xml`, `public/llms.txt`, and (after editing content)
 `node scripts/generate-llms-full.js` must be re-run. `scripts/indexnow.js` is run by hand after each deploy.
