@@ -147,6 +147,13 @@ file):
     deploy `paystack-webhook` and `paystack-verify` FIRST, then apply this file,
     and re-run it once more a day later (idempotent) to catch anything paid in
     between.
+26. `security-audit-2026-10.sql` — **critical, required.** October 2026 audit
+    fixes: stops users setting their own `is_admin`, replaces the public
+    `event-photos` listing/upload storage policies with event-scoped ones (plus
+    bucket size/MIME limits), restricts `event_access` self-grants to `upload`,
+    drops the leftover leaking `events` policy, bounds `error_logs` inserts, and
+    revokes API access to internal SECURITY DEFINER functions. Idempotent; run
+    last. Promote admins afterwards from the SQL Editor only.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
