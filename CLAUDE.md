@@ -60,6 +60,11 @@ check can be bypassed via DevTools:
   validate → per-guest photo-cap check → compress → sanitize filename →
   upload to `event-photos` storage bucket → insert `photos` row (rolls
   back the storage object if the DB insert fails).
+  Each upload also stores a ~600px thumbnail (`utils/thumbnail.js`, best-effort, at
+  `<storage_path>.thumb.jpg`, recorded in `photos.thumb_path`, DB-CHECK-pinned to that
+  name); the gallery grid shows thumbnails and only the viewer loads originals, because
+  full-size grid tiles exhausted the Free plan's cached-egress quota. The event owner's
+  gallery backfills thumbnails for older photos; delete and the purge job remove both files.
 - `src/services/pricingTiers.js` — pure pricing data (free/starter/growth/
   unlimited), imported by UI and mirrored (amounts, guest/photo caps) in
   two other places that must be kept in sync: the `paystack-initialize`

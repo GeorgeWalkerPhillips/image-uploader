@@ -5,6 +5,7 @@ import {
   normalizeImage,
 } from '../utils/imageValidation';
 import { checkRateLimit } from '../utils/rateLimiter';
+import { createThumbnail, thumbPathFor } from '../utils/thumbnail';
 import { logError } from './errorLogger';
 
 // Mobile networks (and the proxy in front of Storage) occasionally drop an
@@ -147,12 +148,36 @@ export const uploadImage = async (
     stage = 'storage_upload';
     const { data, error: uploadError } = await uploadWithRetry(() =>
       supabase.storage.from('event-photos').upload(storagePath, uploadFile, {
-        cacheControl: '3600',
+        // Unique per-upload path that is never overwritten, so browsers can
+        // safely keep it for a while instead of re-downloading on every view.
+        cacheControl: '604800',
         upsert: false,
       })
     );
 
     if (uploadError) throw uploadError;
+
+    // A small thumbnail for the gallery grid (see utils/thumbnail.js). Strictly
+    // best-effort: the photo itself is already stored, so any failure here
+    // just means this photo has no thumbnail and the grid falls back to the
+    // original. It must never fail the guest's upload.
+    stage = 'thumbnail';
+    let thumbPath = null;
+    try {
+      const thumbBlob = await createThumbnail(uploadFile);
+      const candidate = thumbPathFor(storagePath);
+      const { error: thumbError } = await uploadWithRetry(() =>
+        supabase.storage.from('event-photos').upload(candidate, thumbBlob, {
+          cacheControl: '31536000',
+          contentType: 'image/jpeg',
+          upsert: false,
+        })
+      );
+      if (thumbError) throw thumbError;
+      thumbPath = candidate;
+    } catch (thumbErr) {
+      logError('uploadImage:thumbnail', thumbErr, { eventId, userId });
+    }
 
     stage = 'db_insert';
     const { error: dbError } = await supabase.from('photos').insert({
@@ -165,12 +190,13 @@ export const uploadImage = async (
       width,
       height,
       uploader_name: uploaderName,
+      thumb_path: thumbPath,
     });
 
     if (dbError) {
       await supabase.storage
         .from('event-photos')
-        .remove([storagePath]);
+        .remove([storagePath, thumbPath].filter(Boolean));
 
       throw dbError;
     }
@@ -214,11 +240,11 @@ export const getEventPhotos = async (eventId, limit = 50, offset = 0) => {
   }
 };
 
-export const deletePhoto = async (photoId, storagePath) => {
+export const deletePhoto = async (photoId, storagePath, thumbPath = null) => {
   try {
     const { error: storageError } = await supabase.storage
       .from('event-photos')
-      .remove([storagePath]);
+      .remove([storagePath, thumbPath].filter(Boolean));
 
     if (storageError) throw storageError;
 
@@ -239,6 +265,46 @@ export const deletePhoto = async (photoId, storagePath) => {
       success: false,
       error: error.message,
     };
+  }
+};
+
+// Photos uploaded before thumbnails existed have thumb_path = NULL. The event
+// owner's gallery calls this once per such photo: it downloads the original a
+// single time, uploads a thumbnail, and records it (the owner's RLS policy on
+// photos allows the update; the DB CHECK pins the path to this photo). Returns
+// the thumbnail's storage path, or null if anything failed (retried next visit).
+export const backfillThumbnail = async (photoId, storagePath) => {
+  try {
+    const url = getPublicPhotoUrl(storagePath);
+    if (!url) return null;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Original not readable (${response.status})`);
+
+    const thumbBlob = await createThumbnail(await response.blob());
+    const thumbPath = thumbPathFor(storagePath);
+
+    const { error: uploadError } = await uploadWithRetry(() =>
+      supabase.storage.from('event-photos').upload(thumbPath, thumbBlob, {
+        cacheControl: '31536000',
+        contentType: 'image/jpeg',
+        upsert: false,
+      })
+    );
+    // 409 = a previous run already stored it; just record it below.
+    if (uploadError && !isAlreadyExistsError(uploadError)) throw uploadError;
+
+    const { error: dbError } = await supabase
+      .from('photos')
+      .update({ thumb_path: thumbPath })
+      .eq('id', photoId)
+      .is('thumb_path', null);
+    if (dbError) throw dbError;
+
+    return thumbPath;
+  } catch (error) {
+    logError('backfillThumbnail', error, { photoId });
+    return null;
   }
 };
 

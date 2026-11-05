@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaChevronLeft, FaChevronRight, FaTimes, FaDownload, FaCheckSquare, FaThLarge, FaUserFriends } from 'react-icons/fa';
 import { supabase } from './supabaseClient';
-import { getPublicPhotoUrl } from './services/uploadService';
+import { getPublicPhotoUrl, backfillThumbnail } from './services/uploadService';
 import { downloadPhotosAsZip } from './utils/downloadPhotos';
 import { BottomNav } from './components/BottomNav';
 import { UserBadge } from './components/UserBadge';
@@ -64,7 +64,7 @@ function Gallery() {
       setLoading(true);
       const { data, error } = await supabase
         .from('photos')
-        .select('id, storage_path, uploaded_at, width, height, uploader_name')
+        .select('id, storage_path, thumb_path, uploaded_at, width, height, uploader_name')
         .eq('event_id', eventId)
         .order('uploaded_at', { ascending: false })
         .range(newOffset, newOffset + PHOTOS_PER_PAGE - 1);
@@ -74,6 +74,10 @@ function Gallery() {
       const photosWithUrls = data.map((photo) => ({
         id: photo.id,
         url: getPublicPhotoUrl(photo.storage_path),
+        // The grid shows this small thumbnail; the full-size `url` is only
+        // loaded in the viewer. Photos without one fall back to the original.
+        thumbPath: photo.thumb_path || null,
+        thumbUrl: photo.thumb_path ? getPublicPhotoUrl(photo.thumb_path) : null,
         storagePath: photo.storage_path,
         uploadedAt: photo.uploaded_at,
         width: photo.width,
@@ -125,13 +129,13 @@ function Gallery() {
     setCurrentIndex((i) => Math.min(photos.length - 1, i + 1));
   };
 
-  const deletePhoto = async (photoId, storagePath) => {
+  const deletePhoto = async (photoId, storagePath, thumbPath = null) => {
     if (!window.confirm('Delete this photo? This cannot be undone.')) return;
 
     try {
       const { error: storageError } = await supabase.storage
         .from('event-photos')
-        .remove([storagePath]);
+        .remove([storagePath, thumbPath].filter(Boolean));
 
       if (storageError) throw storageError;
 
@@ -215,6 +219,50 @@ function Gallery() {
 
   const isOwner = Boolean(user && eventOwnerId && user.id === eventOwnerId);
 
+  // Photos uploaded before thumbnails existed have none. When the event owner
+  // opens the gallery, make them one at a time (each downloads its original
+  // once, then every later view of the grid is small). Only the owner can write
+  // thumb_path (photos RLS), and a failure is simply retried on the next visit.
+  const mountedRef = useRef(true);
+  const backfillRunning = useRef(false);
+  const backfillAttempted = useRef(new Set());
+  const [backfillTick, setBackfillTick] = useState(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOwner || backfillRunning.current) return;
+    const todo = photos.filter((p) => !p.thumbPath && !backfillAttempted.current.has(p.id));
+    if (todo.length === 0) return;
+
+    backfillRunning.current = true;
+    (async () => {
+      try {
+        for (const p of todo) {
+          if (!mountedRef.current) break;
+          backfillAttempted.current.add(p.id);
+          const thumbPath = await backfillThumbnail(p.id, p.storagePath);
+          if (thumbPath && mountedRef.current) {
+            setPhotos((prev) =>
+              prev.map((x) =>
+                x.id === p.id ? { ...x, thumbPath, thumbUrl: getPublicPhotoUrl(thumbPath) } : x
+              )
+            );
+          }
+        }
+      } finally {
+        backfillRunning.current = false;
+        // Re-check in case another page of photos loaded while this ran.
+        if (mountedRef.current) setBackfillTick((t) => t + 1);
+      }
+    })();
+  }, [isOwner, photos, backfillTick]);
+
   const renderPhotoTile = (photo, index) => (
     <div key={photo.id} className="gallery-item-wrapper">
       <div
@@ -229,7 +277,12 @@ function Gallery() {
         }}
         style={{ cursor: 'pointer' }}
       >
-        <img src={photo.url} alt={`photo-${photo.id}`} loading="lazy" />
+        <img
+          src={photo.thumbUrl || photo.url}
+          alt={`photo-${photo.id}`}
+          loading="lazy"
+          decoding="async"
+        />
         {selectMode && (
           <div className={`select-checkbox ${selectedIds.has(photo.id) ? 'checked' : ''}`}>
             {selectedIds.has(photo.id) && <FaCheckSquare />}
@@ -241,7 +294,7 @@ function Gallery() {
           className="delete-photo-btn"
           onClick={(e) => {
             e.stopPropagation();
-            deletePhoto(photo.id, photo.storagePath);
+            deletePhoto(photo.id, photo.storagePath, photo.thumbPath);
           }}
           title="Delete photo"
         >

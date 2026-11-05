@@ -90,6 +90,11 @@ file):
     service role key from Vault and needs only `welcome_email_url`).
     Also apply `purge-hourly-2026-11.sql` (runs the archive job hourly; the
     function now archives one event per run in ~40 MB zip parts).
+    Also apply `photo-thumbnails-2026-11.sql` **before deploying the client that
+    uses it**: adds `photos.thumb_path` (CHECK-pinned to `<storage_path>.thumb.jpg`).
+    The gallery grid loads ~600px thumbnails instead of full originals (Free-plan
+    cached-egress quota); the owner's gallery backfills old photos lazily; the
+    purge job also removes thumbnails. Redeploy `purge-expired-events`.
 16. `payment-required-for-guest-access.sql` — **required before accepting
     real payments**, alongside file 10. Closes the gap where a paid-tier
     event was fully usable (guests could join and upload) the instant it

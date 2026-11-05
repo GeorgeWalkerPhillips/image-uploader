@@ -62,7 +62,7 @@ function sanitizeForPath(name: string) {
 async function archiveAndPurgeEvent(event: { id: string; name: string; created_by: string }) {
   const { data: photos, error: photosError } = await supabaseAdmin
     .from("photos")
-    .select("id, storage_path, file_name")
+    .select("id, storage_path, file_name, thumb_path")
     .eq("event_id", event.id);
 
   if (photosError) throw photosError;
@@ -182,7 +182,9 @@ async function archiveAndPurgeEvent(event: { id: string; name: string; created_b
     `),
   });
 
-  const storagePaths = photos.map((p) => p.storage_path);
+  // Thumbnails (photo-thumbnails-2026-11.sql) are public copies of the photo, so
+  // they go too. thumb_path is DB-constrained to "<storage_path>.thumb.jpg".
+  const storagePaths = photos.flatMap((p) => [p.storage_path, p.thumb_path].filter(Boolean) as string[]);
   const { error: removeError } = await supabaseAdmin.storage.from(PHOTOS_BUCKET).remove(storagePaths);
   if (removeError) {
     // Log but don't throw: the photos DB rows (deleted next) are the
