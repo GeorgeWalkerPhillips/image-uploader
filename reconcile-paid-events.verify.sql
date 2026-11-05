@@ -20,7 +20,7 @@ declare
   v_skipped     text := '';
   v_user        uuid;
   v_other       uuid;
-  v_marker      text := '{"role":"authenticated","sub":"verify-marker"}';
+  v_marker      text := '{"role":"authenticated","sub":"00000000-0000-0000-0000-000000000001"}';
   v_claims_pre  text;
   v_claims_post text;
   v_role_pre    text;
@@ -36,6 +36,7 @@ declare
   v_n           integer;
   v_row         record;
   v_ev          record;
+  v_fresh_event uuid;
   v_first_n     integer;
   v_second_n    integer;
   v_global_n    integer;
@@ -59,7 +60,8 @@ begin
     ('verify-usr-' || v_tag,  now(), now() + interval '1 day', now() + interval '30 days', v_user, 'growth', false, 'pending_payment', null, 5, 5),
     ('verify-free-' || v_tag, now(), now() + interval '1 day', now() + interval '30 days', v_user, 'free',   false, 'free',            null, 5, 5),
     ('verify-old-' || v_tag,  now(), now() + interval '1 day', now() + interval '30 days', v_user, 'growth', false, 'pending_payment', null, 5, 5),
-    ('verify-paid-' || v_tag, now(), now() + interval '1 day', now() + interval '30 days', v_user, 'growth', true,  'completed',       now(), 50, 25);
+    ('verify-paid-' || v_tag, now(), now() + interval '1 day', now() + interval '30 days', v_user, 'growth', true,  'completed',       now(), 50, 25),
+    ('verify-fresh-' || v_tag, now(), now() + interval '1 day', now() + interval '30 days', v_user, 'growth', false, 'pending_payment', null, 5, 5);
 
   select id into v_ok_event   from public.events where name = 'verify-ok-'   || v_tag;
   select id into v_amt_event  from public.events where name = 'verify-amt-'  || v_tag;
@@ -68,6 +70,7 @@ begin
   select id into v_free_event from public.events where name = 'verify-free-' || v_tag;
   select id into v_old_event  from public.events where name = 'verify-old-'  || v_tag;
   select id into v_paid_event from public.events where name = 'verify-paid-' || v_tag;
+  select id into v_fresh_event from public.events where name = 'verify-fresh-' || v_tag;
 
   -- Payments (succeeded). Correct = growth R399.00 ZAR by the event owner.
   insert into public.payments (event_id, user_id, payment_reference, amount_cents, currency, status, metadata)
@@ -77,7 +80,8 @@ begin
     (v_cur_event,  v_user, 'verify-' || v_tag || '-cur',  39900, 'USD', 'succeeded', '{"tier":"growth"}'),
     (v_free_event, v_user, 'verify-' || v_tag || '-free', 17900, 'ZAR', 'succeeded', '{"tier":"free"}'),
     (v_old_event,  v_user, 'verify-' || v_tag || '-old',  39900, 'ZAR', 'succeeded', '{"tier":"growth"}'),
-    (v_paid_event, v_user, 'verify-' || v_tag || '-paid', 39900, 'ZAR', 'succeeded', '{"tier":"growth"}');
+    (v_paid_event, v_user, 'verify-' || v_tag || '-paid', 39900, 'ZAR', 'succeeded', '{"tier":"growth"}'),
+    (v_fresh_event, v_user, 'verify-' || v_tag || '-fresh', 39900, 'ZAR', 'succeeded', '{"tier":"growth"}');
 
   update public.payments set created_at = now() - interval '30 days'
    where payment_reference = 'verify-' || v_tag || '-old';
@@ -88,6 +92,13 @@ begin
   else
     v_skipped := v_skipped || 'different-user case skipped (only one auth user); ';
   end if;
+
+  -- The reconciler ignores payments younger than 2 minutes (grace period for the
+  -- webhook's own flip), so age the test payments; 'fresh' stays brand new on purpose.
+  update public.payments set created_at = now() - interval '10 minutes'
+   where payment_reference like 'verify-' || v_tag || '-%'
+     and payment_reference <> 'verify-' || v_tag || '-old'
+     and payment_reference <> 'verify-' || v_tag || '-fresh';
 
   -- Switch to a distinctive NON-service claim so the claim save/restore is observable.
   perform set_config('request.jwt.claims', v_marker, true);
@@ -118,9 +129,9 @@ begin
   end if;
 
   select count(*) into v_n from public.reconcile_paid_events_preview()
-   where event_id in (v_old_event, v_paid_event);
+   where event_id in (v_old_event, v_paid_event, v_fresh_event);
   if v_n <> 0 then
-    v_fail := v_fail || 'preview: old (>14 days) or already-paid event listed; ';
+    v_fail := v_fail || 'preview: old (>14 days), already-paid or fresh (<2 min) event listed; ';
   end if;
 
   -- (c) first run -----------------------------------------------------------------
@@ -154,7 +165,7 @@ begin
   -- (e) nothing else unlocked ------------------------------------------------------
   for v_ev in
     select id, name, is_paid, payment_status, guest_cap, photo_cap_per_guest from public.events
-     where id in (v_amt_event, v_cur_event, v_usr_event, v_free_event, v_old_event)
+     where id in (v_amt_event, v_cur_event, v_usr_event, v_free_event, v_old_event, v_fresh_event)
   loop
     if v_ev.is_paid is true or v_ev.payment_status in ('completed')
        or v_ev.guest_cap <> 5 or v_ev.photo_cap_per_guest <> 5 then

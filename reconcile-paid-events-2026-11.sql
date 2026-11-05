@@ -111,6 +111,9 @@ as $$
     left join tiers t on t.tier = e.tier
     where p.status = 'succeeded'
       and p.created_at >= now() - interval '14 days'
+      -- grace period: never race the webhook/verify path, which records the payment
+      -- first and flips the event a few milliseconds later
+      and p.created_at <  now() - interval '2 minutes'
       and (e.is_paid is not true or e.payment_status is distinct from 'completed')
   )
   select distinct on (c.event_id)
@@ -127,6 +130,9 @@ as $$
   from candidates c
   order by c.event_id, (c.reason is not null), c.paid_recorded_at, c.payment_reference;
 $$;
+
+revoke all on function public.reconcile_paid_events_preview() from public, anon, authenticated;
+grant execute on function public.reconcile_paid_events_preview() to service_role;
 
 
 -- ---------------------------------------------------------------------------
@@ -150,6 +156,8 @@ declare
   v_prev_claims text;
   v_prev_role   text;
   v_rows        integer;
+  v_failed      boolean;
+  v_sqlstate    text;
 begin
   for r in
     select p.*
@@ -186,8 +194,33 @@ begin
       -- Restore the caller's claims immediately after the write.
       perform pg_catalog.set_config('request.jwt.claims', coalesce(v_prev_claims, ''), true);
       perform pg_catalog.set_config('request.jwt.claim.role', coalesce(v_prev_role, ''), true);
+      v_failed := false;
+    exception when others then
+      -- The subtransaction rolled back the update and the claim changes; restore anyway.
+      perform pg_catalog.set_config('request.jwt.claims', coalesce(v_prev_claims, ''), true);
+      perform pg_catalog.set_config('request.jwt.claim.role', coalesce(v_prev_role, ''), true);
+      v_rows := 0;
+      v_failed := true;
+      v_sqlstate := sqlstate;
+    end;
 
-      if v_rows > 0 then
+    -- Logging is best-effort and sits OUTSIDE the block above, so a problem with
+    -- error_logs can never undo an unlock or abort the other events in this run.
+    if v_failed then
+      begin
+        insert into public.error_logs (event_id, severity, source, message, context)
+        values (
+          r.event_id,
+          'error',
+          'reconcile-paid-events',
+          'Failed to re-unlock event for payment ' || r.payment_reference || ' (sqlstate ' || v_sqlstate || ')',
+          pg_catalog.jsonb_build_object('tier', r.tier, 'payment_reference', r.payment_reference)
+        );
+      exception when others then
+        null;
+      end;
+    elsif v_rows > 0 then
+      begin
         insert into public.error_logs (event_id, severity, source, message, context)
         values (
           r.event_id,
@@ -200,21 +233,10 @@ begin
             'payment_reference', r.payment_reference
           )
         );
-      end if;
-    exception when others then
-      -- The subtransaction rolled back the update and the claim changes; restore anyway.
-      perform pg_catalog.set_config('request.jwt.claims', coalesce(v_prev_claims, ''), true);
-      perform pg_catalog.set_config('request.jwt.claim.role', coalesce(v_prev_role, ''), true);
-      v_rows := 0;
-      insert into public.error_logs (event_id, severity, source, message, context)
-      values (
-        r.event_id,
-        'error',
-        'reconcile-paid-events',
-        'Failed to re-unlock event for payment ' || r.payment_reference || ' (sqlstate ' || sqlstate || ')',
-        pg_catalog.jsonb_build_object('tier', r.tier, 'payment_reference', r.payment_reference)
-      );
-    end;
+      exception when others then
+        null;
+      end;
+    end if;
 
     event_id             := r.event_id;
     tier                 := r.tier;
@@ -227,6 +249,9 @@ begin
   return;
 end;
 $$;
+
+revoke all on function public.reconcile_paid_events() from public, anon, authenticated;
+grant execute on function public.reconcile_paid_events() to service_role;
 
 
 -- ---------------------------------------------------------------------------
