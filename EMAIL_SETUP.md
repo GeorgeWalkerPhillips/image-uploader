@@ -209,16 +209,28 @@ Sent through Resend with the shared Valere template; no new secrets (`RESEND_API
 - **Purchase receipt** (`paystack-webhook` / `wedding-planner-verify`, via `applyPlannerPayment`). Subject: `Wedding Planner purchase confirmed`; amount, Paystack reference, button to `<origin>/hq/`. Sent once, by the call that first records the purchase; a send failure never fails the payment and is written to `error_logs` (`wedding-planner:sendReceipt`, email addresses redacted).
 - Deploy: `supabase functions deploy wedding-invite --project-ref <ref>` (and the payment functions per `PAYMENT_SETUP.md`).
 
-## Known limitation
+## Archive sizing (fixed Nov 2026)
 
-`purge-expired-events` zips every due event's photos inside a single Edge
-Function invocation, which has finite memory and wall-time budgets. This
-is fine at the scale this app currently runs at, but an event with a very
-large number of (or very large) photos, or many events becoming due on the
-same day, could hit those limits. If that happens in practice, the fix is
-to split this into one invocation per event rather than looping over all
-due events in one call — see the comment at the top of
-`supabase/functions/purge-expired-events/index.ts`.
+`purge-expired-events` used to zip a whole event in memory in one go, and
+several large events in one run; events of ~100 MB+ failed every night with
+"Array buffer allocation failed" (and then `WORKER_RESOURCE_LIMIT`). Now it
+handles **one event per invocation** (oldest first), packs photos into zip
+**parts of about 40 MB** (uploaded one at a time, uncompressed), checks every
+part is stored before emailing, and emails one download button per part. An
+unreadable source photo now fails the event (retried next run) instead of being
+skipped and then deleted. The cron job runs **hourly** (`purge-hourly-2026-11.sql`)
+so a backlog clears quickly. The 90-day archive deletion removes every file under
+the event's folder in `event-archives`, so old single-zip and new multi-part
+archives are both handled.
+
+## Welcome email (fixed Nov 2026)
+
+The welcome email had never sent: `send-welcome-email` was not deployed and the
+Vault secrets did not exist (the swallowed error was `null value in column "url"`).
+`welcome-email-fix-2026-11.sql` switches the trigger to authenticate with the
+service role key already in Vault (`service_role_key`); the function requires
+that bearer. The old `email_trigger_secret` / `EMAIL_TRIGGER_SECRET` are no
+longer used. Needs only the Vault secret `welcome_email_url`.
 
 ## Troubleshooting
 
@@ -229,7 +241,7 @@ due events in one call — see the comment at the top of
   domain matches the verified domain exactly
 
 **Archive job not running?**
-- `select jobid, active from cron.job where jobname = 'purge-expired-events-daily';`
+- `select jobid, schedule, active from cron.job where jobname = 'purge-expired-events-daily';` (now hourly at :15)
   — if this returns nothing, the `cron.schedule(...)` call in
   `event-archive-and-emails.sql` wasn't run (or failed)
 - `select * from cron.job_run_details order by start_time desc limit 5;` —

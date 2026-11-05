@@ -33,6 +33,13 @@ const PHOTOS_BUCKET = "event-photos";
 const ARCHIVES_BUCKET = "event-archives";
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const PURGE_AFTER_DAYS = 30;
+// Max source-photo bytes per archive zip part (see archiveAndPurgeEvent).
+const ARCHIVE_PART_BYTES = 40 * 1024 * 1024;
+// Memory from one event's photos is not released fast enough to start another
+// in the same invocation (WORKER_RESOURCE_LIMIT with 3 big events), so each run
+// handles one event, oldest first. The cron job runs hourly to work through a
+// backlog (purge-hourly-2026-11.sql); with nothing due a run is a cheap no-op.
+const MAX_EVENTS_PER_RUN = 1;
 // Archives used to be kept forever (only the signed URL above expired) —
 // every event ever sold added a permanent slice to the monthly storage
 // bill against a one-time fee. This bounds it: 90 days after the archive
@@ -78,38 +85,84 @@ async function archiveAndPurgeEvent(event: { id: string; name: string; created_b
     throw new Error(`No profile email for organizer ${event.created_by}`);
   }
 
-  const zip = new JSZip();
-  const folder = zip.folder(sanitizeForPath(event.name));
+  // The Edge Function has a small memory budget (~256 MB), and a single zip
+  // holds every photo plus the generated zip in memory at once, so big events
+  // ("Array buffer allocation failed", every night since October) could never
+  // be archived. Instead the photos are packed into parts of at most
+  // ARCHIVE_PART_BYTES, one at a time, and each part is uploaded and released
+  // before the next is built. JPEGs do not compress, so STORE keeps it cheap.
+  const baseName = sanitizeForPath(event.name);
+  const parts: { path: string; photoCount: number }[] = [];
+  let zip = new JSZip();
+  let folder = zip.folder(baseName);
+  let bytesInPart = 0;
+  let photosInPart = 0;
+
+  const flushPart = async () => {
+    if (photosInPart === 0) return;
+    const zipBytes = await zip.generateAsync({ type: "uint8array", compression: "STORE" });
+    const partNumber = parts.length + 1;
+    const path = `${event.id}/${baseName}-archive-part${partNumber}.zip`;
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(ARCHIVES_BUCKET)
+      .upload(path, zipBytes, { contentType: "application/zip", upsert: true });
+    if (uploadError) throw uploadError;
+    parts.push({ path, photoCount: photosInPart });
+    zip = new JSZip();
+    folder = zip.folder(baseName);
+    bytesInPart = 0;
+    photosInPart = 0;
+  };
 
   for (const photo of photos) {
     const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
       .from(PHOTOS_BUCKET)
       .download(photo.storage_path);
 
+    // An unreadable photo must stop the whole run: the originals are deleted
+    // below, so silently skipping one here would lose it. The event is retried
+    // on the next run and logged to error_logs by the caller.
     if (downloadError || !fileBlob) {
-      console.error(`Skipping unreadable photo ${photo.storage_path}:`, downloadError);
-      continue;
+      throw new Error(`Cannot read photo ${photo.storage_path}: ${downloadError?.message ?? "no data"}`);
     }
 
+    if (photosInPart > 0 && bytesInPart + fileBlob.size > ARCHIVE_PART_BYTES) await flushPart();
+
     folder!.file(photo.file_name || `${photo.id}.jpg`, await fileBlob.arrayBuffer());
+    bytesInPart += fileBlob.size;
+    photosInPart += 1;
+  }
+  await flushPart();
+
+  // Every part must be present in the archive bucket before anything is
+  // deleted or the organizer is told it is safe.
+  const { data: stored, error: listError } = await supabaseAdmin.storage
+    .from(ARCHIVES_BUCKET)
+    .list(event.id, { limit: 1000 });
+  if (listError) throw listError;
+  const storedNames = new Set((stored ?? []).map((f) => f.name));
+  for (const part of parts) {
+    if (!storedNames.has(part.path.split("/").pop()!)) {
+      throw new Error(`Archive part missing after upload: ${part.path}`);
+    }
   }
 
-  const zipBytes = await zip.generateAsync({ type: "uint8array" });
-  const archivePath = `${event.id}/${sanitizeForPath(event.name)}-archive.zip`;
-
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from(ARCHIVES_BUCKET)
-    .upload(archivePath, zipBytes, { contentType: "application/zip", upsert: true });
-
-  if (uploadError) throw uploadError;
-
-  const { data: signedUrlData, error: signError } = await supabaseAdmin.storage
-    .from(ARCHIVES_BUCKET)
-    .createSignedUrl(archivePath, SIGNED_URL_TTL_SECONDS);
-
-  if (signError || !signedUrlData?.signedUrl) {
-    throw signError || new Error("Failed to create signed URL");
+  const links: string[] = [];
+  for (const part of parts) {
+    const { data: signedUrlData, error: signError } = await supabaseAdmin.storage
+      .from(ARCHIVES_BUCKET)
+      .createSignedUrl(part.path, SIGNED_URL_TTL_SECONDS);
+    if (signError || !signedUrlData?.signedUrl) {
+      throw signError || new Error("Failed to create signed URL");
+    }
+    links.push(signedUrlData.signedUrl);
   }
+
+  const downloadButtons =
+    links.length === 1
+      ? emailButton(links[0], "Download your photos")
+      : `<p>Your photos are split into ${links.length} zip files so they download reliably. Please download all of them:</p>` +
+        links.map((url, i) => emailButton(url, `Download part ${i + 1} of ${links.length}`)).join("");
 
   // Photos are only deleted after the email actually sends — if Resend is
   // down or the send fails, better to retry the whole thing tomorrow than
@@ -120,9 +173,9 @@ async function archiveAndPurgeEvent(event: { id: string; name: string; created_b
     html: wrapEmail(`
       ${emailHeading(`${event.name} &mdash; archive ready`)}
       <p>Hi ${profile.full_name || ""},</p>
-      <p>Your event ended a while ago, so we've packaged all ${photos.length} photo${photos.length === 1 ? "" : "s"} into a zip file.</p>
-      ${emailButton(signedUrlData.signedUrl, "Download your photos")}
-      <p style="font-size:13px;color:#666666;">This link expires in 7 days.</p>
+      <p>Your event ended a while ago, so we've packaged all ${photos.length} photo${photos.length === 1 ? "" : "s"} into ${links.length === 1 ? "a zip file" : `${links.length} zip files`}.</p>
+      ${downloadButtons}
+      <p style="font-size:13px;color:#666666;">${links.length === 1 ? "This link expires" : "These links expire"} in 7 days.</p>
       ${emailFootnote(
         `To free up storage, the original photos have now been removed from Valere. This zip is the only remaining copy — please save it somewhere safe, as it will be permanently deleted ${ARCHIVE_PURGE_AFTER_DAYS} days from now.`
       )}
@@ -154,11 +207,16 @@ async function archiveAndPurgeEvent(event: { id: string; name: string; created_b
 // roughly steady-state amount instead of one that grows forever with
 // all-time event volume, since archives used to be kept indefinitely.
 async function purgeArchive(event: { id: string; name: string }) {
-  const archivePath = `${event.id}/${sanitizeForPath(event.name)}-archive.zip`;
+  // An event's archive is either the legacy single "<name>-archive.zip" or
+  // several "-archive-partN.zip" files; everything under the event's folder
+  // is its archive, so remove whatever is there.
+  const { data: files } = await supabaseAdmin.storage.from(ARCHIVES_BUCKET).list(event.id, { limit: 1000 });
+  const archivePaths = (files ?? []).map((f) => `${event.id}/${f.name}`);
+  if (archivePaths.length === 0) archivePaths.push(`${event.id}/${sanitizeForPath(event.name)}-archive.zip`);
 
   const { error: removeError } = await supabaseAdmin.storage
     .from(ARCHIVES_BUCKET)
-    .remove([archivePath]);
+    .remove(archivePaths);
 
   if (removeError) {
     console.error(`Failed to remove archive for event ${event.id}:`, removeError);
@@ -190,7 +248,9 @@ Deno.serve(async (req) => {
     .from("events")
     .select("id, name, created_by")
     .lt("expiry_date", cutoff.toISOString())
-    .is("photos_purged_at", null);
+    .is("photos_purged_at", null)
+    .order("expiry_date", { ascending: true })
+    .limit(MAX_EVENTS_PER_RUN);
 
   if (eventsError) {
     console.error("Failed to query expired events:", eventsError);

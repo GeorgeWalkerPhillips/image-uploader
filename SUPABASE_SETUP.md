@@ -85,6 +85,11 @@ file):
     missing Vault secret — would otherwise silently roll back that
     confirmation, or block sign-in entirely, even though the user's browser
     lands on a page that looks successful.
+    **Follow with `welcome-email-fix-2026-11.sql`** (the original's Vault
+    secrets were never created, so no welcome email ever sent; the fix uses the
+    service role key from Vault and needs only `welcome_email_url`).
+    Also apply `purge-hourly-2026-11.sql` (runs the archive job hourly; the
+    function now archives one event per run in ~40 MB zip parts).
 16. `payment-required-for-guest-access.sql` — **required before accepting
     real payments**, alongside file 10. Closes the gap where a paid-tier
     event was fully usable (guests could join and upload) the instant it
