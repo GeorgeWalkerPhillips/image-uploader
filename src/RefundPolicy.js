@@ -1,13 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './LegalPage.module.css';
-import { CONTACT_EMAIL } from './siteProfile';
+import { CONTACT_EMAIL, SITE_URL } from './siteProfile';
+import { useCanonical } from './seo/usePageMeta';
 
 // TODO before launch: confirm the contact email, trading name, and the
 // 7-day/24-hour refund windows below match what you actually want to honor.
 const TRADING_NAME = 'Valere';
 
 function RefundPolicy() {
+  useCanonical(`${SITE_URL}/refund-policy`);
   return (
     <div className={styles.legalContainer}>
       <div className={styles.legalCard}>

@@ -28,6 +28,7 @@ import {
 } from './services/pricingTiers';
 import { useAuth } from './context/AuthContext';
 import { SiteNav } from './components/SiteNav';
+import { sortedPosts } from './blog/content';
 import styles from './LandingPage.module.css';
 
 const POPULAR_TIER = 'growth';
@@ -485,6 +486,11 @@ function LandingPage() {
 
       <footer className={styles.landingFooter}>
         <p>&copy; {new Date().getFullYear()} Valere. All rights reserved.</p>
+        <nav className={styles.landingFooterLinks} aria-label="Latest from the blog">
+          {sortedPosts().slice(0, 2).map((post) => (
+            <Link key={post.slug} to={post.path}>{post.metaTitle.replace(/ \| Valere$/, '')}</Link>
+          ))}
+        </nav>
         <nav className={styles.landingFooterLinks}>
           <Link to="/guides">Guides</Link>
           <Link to="/blog">Blog</Link>

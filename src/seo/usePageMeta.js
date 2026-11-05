@@ -72,3 +72,23 @@ export function usePageMeta(meta) {
     // `meta` must be a stable object (a module constant per page).
   }, [meta]);
 }
+
+// Canonical only, for pages that keep the shell's other head tags (the legal
+// pages). Without it they inherit the home page's canonical from index.html.
+export function useCanonical(url) {
+  useEffect(() => {
+    let el = document.head.querySelector('link[rel="canonical"]');
+    const created = !el;
+    if (!el) {
+      el = document.createElement('link');
+      el.setAttribute('rel', 'canonical');
+      document.head.appendChild(el);
+    }
+    const prev = el.getAttribute('href');
+    el.setAttribute('href', url);
+    return () => {
+      if (created) el.remove();
+      else el.setAttribute('href', prev ?? '');
+    };
+  }, [url]);
+}

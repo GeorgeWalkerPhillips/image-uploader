@@ -1,13 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './LegalPage.module.css';
-import { CONTACT_EMAIL } from './siteProfile';
+import { CONTACT_EMAIL, SITE_URL } from './siteProfile';
+import { useCanonical } from './seo/usePageMeta';
 
 // TODO before launch: confirm the contact email and legal/trading name
 // below are correct for your business.
 const TRADING_NAME = 'Valere';
 
 function PrivacyPolicy() {
+  useCanonical(`${SITE_URL}/privacy`);
   return (
     <div className={styles.legalContainer}>
       <div className={styles.legalCard}>
