@@ -95,6 +95,13 @@ file):
     The gallery grid loads ~600px thumbnails instead of full originals (Free-plan
     cached-egress quota); the owner's gallery backfills old photos lazily; the
     purge job also removes thumbnails. Redeploy `purge-expired-events`.
+    Also apply `storage-delete-policy-2026-11.sql`: the `event-photos` bucket had no
+    DELETE policy, so every client-side `storage.remove()` (upload rollback, the
+    owner's "Delete photo") silently did nothing and left orphan files. Adds a
+    narrow policy (event owner: anything in their event's folder; uploader: only
+    their own file while no `photos` row references it), a SECURITY DEFINER
+    "is referenced" helper, and `list_orphan_event_photos()` which the hourly
+    `purge-expired-events` run uses to remove unreferenced files older than 7 days.
 16. `payment-required-for-guest-access.sql` — **required before accepting
     real payments**, alongside file 10. Closes the gap where a paid-tier
     event was fully usable (guests could join and upload) the instant it

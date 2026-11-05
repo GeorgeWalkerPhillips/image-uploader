@@ -40,6 +40,7 @@ const ARCHIVE_PART_BYTES = 40 * 1024 * 1024;
 // handles one event, oldest first. The cron job runs hourly to work through a
 // backlog (purge-hourly-2026-11.sql); with nothing due a run is a cheap no-op.
 const MAX_EVENTS_PER_RUN = 1;
+const ORPHAN_MIN_AGE_DAYS = 7;
 // Archives used to be kept forever (only the signed URL above expired) —
 // every event ever sold added a permanent slice to the monthly storage
 // bill against a one-time fee. This bounds it: 90 days after the archive
@@ -308,6 +309,32 @@ Deno.serve(async (req) => {
       });
       results.push({ eventId: event.id, status: "archive_purge_failed" });
     }
+  }
+
+  // Orphan sweep: files in event-photos that no photos row references and that
+  // are older than ORPHAN_MIN_AGE_DAYS (a failed upload whose rollback did not
+  // run, a lost response, a thumbnail whose row update failed). The age guard
+  // keeps an upload that is still being recorded safe. Removed through the
+  // Storage API so the underlying object is freed (see storage-delete-policy-2026-11.sql).
+  try {
+    const { data: orphans, error: orphanListError } = await supabaseAdmin.rpc("list_orphan_event_photos", {
+      p_older_than_days: ORPHAN_MIN_AGE_DAYS,
+      p_limit: 100,
+    });
+    if (orphanListError) throw orphanListError;
+    const orphanPaths = (orphans ?? []) as string[];
+    if (orphanPaths.length > 0) {
+      const { error: orphanRemoveError } = await supabaseAdmin.storage.from(PHOTOS_BUCKET).remove(orphanPaths);
+      if (orphanRemoveError) throw orphanRemoveError;
+      results.push({ status: "orphans_removed", count: orphanPaths.length });
+    }
+  } catch (error) {
+    console.error("Orphan sweep failed:", error);
+    await supabaseAdmin.from("error_logs").insert({
+      severity: "error",
+      source: "purge-expired-events:orphanSweep",
+      message: String((error as Error).message || error).slice(0, 2000),
+    });
   }
 
   return new Response(JSON.stringify({ processed: results.length, results }), {
