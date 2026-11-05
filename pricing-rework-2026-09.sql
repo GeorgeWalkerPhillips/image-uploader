@@ -1,3 +1,6 @@
+-- !! SUPERSEDED (2026-11-05): the function in section 1 resets is_paid/payment_status
+-- !! on EVERY non-service-role UPDATE (renaming a paid event re-locks it). Do NOT
+-- !! re-apply it; use billing-trigger-preserve-on-update-2026-11.sql instead.
 -- Pricing rework (Sept 2026). Tier *keys* are unchanged
 -- (free/starter/growth/unlimited) — only the guest/photo caps and the
 -- charge amounts move, plus the display names in the client

@@ -66,7 +66,9 @@ check can be bypassed via DevTools:
   and `paystack-webhook` Supabase Edge Functions (both now also amount-
   verify the charge against the tier price), and the billing-integrity
   trigger `enforce_event_billing_integrity()` — last redefined in
-  `pricing-rework-2026-09.sql` (originally `security-hardening.sql`).
+  `billing-trigger-preserve-on-update-2026-11.sql` (which preserves paid state on non-service
+  updates; the older `pricing-rework-2026-09.sql` version RESET it on any client edit, e.g. a
+  rename, and must never be re-applied).
   It also holds `WEDDING_PLANNER` (the one-time R199 add-on price, included free with the `unlimited` tier), which must
   match the server constant in `supabase/functions/_shared/weddingPlanner.ts`.
 

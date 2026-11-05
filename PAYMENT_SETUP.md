@@ -443,3 +443,19 @@ does or doesn't check.
 - Paystack Standard (hosted checkout) integration: https://paystack.com/docs/payments/accept-payments/#standard
 - Paystack Webhooks: https://paystack.com/docs/payments/webhooks/
 - Supabase Edge Functions: https://supabase.com/docs/guides/functions
+
+## Incident note: paid event re-locked by a rename (Nov 2026)
+
+Symptom: Paystack shows Success and `payments` has the row, but the event is `pending_payment`.
+Cause: the old billing trigger reset billing fields on any client write (rename). Fixed by
+`billing-trigger-preserve-on-update-2026-11.sql`. To find affected events:
+
+```sql
+select e.id, e.name, p.payment_reference, p.amount_cents
+  from public.payments p join public.events e on e.id = p.event_id
+ where p.status = 'succeeded' and e.is_paid is not true;
+```
+
+To unlock one after checking the amount/currency matches its tier, run an UPDATE inside a
+transaction that first sets `request.jwt.claims` to `{"role":"service_role"}` (the trigger lets
+the service role write billing fields).

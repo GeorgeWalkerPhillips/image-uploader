@@ -147,6 +147,12 @@ file):
     deploy `paystack-webhook` and `paystack-verify` FIRST, then apply this file,
     and re-run it once more a day later (idempotent) to catch anything paid in
     between.
+26. `billing-trigger-preserve-on-update-2026-11.sql` — **required fix, supersedes
+    the `enforce_event_billing_integrity()` in item 18.** The older version reset a
+    paid event to `pending_payment` on ANY client write (e.g. renaming the event),
+    silently re-locking paying customers. The new version preserves billing fields
+    and caps on UPDATE (set from the tier only on INSERT). Applied in production
+    2026-11-05. Do not re-run item 18's section 1 after this.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest
