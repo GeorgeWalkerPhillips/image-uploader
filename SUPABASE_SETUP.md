@@ -153,6 +153,12 @@ file):
     silently re-locking paying customers. The new version preserves billing fields
     and caps on UPDATE (set from the tier only on INSERT). Applied in production
     2026-11-05. Do not re-run item 18's section 1 after this.
+27. `reconcile-paid-events-2026-11.sql` — self-healing reconciler for paid-but-locked
+    events: `reconcile_paid_events_preview()` / `reconcile_paid_events()` (service_role
+    only) plus a 5-minute pg_cron job that calls the `reconcile-paid-events` Edge Function.
+    Apply after item 26. Deploy the function, set the `OPS_ALERT_EMAIL` secret and the
+    `reconcile_paid_events_function_url` Vault secret first (see `PAYMENT_SETUP.md`,
+    "Self-healing reconciler"). `reconcile-paid-events.verify.sql` is the rolled-back check.
 
 Files 1-9 must be applied for the app to work — signup, event creation,
 guest joining, organizers seeing their own event's gallery, per-guest

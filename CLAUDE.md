@@ -87,6 +87,7 @@ owns the event. Edge Function source
 lives under `supabase/functions/` (deployed via `supabase functions deploy`,
 per the deploy comment at the top of each `index.ts`); `PAYMENT_SETUP.md`
 walks through the full flow and dashboard/secrets setup.
+A safety net, `reconcile-paid-events` (5-minute pg_cron job + `reconcile_paid_events()` SQL function, `reconcile-paid-events-2026-11.sql`), re-unlocks any event with a matching succeeded payment that is somehow still locked and emails `OPS_ALERT_EMAIL` about it or anything needing manual review; its tier prices are another copy to keep in sync.
 
 **Email (Resend, sent only from Edge Functions)**: Supabase's own email
 sending covers auth emails only (signup confirmation, password reset) —

@@ -459,3 +459,52 @@ select e.id, e.name, p.payment_reference, p.amount_cents
 To unlock one after checking the amount/currency matches its tier, run an UPDATE inside a
 transaction that first sets `request.jwt.claims` to `{"role":"service_role"}` (the trigger lets
 the service role write billing fields).
+
+## Self-healing reconciler (paid-but-locked events)
+
+A safety net that works whatever the cause: if a payment is recorded as `succeeded` but the
+event is not `is_paid = true` / `payment_status = 'completed'`, it is re-unlocked automatically.
+
+**What it does** (`reconcile-paid-events-2026-11.sql` + Edge Function `reconcile-paid-events`):
+- `public.reconcile_paid_events_preview()` (read-only) lists affected events for payments from the last 14 days.
+  Verdict `fixable` only when the tier is starter/growth/unlimited, currency is `ZAR`, the amount equals
+  that tier's price, and `payments.user_id = events.created_by`. Anything else is `needs_manual_review`
+  with a short reason. Prices/caps are mirrored in one place in that function (SYNC POINT with `TIER_CONFIG`,
+  `pricingTiers.js`, the billing trigger).
+- `public.reconcile_paid_events()` re-unlocks each fixable event (paid, completed, `paid_at` kept or set from
+  the payment, caps raised to the tier caps, never lowered, tier never changed), writes an `error_logs` row
+  (`warning`, source `reconcile-paid-events`) and returns what it did. It briefly sets the transaction-local
+  service-role claim so the billing trigger allows the write, then restores the caller's claims. It is a
+  no-op when nothing is wrong. Both functions are executable by `service_role` only.
+- The Edge Function calls both, and sends ONE alert email if something was fixed or needs review (only
+  payments from the last 14 days, at most one alert per event per 24h, tracked as `error_logs` rows with
+  source `reconcile-paid-events-alert`). Alerts contain event ids, tier, payment reference, amount and reason only.
+  It returns `{checked, fixed, needsReview, emailed, alerted}` (plus `emailSkipped` when no address is set)
+  and HTTP 500 if an RPC, lookup or send fails, so the cron run shows red.
+
+**Schedule:** pg_cron job `reconcile-paid-events-every-5-min` (`*/5 * * * *`) posts to the function with the
+service role key from Vault.
+
+**Setup (owner):**
+1. Apply `reconcile-paid-events-2026-11.sql` batches 1-3.
+2. Deploy: `supabase functions deploy reconcile-paid-events --project-ref <ref>` (JWT verification stays on).
+3. Set the alert address (the function never hardcodes one; without it, it still fixes and logs but sends no email):
+   `supabase secrets set OPS_ALERT_EMAIL=<address> --project-ref <ref>` (or Dashboard -> Edge Functions -> Secrets).
+4. Create the Vault secret once: `select vault.create_secret('https://<ref>.supabase.co/functions/v1/reconcile-paid-events', 'reconcile_paid_events_function_url');`
+5. Apply batch 4 (the cron job).
+6. Optional: run `reconcile-paid-events.verify.sql` once; it always ends with an error `VERIFY PASS: ...` or `VERIFY FAIL: ...` and keeps no data.
+
+**Run manually:** SQL editor: `select * from public.reconcile_paid_events_preview();` to look, then
+`select * from public.reconcile_paid_events();` to fix. Or invoke the function with the service role key:
+`curl -X POST https://<ref>.supabase.co/functions/v1/reconcile-paid-events -H "Authorization: Bearer <service role key>"`.
+
+**Read the log rows:** `select * from error_logs where source like 'reconcile-paid-events%' order by created_at desc;`
+(`reconcile-paid-events` = a fix or a failed fix, `reconcile-paid-events-alert` = an alert sent/recorded).
+
+**Disable:** `select cron.unschedule('reconcile-paid-events-every-5-min');`. To remove it completely also run, as the owner:
+`drop function if exists public.reconcile_paid_events(); drop function if exists public.reconcile_paid_events_preview();`
+Events it already re-unlocked stay unlocked.
+
+**Limits:** it does not resend the receipt email or grant the Wedding Planner bundle for an `unlimited` event
+(the bundle is granted when payment is first applied and is not removed by a re-lock). A `needs_manual_review`
+event is never touched: check the charge in Paystack, then fix by hand as in the incident note above.
