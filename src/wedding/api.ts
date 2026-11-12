@@ -20,6 +20,7 @@ export type WeddingTable =
   | 'wedding_packing_items'
   | 'wedding_travel_docs'
   | 'wedding_guests'
+  | 'wedding_schedule_items'
   | 'wedding_activity';
 
 interface ApiResponse {

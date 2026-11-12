@@ -19,6 +19,7 @@ import { InvoicesPage } from './pages/InvoicesPage';
 import { SpendingPage } from './pages/SpendingPage';
 import { TasksPage } from './pages/TasksPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { SchedulePage } from './pages/SchedulePage';
 import { GuestsPage } from './pages/GuestsPage';
 import { VendorsPage } from './pages/VendorsPage';
 import { ActivityPage } from './pages/ActivityPage';
@@ -95,6 +96,7 @@ export default function WeddingApp() {
                     <Route path="spending" element={<SpendingPage />} />
                     <Route path="tasks" element={<TasksPage />} />
                     <Route path="calendar" element={<CalendarPage />} />
+                    <Route path="schedule" element={<SchedulePage />} />
                     <Route path="more" element={<MorePage />} />
                     <Route path="honeymoon" element={<HoneymoonPage />} />
                     <Route path="purchases" element={<PurchasesPage />} />

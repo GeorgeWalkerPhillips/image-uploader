@@ -42,7 +42,9 @@ Apply the SQL files by hand in the Supabase SQL Editor, in this order:
 
 4. `wedding-hq-2026-10e-planner-product.sql` makes HQ multi-tenant (see "Planner product"
    below). Apply in its labelled batches, in order.
-5. `wedding-hq-2026-10f-invite-sends.sql` (invite send tracking) and
+5. `wedding-hq-2026-11-day-schedule.sql` adds `wedding_schedule_items`, the wedding day schedule
+   (see "Wedding day schedule" below). Create-only, one batch; run after file 1.
+6. `wedding-hq-2026-10f-invite-sends.sql` (invite send tracking) and
    `wedding-hq-2026-10g-planner-bundle-backfill.sql` (grants the planner free to owners
    of paid `unlimited` events: `bundle-<event id>` payment references, source `admin`).
 
@@ -99,12 +101,27 @@ RPC names, shapes and error strings: `WEDDING_PLANNER_CONTRACT.md`.
 6. **Email reminders**: a daily 07:00 (Johannesburg) digest email per member of events, tasks
    and payments coming up; per-member settings. Backend only so far; see `EMAIL_SETUP.md`.
 
+## Wedding day schedule (`/hq/schedule`)
+
+The timed running order of the wedding day: start time, optional end time, what happens,
+where, who is in charge, notes. Stored in `wedding_schedule_items` (members-only RLS, same
+rule as every other `wedding_*` table; helpers are denied). The day is the wedding's own
+`wedding_date`, so rows carry only a wall-clock time (Johannesburg). "Start from a typical
+day" inserts a generic 12-item day (no names or vendors) to edit.
+
+**Download PDF** builds a branded A4 document on the device (`lib/schedulePdf.ts`, jsPDF
+loaded on demand): cream paper, espresso ink and gold accent from the Valere logo, the logo
+on the cover (falls back to a text wordmark offline), a timeline with one entry per item,
+a running header on later pages and "Prepared with Valere" / page numbers in the footer.
+Only the built-in PDF fonts are used, so text outside Western European characters (for
+example emoji) is dropped from the PDF; the app screen still shows it. Nothing is uploaded.
+
 ## Realtime, offline and install
 
 ### Realtime (`lib/realtime.ts`, `useRealtimeSync.ts`)
 
 While HQ is open, one Supabase channel listens (`postgres_changes`, filtered to
-`wedding_id=eq.<id>`) to all 17 data tables, including `wedding_guests` and
+`wedding_id=eq.<id>`) to all 18 data tables, including `wedding_guests` and
 `wedding_activity`, plus the wedding row itself (`id=eq.<id>`). A change invalidates
 the matching React Query key (`[table, weddingId]`), batched over 300 ms. After a
 dropped connection comes back, everything is refetched to catch missed changes. The

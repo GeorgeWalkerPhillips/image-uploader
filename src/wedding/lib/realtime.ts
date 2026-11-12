@@ -2,13 +2,12 @@
 // the mapping, batching and cleanup are unit-testable.
 
 // Every wedding_* data table Wedding HQ reads (the subset in the realtime
-// publication). wedding_guests / wedding_activity have no screen yet but are
-// subscribed so their cache stays fresh once one exists.
+// publication). every one of them is subscribed so its cache stays fresh.
 export const REALTIME_TABLES = [
   'wedding_categories', 'wedding_budget_lines', 'wedding_quotes', 'wedding_vendors', 'wedding_invoices',
   'wedding_payments', 'wedding_savings', 'wedding_targets', 'wedding_tasks', 'wedding_events',
   'wedding_itinerary_days', 'wedding_purchase_items', 'wedding_bookings', 'wedding_packing_items',
-  'wedding_travel_docs', 'wedding_guests', 'wedding_activity',
+  'wedding_travel_docs', 'wedding_guests', 'wedding_activity', 'wedding_schedule_items',
 ] as const;
 
 // The wedding row itself (name, date, budget): has `id`, not `wedding_id`.

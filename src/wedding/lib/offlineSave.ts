@@ -37,6 +37,7 @@ const TABLE_LABELS: Record<WeddingTable, string> = {
   wedding_packing_items: 'Packing list',
   wedding_travel_docs: 'Travel documents',
   wedding_guests: 'Guest list',
+  wedding_schedule_items: 'Wedding day schedule',
   wedding_activity: 'Recent activity',
 };
 

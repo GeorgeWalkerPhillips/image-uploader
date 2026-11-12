@@ -186,7 +186,7 @@ Africa/Johannesburg. **This repo is public: never commit the couple's personal
 seed data** — apply it directly to the database. Any change touching `wedding_*`
 policies or storage needs `reviewer-security`. Schema: `wedding-hq-2026-10.sql`
 (+ `-10b`, `-10c`, `-10e` planner product, `-10f` invite sends, `-10g` bundle
-backfill).
+backfill, `wedding-hq-2026-11-day-schedule.sql` the wedding day schedule at `/hq/schedule` with its branded PDF export in `lib/schedulePdf.ts`).
 Realtime sync (`lib/realtime.ts`), a per-user offline read cache in localStorage
 (`wedding-hq:` prefix, cleared on sign-out) and a `/hq/`-scoped PWA
 (`public/hq/sw.js`, registered only from inside `WeddingApp`; `vercel.json` sets its

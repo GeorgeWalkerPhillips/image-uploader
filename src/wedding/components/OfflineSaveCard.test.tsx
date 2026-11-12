@@ -53,7 +53,7 @@ describe('partner', () => {
     expect(localStorage.getItem(storageKey('u-ada'))).toBeNull(); // not flushed until finished
 
     await act(async () => release());
-    expect(await screen.findByText(/Saved 21 of 21\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Saved 22 of 22\./)).toBeInTheDocument();
     expect(screen.getByText(/The app files are kept for offline too/)).toBeInTheDocument();
 
     const roots = snapshot().queries.map((q: { queryKey: string[] }) => q.queryKey[0]);
@@ -79,7 +79,7 @@ describe('partner', () => {
 
     db.failFetch.clear();
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText(/Saved 21 of 21\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Saved 22 of 22\./)).toBeInTheDocument();
   });
 
   it('does not record a time when nothing could be stored', async () => {
@@ -103,7 +103,7 @@ describe('partner', () => {
   it('a double click starts one save', async () => {
     renderPage(<OfflineSaveCard weddingId={WID} variant="partner" />);
     await userEvent.dblClick(screen.getByRole('button', { name: 'Save everything for offline' }));
-    await screen.findByText(/Saved 21 of 21\./);
+    await screen.findByText(/Saved 22 of 22\./);
     expect(fetchRows).toHaveBeenCalledTimes(REALTIME_TABLES.length); // once per table
   });
 
@@ -117,7 +117,7 @@ describe('partner', () => {
     requestShellCache.mockResolvedValue(false);
     renderPage(<OfflineSaveCard weddingId={WID} variant="partner" />);
     await userEvent.click(screen.getByRole('button', { name: 'Save everything for offline' }));
-    expect(await screen.findByText('Saved 21 of 21.')).toBeInTheDocument();
+    expect(await screen.findByText('Saved 22 of 22.')).toBeInTheDocument();
   });
 });
 

@@ -45,3 +45,12 @@
 .exportRow:first-of-type { border-top: 0; }
 .exportBtn { width: 100%; }
 .badge { margin-left: 6px; }
+
+/* Wedding day schedule */
+.schedList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.schedRow { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+.schedTime { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.schedTime small { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--hq-muted); }
+.schedBody { min-width: 0; overflow-wrap: anywhere; }
+.schedBody p { margin: 4px 0 0; }
+.schedOverlap { margin: 6px 0 0; font-size: 13px; font-weight: 600; color: var(--hq-amber); }

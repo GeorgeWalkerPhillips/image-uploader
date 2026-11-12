@@ -20,6 +20,7 @@ export const ROW_ORDER: Record<WeddingTable, OrderBy | undefined> = {
   wedding_packing_items: { column: 'created_at' },
   wedding_travel_docs: { column: 'created_at' },
   wedding_guests: { column: 'name' },
+  wedding_schedule_items: { column: 'start_time' },
   // The feed is capped; keep in step with ACTIVITY_PAGE in extrasHooks.ts.
   wedding_activity: { column: 'created_at', ascending: false, limit: 20 },
 };
