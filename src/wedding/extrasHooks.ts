@@ -8,7 +8,7 @@ import { useWedding } from './WeddingContext';
 import { assertOnline } from './useOnline';
 import { ROW_ORDER } from './lib/rowOrder';
 import { logActivity } from './lib/activity';
-import type { ActivityEntry, Guest } from './types';
+import type { ActivityEntry, Guest, ScheduleItem } from './types';
 
 export const useGuests = (weddingId: string) => useRows<Guest>('wedding_guests', weddingId, ROW_ORDER.wedding_guests);
 
@@ -65,5 +65,17 @@ export function useSaveReminderSettings(weddingId: string, userId: string) {
       return saveReminderSettings(weddingId, userId, values);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: reminderKey(weddingId, userId) }),
+  });
+}
+
+// Adds many schedule items in one request (the "start from a typical day" button).
+export function useAddScheduleItems(weddingId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rows: readonly Record<string, unknown>[]) => {
+      assertOnline();
+      return insertRows<ScheduleItem>('wedding_schedule_items', weddingId, rows);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wedding_schedule_items', weddingId] }),
   });
 }

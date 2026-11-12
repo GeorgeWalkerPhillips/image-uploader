@@ -314,3 +314,16 @@ export interface CollabWedding {
   name: string;
   wedding_date: string | null;
 }
+
+// One line of the wedding day's running order. Times are wall-clock HH:MM:SS
+// (Johannesburg); the day itself is the wedding's wedding_date.
+export interface ScheduleItem {
+  id: string;
+  wedding_id: string;
+  start_time: string;
+  end_time: string | null;
+  title: string;
+  location: string | null;
+  who: string | null;
+  notes: string | null;
+}

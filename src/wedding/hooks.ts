@@ -10,7 +10,7 @@ import { computeMetrics } from './lib/budget';
 import type { Metrics } from './lib/budget';
 import type { CalendarEventRow, ItineraryDayRow } from './lib/calendar';
 import type {
-  Booking, BudgetLine, Category, Invoice, ItineraryDay, PackingItem, Payer, Payment, PurchaseItem, Quote, Saving,
+  Booking, BudgetLine, ScheduleItem, Category, Invoice, ItineraryDay, PackingItem, Payer, Payment, PurchaseItem, Quote, Saving,
   Task, Target, TravelDoc, Vendor,
 } from './types';
 
@@ -152,6 +152,8 @@ export const useItinerary = (weddingId: string) =>
 // The editable itinerary (every column), as opposed to the calendar's slimmer view.
 export const useItineraryDays = (weddingId: string) =>
   useRows<ItineraryDay>('wedding_itinerary_days', weddingId, ROW_ORDER.wedding_itinerary_days);
+export const useScheduleItems = (weddingId: string) =>
+  useRows<ScheduleItem>('wedding_schedule_items', weddingId, ROW_ORDER.wedding_schedule_items);
 export const useBookings = (weddingId: string) =>
   useRows<Booking>('wedding_bookings', weddingId, ROW_ORDER.wedding_bookings);
 export const usePackingItems = (weddingId: string) =>

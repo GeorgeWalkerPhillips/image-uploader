@@ -164,6 +164,9 @@ file):
     deploy `paystack-webhook` and `paystack-verify` FIRST, then apply this file,
     and re-run it once more a day later (idempotent) to catch anything paid in
     between.
+25b. `wedding-hq-2026-11-day-schedule.sql` — Wedding HQ only: `wedding_schedule_items`
+    (the wedding day schedule / run of day), members-only via RLS, added to the realtime
+    publication. Create-only; run after file 19. See `WEDDING_HQ.md`.
 26. `billing-trigger-preserve-on-update-2026-11.sql` — **required fix, supersedes
     the `enforce_event_billing_integrity()` in item 18.** The older version reset a
     paid event to `pending_payment` on ANY client write (e.g. renaming the event),
