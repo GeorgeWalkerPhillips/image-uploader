@@ -41,6 +41,19 @@
 
 .main { display: flex; flex-direction: column; gap: 16px; }
 
+/* Desktop: use the screen instead of a phone-width column. Phones and tablets
+   (under 900px) are unchanged. Auto-fit means a page with one block fills the
+   width and a page with several blocks flows them into columns. */
+@media (min-width: 900px) {
+  .container { max-width: 1120px; padding-left: 32px; padding-right: 32px; }
+  .main {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+}
+
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .stack > .rowBetween { padding: 0 6px; }
 .stack .h2 { margin-bottom: 0; }
