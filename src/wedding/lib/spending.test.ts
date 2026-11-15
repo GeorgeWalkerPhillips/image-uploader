@@ -59,9 +59,36 @@ describe('categorySummaries', () => {
 describe('budgetTotals', () => {
   it('computes per-scope totals, with unlinked payments counted toward the wedding', () => {
     const w = budgetTotals('wedding', 4350000, categories, lines, invoices, payments);
-    expect(w).toMatchObject({ estimatedCents: 2250000, committedCents: 2150000, paidCents: 550000, remainingToPayCents: 1600000, budgetLeftCents: 2200000, overBudget: false });
+    expect(w).toMatchObject({ estimatedCents: 2250000, committedCents: 2150000, paidCents: 550000, remainingToPayCents: 1650000, budgetLeftCents: 2200000, overBudget: false });
     const h = budgetTotals('honeymoon', 6000000, categories, lines, invoices, payments);
     expect(h).toMatchObject({ committedCents: 2200000, paidCents: 500000, budgetLeftCents: 3800000, overBudget: false });
+  });
+  it('still to pay is what the lines owe: a payment on an invoice with no line does not reduce it', () => {
+    const t = budgetTotals('wedding', 4350000, categories, lines, invoices, payments);
+    const owed = ['l-venue', 'l-decor']
+      .map((id) => lineSummary(lines.find((l) => l.id === id) as BudgetLine, invoices, payments).remainingToPayCents)
+      .reduce((a, b) => a + b, 0);
+    expect(t.remainingToPayCents).toBe(owed);
+    expect(t.remainingToPayCents).toBe(450000 + 1200000);
+  });
+  it('an overpaid line does not cancel what other lines still owe', () => {
+    const two = [line('a', 'venue', 100000), line('b', 'decor', 100000)];
+    const invs = [inv('ia', 150000, null, 'a'), inv('ib', 100000, null, 'b')];
+    const pays = [pay('pa', 'ia', 150000)];
+    const t = budgetTotals('wedding', 500000, categories, two, invs, pays);
+    expect(t.committedCents).toBe(200000);
+    expect(t.paidCents).toBe(150000);
+    expect(t.remainingToPayCents).toBe(100000); // line b still owes 1000; line a is settled
+    const cs = categorySummaries(categories, two, invs, pays, 'wedding');
+    expect(cs.find((c) => c.categoryId === 'venue')?.remainingToPayCents).toBe(0);
+    expect(cs.find((c) => c.categoryId === 'decor')?.remainingToPayCents).toBe(100000);
+  });
+  it('a category with an overpaid line still shows what its other lines owe', () => {
+    const two = [line('a', 'venue', 100000), line('b', 'venue', 100000)];
+    const invs = [inv('ia', 150000, null, 'a')];
+    const pays = [pay('pa', 'ia', 150000)];
+    const [c] = categorySummaries(categories, two, invs, pays, 'wedding').filter((s) => s.categoryId === 'venue');
+    expect(c?.remainingToPayCents).toBe(100000);
   });
   it('reports over budget with a negative amount left', () => {
     const t = budgetTotals('wedding', 2000000, categories, lines, invoices, payments);

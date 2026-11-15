@@ -135,7 +135,9 @@ export function categorySummaries(
         estimatedCents: estimated,
         committedCents: committed,
         paidCents: paid,
-        remainingToPayCents: Math.max(0, committed - paid),
+        // Sum of each line's own balance: an overpaid line must not cancel what
+        // the category's other lines still owe.
+        remainingToPayCents: sums.reduce((t, s) => t + s.remainingToPayCents, 0),
         varianceCents: variance,
         status: variance > 0 ? 'over' : variance < 0 ? 'under' : 'on',
         lineCount: own.length,
@@ -150,7 +152,7 @@ export interface Totals {
   estimatedCents: number;
   committedCents: number;
   paidCents: number;
-  remainingToPayCents: number; // committed - paid, never negative
+  remainingToPayCents: number; // sum of each line's balance, never negative
   budgetLeftCents: number; // budget - committed; negative = over budget
   overBudget: boolean;
 }
@@ -172,10 +174,12 @@ export function budgetTotals(
 
   let estimated = 0;
   let committed = 0;
+  let remaining = 0;
   for (const line of lines) {
     if (categoryById.get(line.category_id)?.scope !== scope) continue;
     estimated += line.estimated_cents;
     committed += lineCommittedCents(line);
+    remaining += lineSummary(line, invoices, payments).remainingToPayCents;
   }
 
   let paid = 0;
@@ -191,7 +195,10 @@ export function budgetTotals(
     estimatedCents: estimated,
     committedCents: committed,
     paidCents: paid,
-    remainingToPayCents: Math.max(0, committed - paid),
+    // What the budget lines still owe, line by line (never negative per line).
+    // Not committed - paid: that would let an overpaid line, or a payment on an
+    // invoice with no budget line, hide money that is still owed.
+    remainingToPayCents: remaining,
     budgetLeftCents: budgetCents - committed,
     overBudget: committed > budgetCents,
   };

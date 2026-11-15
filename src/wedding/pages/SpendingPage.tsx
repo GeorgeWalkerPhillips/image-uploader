@@ -14,7 +14,7 @@ import { categoryColor } from '../lib/categoryForm';
 import { formatZar, formatZarShort } from '../lib/money';
 import { emptySavingForm, PAYERS, validateSaving } from '../lib/moneyForms';
 import type { SavingFormValues } from '../lib/moneyForms';
-import { categorySummaries, monthlySavings, monthlySpend, paidToDate, purchaseSpend, savingsProgress } from '../lib/spending';
+import { budgetTotals, categorySummaries, monthlySavings, monthlySpend, paidToDate, purchaseSpend, savingsProgress } from '../lib/spending';
 import { isDeadlinePassed } from '../lib/targets';
 import { formatDateJhb, todayJhbISO, toJhbDateISO } from '../lib/time';
 import type { FieldErrors } from '../lib/validators';
@@ -63,7 +63,12 @@ export function SpendingPage() {
   const spent = useMemo(() => paidToDate(payments, purchases), [payments, purchases]);
   const totalBudget = wedding.budget_cents + wedding.honeymoon_budget_cents;
   const committed = budget.metrics.committed + budget.metrics.honeymoonCommitted;
-  const stillToPay = Math.max(0, committed - paid);
+  const stillToPay = useMemo(
+    () =>
+      budgetTotals('wedding', 0, categories, lines, invoices, payments).remainingToPayCents +
+      budgetTotals('honeymoon', 0, categories, lines, invoices, payments).remainingToPayCents,
+    [categories, lines, invoices, payments]
+  );
   const budgetLeft = totalBudget - committed;
 
   const byPayer = spent.byPayer;
