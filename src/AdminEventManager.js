@@ -20,6 +20,7 @@ import { TIERS, formatGuestCap, formatPhotoCap } from './services/pricingTiers';
 import { initializePaystackTransaction, verifyPaystackPayment } from './services/paystackService';
 import { sendEventCreatedEmail } from './services/emailService';
 import { logError } from './services/errorLogger';
+import { trackPurchase } from './utils/metaPixel';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import { PageSpinner } from './components/Spinner';
@@ -115,6 +116,20 @@ function AdminEventManager() {
       }
 
       toast.success('Payment confirmed! Your event is live.');
+
+      // Ad measurement only (no-op unless a pixel is configured and the
+      // visitor accepted). Best-effort: never affects the payment flow.
+      try {
+        const { data: paidEvent } = await supabase
+          .from('events')
+          .select('tier')
+          .eq('id', eventId)
+          .single();
+        const amountCents = TIERS[paidEvent?.tier]?.amountCents;
+        if (amountCents) trackPurchase({ valueCents: amountCents, reference: reference || eventId });
+      } catch {
+        /* ignore */
+      }
     } finally {
       setConfirmingPayment(false);
       fetchEvents();

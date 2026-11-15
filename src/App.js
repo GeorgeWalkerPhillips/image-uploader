@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PageSpinner } from './components/Spinner';
 import { AuthCallbackRedirect } from './components/AuthCallbackRedirect';
+import { MarketingConsent } from './components/MarketingConsent';
 import Home from './Home';
 import CameraCapture from './CameraCapture';
 import AdminEventManager from './AdminEventManager';
@@ -27,6 +28,7 @@ function App() {
   return (
     <AuthProvider>
       <AuthCallbackRedirect />
+      <MarketingConsent />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/camera" element={<CameraCapture />} />

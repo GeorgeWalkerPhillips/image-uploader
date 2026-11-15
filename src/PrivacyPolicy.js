@@ -104,7 +104,16 @@ function PrivacyPolicy() {
           We use your browser's local storage to remember your session (so
           you don't have to sign in every visit) and, for guests, to
           pre-fill the display name you entered last time. We don't use
-          third-party advertising or tracking cookies.
+          third-party advertising or tracking cookies on guest, camera or
+          gallery pages.
+        </p>
+        <p>
+          On our public marketing pages, and only if you click "Accept" on the
+          cookie banner, we load Meta's advertising pixel so we can measure how
+          our Facebook and Instagram ads perform (page views and completed
+          purchases). Meta may set cookies and receive data about your visit.
+          If you decline, nothing is loaded. You can change your mind by
+          clearing this site's data in your browser.
         </p>
 
         <h2>Changes to this policy</h2>

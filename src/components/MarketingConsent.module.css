@@ -1,0 +1,52 @@
+.banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  background: #fff;
+  color: #222;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  flex: 1 1 260px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid #222;
+}
+
+.primary {
+  background: #222;
+  color: #fff;
+}
+
+.secondary {
+  background: transparent;
+  color: #222;
+}
