@@ -596,7 +596,7 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
             {SCOPES.map((s) => (
               <button key={s.value} type="button" aria-pressed={scope === s.value}
                 className={`${styles.segment} ${scope === s.value ? styles.segmentActive : ''}`}
-                onClick={() => setScope(s.value)}>
+                onClick={() => { setScope(s.value); setEditingBudget(false); }}>
                 {s.label}
               </button>
             ))}
