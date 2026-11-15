@@ -11,7 +11,7 @@ import type { Metrics } from './lib/budget';
 import type { CalendarEventRow, ItineraryDayRow } from './lib/calendar';
 import type {
   Booking, BudgetLine, ScheduleItem, Category, Invoice, ItineraryDay, PackingItem, Payer, Payment, PurchaseItem, Quote, Saving,
-  Task, Target, TravelDoc, Vendor,
+  Task, Target, TravelDoc, Vendor, Wedding,
 } from './types';
 
 const rowsKey = (table: WeddingTable, weddingId: string) => [table, weddingId] as const;
@@ -78,7 +78,16 @@ export function useUpdateWedding() {
       assertOnline();
       return updateWedding(wedding.id, values);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wedding-membership'] }),
+    onSuccess: (saved) => {
+      // Show the saved values straight away (budget, dates...) instead of
+      // waiting for a refetch, then refetch to stay in sync with the server.
+      qc.setQueriesData<{ wedding: Wedding } | null | undefined>(
+        { queryKey: ['wedding-membership'] },
+        (old: { wedding: Wedding } | null | undefined) =>
+          (old ? { ...old, wedding: { ...old.wedding, ...saved } } : old)
+      );
+      return qc.invalidateQueries({ queryKey: ['wedding-membership'] });
+    },
     onError: (e: unknown) => {
       notify.error(messageOf(e));
     },

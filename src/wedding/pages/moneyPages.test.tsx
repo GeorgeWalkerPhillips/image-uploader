@@ -60,6 +60,37 @@ describe('BudgetPage', () => {
     expect(totals.textContent).toContain(`Budget left${formatZar(3800000)}`);
   });
 
+  test('the budget can be edited from the totals card and saves the right column', async () => {
+    const spy = jest.spyOn(api, 'updateWedding');
+    renderPage(<BudgetPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit budget' }));
+    const input = screen.getByLabelText('Wedding budget (R)');
+    expect(input).toHaveValue('50 000');
+    await userEvent.clear(input);
+    await userEvent.type(input, '60 000');
+    await userEvent.click(screen.getByRole('button', { name: 'Save budget' }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(WID, { budget_cents: 6000000 }));
+    await waitFor(() => expect(screen.queryByLabelText('Wedding budget (R)')).not.toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole('button', { name: 'Honeymoon' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit budget' }));
+    await userEvent.type(screen.getByLabelText('Honeymoon budget (R)'), '25 000');
+    await userEvent.click(screen.getByRole('button', { name: 'Save budget' }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(WID, { honeymoon_budget_cents: 2500000 }));
+  });
+
+  test('an invalid budget is rejected without saving', async () => {
+    const spy = jest.spyOn(api, 'updateWedding');
+    renderPage(<BudgetPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit budget' }));
+    const input = screen.getByLabelText('Wedding budget (R)');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'abc');
+    await userEvent.click(screen.getByRole('button', { name: 'Save budget' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter a valid amount.');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   test('honeymoon scope with no budget is over budget', async () => {
     renderPage(<BudgetPage />);
     await userEvent.click(await screen.findByRole('button', { name: 'Honeymoon' }));
