@@ -1,7 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useWedding } from '../WeddingContext';
-import { useBudgetData, useDeleteRow, usePayerLabels, useSaveRow, useVendors } from '../hooks';
+import { useBudgetData, useDeleteRow, usePayerLabels, useSaveRow, useUpdateWedding, useVendors } from '../hooks';
 import { notify } from '../notify';
 import { useLogActivity } from '../extrasHooks';
 import { supabaseAttachmentStore } from '../storage';
@@ -24,7 +25,7 @@ import type { CategoryPayload } from '../lib/categoryForm';
 import { findVendorByName } from '../lib/vendors';
 import { budgetTotals, categorySummaries, lineSummary } from '../lib/spending';
 import type { CategorySummary } from '../lib/spending';
-import { formatZar, formatZarShort } from '../lib/money';
+import { centsToGroupedInput, formatAmountText, formatZar, formatZarShort, parseRandsToCents } from '../lib/money';
 import type { BudgetLinePayload, PaymentPayload } from '../lib/moneyForms';
 import type { BudgetLine, Category, Invoice, Payment, Scope, Vendor } from '../types';
 import styles from '../wedding.module.css';
@@ -85,6 +86,10 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
   const logActivity = useLogActivity();
   const today = todayJhbISO(useNow(60000));
 
+  const updateWedding = useUpdateWedding();
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
+  const [budgetError, setBudgetError] = useState<string | null>(null);
   const [pickedScope, setScope] = useState<Scope>('wedding');
   const scope: Scope = fixedScope ?? pickedScope;
   const [query, setQuery] = useState('');
@@ -127,6 +132,28 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
       ),
     [scope, wedding.budget_cents, wedding.honeymoon_budget_cents, categories, lines, invoices, payments]
   );
+
+  const startBudgetEdit = () => {
+    setBudgetInput(centsToGroupedInput(totals.budgetCents));
+    setBudgetError(null);
+    setEditingBudget(true);
+  };
+  const submitBudget = (e: FormEvent) => {
+    e.preventDefault();
+    const cents = budgetInput.trim() === '' ? 0 : parseRandsToCents(budgetInput);
+    if (cents === null || cents < 0) {
+      setBudgetError('Enter a valid amount.');
+      return;
+    }
+    setBudgetError(null);
+    const column = scope === 'wedding' ? 'budget_cents' : 'honeymoon_budget_cents';
+    updateWedding.mutate({ [column]: cents }, {
+      onSuccess: () => {
+        notify.success('Budget saved');
+        setEditingBudget(false);
+      },
+    });
+  };
 
   const needle = query.trim().toLowerCase();
   const linesFor = (categoryId: string): BudgetLine[] => {
@@ -315,9 +342,32 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
     return (
       <>
         <section className={styles.card} aria-label="Budget totals">
-          <h2 className={styles.h2}>{scope === 'wedding' ? 'Wedding' : 'Honeymoon'} budget</h2>
-          {totals.budgetCents === 0 && (
-            <p className={styles.hint}>No budget set yet. <Link to="/hq/settings" className={styles.inlineLink}>Set it in Settings</Link>.</p>
+          <div className={styles.rowBetween}>
+            <h2 className={styles.h2}>{scope === 'wedding' ? 'Wedding' : 'Honeymoon'} budget</h2>
+            {!editingBudget && (
+              <button type="button" className={styles.btn} onClick={startBudgetEdit}>Edit budget</button>
+            )}
+          </div>
+          {editingBudget && (
+            <form onSubmit={submitBudget} noValidate>
+              <label className={styles.field}>
+                <span>{scope === 'wedding' ? 'Wedding' : 'Honeymoon'} budget (R)</span>
+                <input className={styles.input} value={budgetInput} inputMode="decimal" autoFocus
+                  aria-invalid={!!budgetError} aria-describedby={budgetError ? 'err-budget' : undefined}
+                  onChange={(e) => setBudgetInput(e.target.value)}
+                  onBlur={() => setBudgetInput(formatAmountText(budgetInput))} />
+              </label>
+              {budgetError && <span className={styles.error} id="err-budget" role="alert">{budgetError}</span>}
+              <div className={styles.actions}>
+                <button type="submit" className={styles.btnPrimary} disabled={updateWedding.isPending}>
+                  {updateWedding.isPending ? 'Saving...' : 'Save budget'}
+                </button>
+                <button type="button" className={styles.btn} onClick={() => setEditingBudget(false)}>Cancel</button>
+              </div>
+            </form>
+          )}
+          {totals.budgetCents === 0 && !editingBudget && (
+            <p className={styles.hint}>No budget set yet. Tap Edit budget to set it.</p>
           )}
           <dl className={styles.statGrid}>
             <div className={styles.stat}><dt>Budget</dt><dd>{formatZar(totals.budgetCents)}</dd></div>
@@ -546,7 +596,7 @@ export function BudgetPage({ fixedScope }: BudgetPageProps = {}) {
             {SCOPES.map((s) => (
               <button key={s.value} type="button" aria-pressed={scope === s.value}
                 className={`${styles.segment} ${scope === s.value ? styles.segmentActive : ''}`}
-                onClick={() => setScope(s.value)}>
+                onClick={() => { setScope(s.value); setEditingBudget(false); }}>
                 {s.label}
               </button>
             ))}
