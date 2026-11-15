@@ -42,19 +42,35 @@ describe('metaPixel', () => {
     px.trackPageView('/');
     expect(document.querySelector('script[src*="fbevents"]')).not.toBeNull();
     const calls = window.fbq.queue.map((a) => a[0] + ':' + a[1]);
-    expect(calls).toEqual(['init:1234567890', 'track:PageView']);
+    expect(calls).toEqual(['set:autoConfig', 'init:1234567890', 'track:PageView']);
+    expect(window.fbq.disablePushState).toBe(true);
   });
 
   it('never tracks guest or private routes', () => {
     const px = load('1234567890');
     px.setConsent('granted');
     window.fbq.queue.length = 0;
-    ['/camera', '/gallery', '/hq', '/hq/schedule'].forEach((p) => {
+    ['/camera', '/gallery', '/hq', '/hq/schedule', '/admin', '/login', '/reset-password', '/unknown'].forEach((p) => {
       expect(px.isTrackablePath(p)).toBe(false);
       px.trackPageView(p);
     });
     expect(window.fbq.queue).toHaveLength(0);
     expect(px.isTrackablePath('/wedding-planner')).toBe(true);
+    expect(px.isTrackablePath('/guides/some-guide')).toBe(true);
+  });
+
+  it('treats a guest QR link (/?event=) as non-trackable', () => {
+    const px = load('1234567890');
+    expect(px.isTrackablePath('/', '')).toBe(true);
+    expect(px.isTrackablePath('/', '?event=abc')).toBe(false);
+  });
+
+  it('revokes consent on reset', () => {
+    const px = load('1234567890');
+    px.setConsent('granted');
+    px.resetConsent();
+    expect(px.getConsent()).toBeNull();
+    expect(window.fbq.queue.some((a) => a[0] === 'consent' && a[1] === 'revoke')).toBe(true);
   });
 
   it('sends a ZAR Purchase once per reference', () => {
@@ -67,7 +83,9 @@ describe('metaPixel', () => {
     expect(window.fbq.queue).toHaveLength(1);
     expect(window.fbq.queue[0][1]).toBe('Purchase');
     expect(window.fbq.queue[0][2]).toEqual({ value: 179, currency: 'ZAR' });
-    expect(window.fbq.queue[0][3]).toEqual({ eventID: 'ref1' });
+    // Meta gets a random id, never the Paystack reference / event id.
+    expect(window.fbq.queue[0][3].eventID).not.toBe('ref1');
+    expect(window.fbq.queue[0][3].eventID).toBeTruthy();
   });
 
   it('rejects a malformed pixel id', () => {

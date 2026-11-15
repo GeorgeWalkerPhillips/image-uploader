@@ -10,13 +10,25 @@ const PIXEL_ID = (process.env.REACT_APP_META_PIXEL_ID || '').trim();
 const CONSENT_KEY = 'cbv:marketing-consent'; // 'granted' | 'denied'
 const PURCHASE_SENT_PREFIX = 'cbv:pixel-purchase:';
 
-// Path prefixes where the pixel must never load.
-const PRIVATE_PREFIXES = ['/camera', '/gallery', '/hq'];
+// Allow-list: PageView is only ever sent from public marketing/legal pages.
+// Everything else (camera, gallery, admin, login, /hq, unknown routes) is
+// excluded by default.
+const MARKETING_EXACT = ['/', '/wedding-planner', '/about', '/privacy', '/terms', '/refund-policy'];
+const MARKETING_PREFIXES = ['/guides', '/blog'];
 
 export const isPixelConfigured = () => /^\d{6,20}$/.test(PIXEL_ID);
 
-export const isTrackablePath = (pathname = '') =>
-  !PRIVATE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+// A guest QR link lands on `/?event=<id>` before redirecting to /camera.
+// That URL carries the event capability, so it is never trackable.
+export const isTrackablePath = (pathname = '', search = '') => {
+  if (new URLSearchParams(search).has('event')) return false;
+  return (
+    MARKETING_EXACT.includes(pathname) ||
+    MARKETING_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+  );
+};
+
+const currentSearch = () => (typeof window === 'undefined' ? '' : window.location.search);
 
 export const getConsent = () => {
   try {
@@ -55,41 +67,58 @@ export function initPixel() {
     script.src = 'https://connect.facebook.net/en_US/fbevents.js';
     document.head.appendChild(script);
   }
+  // No automatic PageView on history.pushState (it would fire on guest/private
+  // routes after navigation), and no automatic advanced matching / button /
+  // form auto-events (they can hash emails typed on /login).
+  window.fbq.disablePushState = true;
+  window.fbq('set', 'autoConfig', false, PIXEL_ID);
   window.fbq('init', PIXEL_ID);
   initialised = true;
   return true;
 }
 
-const canTrack = (pathname) => {
-  if (!isPixelConfigured() || getConsent() !== 'granted' || !isTrackablePath(pathname)) {
-    return false;
-  }
+const ready = () => {
+  if (!isPixelConfigured() || getConsent() !== 'granted') return false;
   initPixel(); // no-op once initialised
   return typeof window.fbq === 'function';
 };
 
 export function trackPageView(pathname = window.location.pathname) {
-  if (!canTrack(pathname)) return;
+  if (!ready() || !isTrackablePath(pathname, currentSearch())) return;
   window.fbq('track', 'PageView');
 }
 
-// `reference` (Paystack ref or event id) is used as Meta's eventID so a
-// reload/retry can't double count, plus a local once-only guard.
+// Purchase fires from /admin (where Paystack returns). The Paystack
+// reference / event id are used only for a local once-only guard and are
+// never sent to Meta: Meta gets a random eventID and the tier value only.
 export function trackPurchase({ valueCents, reference }) {
-  if (!canTrack(window.location.pathname)) return;
+  if (!ready() || window.location.pathname !== '/admin') return;
   const key = `${PURCHASE_SENT_PREFIX}${reference}`;
   try {
     if (reference && window.localStorage.getItem(key)) return;
-    if (reference) window.localStorage.setItem(key, '1');
   } catch {
     /* ignore */
   }
-  window.fbq(
-    'track',
-    'Purchase',
-    { value: (valueCents || 0) / 100, currency: 'ZAR' },
-    reference ? { eventID: String(reference) } : undefined
-  );
+  const eventID =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `p-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  window.fbq('track', 'Purchase', { value: (valueCents || 0) / 100, currency: 'ZAR' }, { eventID });
+  try {
+    if (reference) window.localStorage.setItem(key, '1'); // only after a successful send
+  } catch {
+    /* ignore */
+  }
+}
+
+// Withdraw consent (wired to the "Cookie settings" button on /privacy).
+export function resetConsent() {
+  try {
+    window.localStorage.removeItem(CONSENT_KEY);
+  } catch {
+    /* ignore */
+  }
+  if (typeof window.fbq === 'function') window.fbq('consent', 'revoke');
 }
 
 // Test helper.

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './LegalPage.module.css';
 import { CONTACT_EMAIL } from './siteProfile';
+import { isPixelConfigured, resetConsent } from './utils/metaPixel';
 
 // TODO before launch: confirm the contact email and legal/trading name
 // below are correct for your business.
@@ -110,11 +111,26 @@ function PrivacyPolicy() {
         <p>
           On our public marketing pages, and only if you click "Accept" on the
           cookie banner, we load Meta's advertising pixel so we can measure how
-          our Facebook and Instagram ads perform (page views and completed
-          purchases). Meta may set cookies and receive data about your visit.
-          If you decline, nothing is loaded. You can change your mind by
-          clearing this site's data in your browser.
+          our Facebook and Instagram ads perform (page views on those pages
+          and completed purchases, with the purchase amount). Meta receives
+          the page address, your IP address and browser details, may set
+          cookies, and may match this to your Meta account. We never send
+          event IDs, photos, guest names or payment references. If you
+          decline, nothing is loaded.
         </p>
+        {isPixelConfigured() && (
+        <p>
+          <button
+            type="button"
+            onClick={() => {
+              resetConsent();
+              window.location.reload();
+            }}
+          >
+            Cookie settings (reset my choice)
+          </button>
+        </p>
+        )}
 
         <h2>Changes to this policy</h2>
         <p>

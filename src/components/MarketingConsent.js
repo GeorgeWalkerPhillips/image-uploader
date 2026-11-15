@@ -12,14 +12,14 @@ import {
 // Renders nothing unless a Meta Pixel ID is configured. Also fires a PageView
 // on each route change once the visitor has accepted.
 export function MarketingConsent() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [choice, setChoice] = useState(() => getConsent());
 
   useEffect(() => {
     if (choice === 'granted') trackPageView(pathname);
-  }, [pathname, choice]);
+  }, [pathname, search, choice]);
 
-  if (!isPixelConfigured() || choice || !isTrackablePath(pathname)) return null;
+  if (!isPixelConfigured() || choice || !isTrackablePath(pathname, search)) return null;
 
   const decide = (value) => {
     setConsent(value);
@@ -30,7 +30,7 @@ export function MarketingConsent() {
     <div className={styles.banner} role="dialog" aria-label="Cookie preferences">
       <p className={styles.text}>
         We'd like to use Meta's advertising pixel to measure how our ads perform.
-        It's optional and never runs on guest or event pages.{' '}
+        It's optional and never runs on guest, camera or gallery pages.{' '}
         <Link to="/privacy">Privacy policy</Link>
       </p>
       <div className={styles.actions}>
