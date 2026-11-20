@@ -374,6 +374,52 @@
   color: white;
 }
 
+a.actionBtn {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.actionBtnShare {
+  background: #111;
+  border-color: #111;
+  color: white;
+}
+
+.moreMenu {
+  flex-basis: 100%;
+}
+
+.moreSummary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 2px solid #eee;
+  border-radius: 20px;
+  color: #333;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moreSummary::-webkit-details-marker {
+  display: none;
+}
+
+.moreSummary:focus-visible {
+  outline: 3px solid rgba(17, 17, 17, 0.35);
+  outline-offset: 2px;
+}
+
+.moreItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 @media (max-width: 640px) {
   .adminHeader {
     flex-direction: column;

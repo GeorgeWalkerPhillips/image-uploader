@@ -10,6 +10,7 @@ import {
   FaEdit,
   FaTrash,
   FaCreditCard,
+  FaWhatsapp,
 } from 'react-icons/fa';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
@@ -21,7 +22,8 @@ import { initializePaystackTransaction, verifyPaystackPayment } from './services
 import { sendEventCreatedEmail } from './services/emailService';
 import { logError } from './services/errorLogger';
 import { QRCodeCanvas } from 'qrcode.react';
-import jsPDF from 'jspdf';
+import { EventReadyPanel } from './components/EventReadyPanel';
+import { downloadQrSheet, guestLink, whatsappShareUrl } from './utils/eventShare';
 import { PageSpinner } from './components/Spinner';
 import styles from './AdminEventManager.module.css';
 
@@ -41,6 +43,9 @@ function AdminEventManager() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
+  // The event whose "ready, now share it" panel is showing (set after a free
+  // event is created or a payment is confirmed).
+  const [readyEventId, setReadyEventId] = useState(null);
 
   const fetchEvents = React.useCallback(async () => {
     if (!user) return;
@@ -115,6 +120,7 @@ function AdminEventManager() {
       }
 
       toast.success('Payment confirmed! Your event is live.');
+      setReadyEventId(eventId);
     } finally {
       setConfirmingPayment(false);
       fetchEvents();
@@ -200,6 +206,7 @@ function AdminEventManager() {
 
       if (tier.key === 'free') {
         toast.success('Free event created!');
+        setReadyEventId(data.id);
         // Paid-tier events get an equivalent "event is live" email from
         // paystack-webhook once payment is confirmed instead — don't send
         // one here too for those.
@@ -303,8 +310,7 @@ function AdminEventManager() {
   };
 
   const copyLink = async (id) => {
-    const baseUrl = window.location.origin;
-    const link = `${baseUrl}/camera?event=${id}`;
+    const link = guestLink(window.location.origin, id);
     try {
       await navigator.clipboard.writeText(link);
       toast.success('Link copied!');
@@ -313,22 +319,23 @@ function AdminEventManager() {
     }
   };
 
-  const downloadQRCodePDF = (event) => {
+  const downloadQRCodePDF = async (event) => {
     const canvas = document.getElementById(`qr-${event.id}`);
     if (!canvas) {
       toast.error('QR code not ready');
       return;
     }
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF();
-    pdf.setFontSize(16);
-    pdf.text('Scan to upload photos to event:', 10, 20);
-    pdf.addImage(imgData, 'PNG', 35, 30, 140, 140);
-    pdf.setFontSize(12);
-    pdf.text(`Event: ${event.name}`, 10, 185);
-    pdf.text(`ID: ${event.id}`, 10, 195);
-    pdf.save(`${event.name}_QR.pdf`);
+    try {
+      await downloadQrSheet({
+        eventName: event.name,
+        link: guestLink(window.location.origin, event.id),
+        qrCanvas: canvas,
+      });
+    } catch (error) {
+      toast.error('Could not create the QR sheet');
+      console.error('QR sheet error:', error);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -374,6 +381,8 @@ function AdminEventManager() {
     }
   };
 
+  const readyEvent = readyEventId ? events.find((ev) => ev.id === readyEventId) : null;
+
   if (loading) {
     return (
       <div className={styles.adminContainer}>
@@ -407,6 +416,16 @@ function AdminEventManager() {
         </div>
         <UserBadge />
       </div>
+
+      {readyEvent && (
+        <EventReadyPanel
+          event={readyEvent}
+          origin={window.location.origin}
+          onCopy={copyLink}
+          onDownloadSheet={downloadQRCodePDF}
+          onClose={() => setReadyEventId(null)}
+        />
+      )}
 
       <div className={styles.eventForm}>
         <h2>Create New Event</h2>
@@ -469,7 +488,7 @@ function AdminEventManager() {
                     <QRCodeCanvas
                       id={`qr-${event.id}`}
                       value={`${window.location.origin}/camera?event=${event.id}`}
-                      size={112}
+                      size={128}
                     />
                   </div>
 
@@ -532,19 +551,23 @@ function AdminEventManager() {
                         <FaCreditCard /> Complete Payment
                       </button>
                     )}
-                    <button
-                      className={styles.actionBtn}
-                      onClick={() => copyLink(event.id)}
-                      title="Copy guest link"
-                    >
-                      <FaLink /> Link
-                    </button>
+                    {!pendingPayment && (
+                      <a
+                        className={`${styles.actionBtn} ${styles.actionBtnShare}`}
+                        href={whatsappShareUrl(event.name, guestLink(window.location.origin, event.id))}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Share the guest link on WhatsApp"
+                      >
+                        <FaWhatsapp /> Share
+                      </a>
+                    )}
                     <button
                       className={styles.actionBtn}
                       onClick={() => downloadQRCodePDF(event)}
-                      title="Download QR code"
+                      title="Download a printable QR sheet"
                     >
-                      <FaQrcode /> QR
+                      <FaQrcode /> QR sheet
                     </button>
                     <button
                       className={styles.actionBtn}
@@ -553,37 +576,49 @@ function AdminEventManager() {
                     >
                       <FaPhotoVideo /> Gallery
                     </button>
-                    <button
-                      className={styles.actionBtn}
-                      onClick={() => downloadEventPhotos(event.id, event.name)}
-                      title="Download all photos as ZIP"
-                    >
-                      <FaDownload /> Download
-                    </button>
-                    <button
-                      className={styles.actionBtn}
-                      onClick={() => navigate(`/camera?event=${event.id}`)}
-                      title="Preview guest camera"
-                    >
-                      <FaCamera /> Preview
-                    </button>
-                    <button
-                      className={styles.actionBtn}
-                      onClick={() => {
-                        setEditingId(event.id);
-                        setNewName(event.name);
-                      }}
-                      title="Edit event name"
-                    >
-                      <FaEdit /> Edit
-                    </button>
-                    <button
-                      className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-                      onClick={() => deleteEvent(event.id)}
-                      title="Delete event"
-                    >
-                      <FaTrash /> Delete
-                    </button>
+                    <details className={styles.moreMenu}>
+                      <summary className={styles.moreSummary}>More</summary>
+                      <div className={styles.moreItems}>
+                        <button
+                          className={styles.actionBtn}
+                          onClick={() => copyLink(event.id)}
+                          title="Copy guest link"
+                        >
+                          <FaLink /> Copy link
+                        </button>
+                        <button
+                          className={styles.actionBtn}
+                          onClick={() => navigate(`/camera?event=${event.id}`)}
+                          title="Preview guest camera"
+                        >
+                          <FaCamera /> Preview
+                        </button>
+                        <button
+                          className={styles.actionBtn}
+                          onClick={() => downloadEventPhotos(event.id, event.name)}
+                          title="Download all photos as ZIP"
+                        >
+                          <FaDownload /> Download all
+                        </button>
+                        <button
+                          className={styles.actionBtn}
+                          onClick={() => {
+                            setEditingId(event.id);
+                            setNewName(event.name);
+                          }}
+                          title="Edit event name"
+                        >
+                          <FaEdit /> Edit
+                        </button>
+                        <button
+                          className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                          onClick={() => deleteEvent(event.id)}
+                          title="Delete event"
+                        >
+                          <FaTrash /> Delete
+                        </button>
+                      </div>
+                    </details>
                   </div>
                 </div>
               );
